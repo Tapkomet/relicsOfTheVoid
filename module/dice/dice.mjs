@@ -24,6 +24,7 @@
  * @property {boolean} [elvenAccuracy]   Allow Elven Accuracy to modify this roll?
  * @property {boolean} [halflingLucky]   Allow Halfling Luck to modify this roll?
  * @property {boolean} [reliableTalent]  Allow Reliable Talent to modify this roll?
+ * @property {boolean} [attackRoll]         Is this an attack roll?
  *
  * ## Roll Configuration Dialog
  * @property {boolean} [fastForward]           Should the roll configuration dialog be skipped?
@@ -53,7 +54,7 @@ export async function d20Roll({
   advantage, disadvantage, critical=20, fumble=1, targetValue,
   elvenAccuracy, halflingLucky, reliableTalent,
   fastForward, chooseModifier=false, template, title, dialogOptions,
-  chatMessage=true, messageData={}, rollMode, flavor
+  chatMessage=true, messageData={}, rollMode, flavor,  attackRoll=false
 }={}) {
 
   // Handle input arguments
@@ -78,7 +79,8 @@ export async function d20Roll({
     targetValue,
     elvenAccuracy,
     halflingLucky,
-    reliableTalent
+    reliableTalent,
+    attackRoll
   });
 
   // Prompt a Dialog to further configure the D20Roll
@@ -166,8 +168,8 @@ export async function damageRoll({
     criticalBonusDice,
     criticalMultiplier,
     criticalBonusDamage,
-    multiplyNumeric: multiplyNumeric ?? game.settings.get("dnd5e", "criticalDamageModifiers"),
-    powerfulCritical: powerfulCritical ?? game.settings.get("dnd5e", "criticalDamageMaxDice")
+    multiplyNumeric: multiplyNumeric ?? game.settings.get("rotv", "criticalDamageModifiers"),
+    powerfulCritical: powerfulCritical ?? game.settings.get("rotv", "criticalDamageMaxDice")
   });
 
   // Prompt a Dialog to further configure the DamageRoll

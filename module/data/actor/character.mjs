@@ -58,65 +58,65 @@ export default class CharacterData extends CreatureTemplate {
         ...AttributesFields.common,
         ...AttributesFields.creature,
         ac: new foundry.data.fields.SchemaField({
-          flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "DND5E.ArmorClassFlat"}),
-          calc: new foundry.data.fields.StringField({initial: "default", label: "DND5E.ArmorClassCalculation"}),
-          formula: new FormulaField({deterministic: true, label: "DND5E.ArmorClassFormula"})
-        }, {label: "DND5E.ArmorClass"}),
+          flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.ArmorClassFlat"}),
+          calc: new foundry.data.fields.StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
+          formula: new FormulaField({deterministic: true, label: "ROTV.ArmorClassFormula"})
+        }, {label: "ROTV.ArmorClass"}),
         hp: new foundry.data.fields.SchemaField({
           value: new foundry.data.fields.NumberField({
-            nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.HitPointsCurrent"
+            nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.HitPointsCurrent"
           }),
           max: new foundry.data.fields.NumberField({
-            nullable: true, integer: true, min: 0, initial: null, label: "DND5E.HitPointsOverride"
+            nullable: true, integer: true, min: 0, initial: null, label: "ROTV.HitPointsOverride"
           }),
-          temp: new foundry.data.fields.NumberField({integer: true, initial: 0, min: 0, label: "DND5E.HitPointsTemp"}),
-          tempmax: new foundry.data.fields.NumberField({integer: true, initial: 0, label: "DND5E.HitPointsTempMax"}),
+          temp: new foundry.data.fields.NumberField({integer: true, initial: 0, min: 0, label: "ROTV.HitPointsTemp"}),
+          tempmax: new foundry.data.fields.NumberField({integer: true, initial: 0, label: "ROTV.HitPointsTempMax"}),
           bonuses: new foundry.data.fields.SchemaField({
-            level: new FormulaField({deterministic: true, label: "DND5E.HitPointsBonusLevel"}),
-            overall: new FormulaField({deterministic: true, label: "DND5E.HitPointsBonusOverall"})
+            level: new FormulaField({deterministic: true, label: "ROTV.HitPointsBonusLevel"}),
+            overall: new FormulaField({deterministic: true, label: "ROTV.HitPointsBonusOverall"})
           })
-        }, {label: "DND5E.HitPoints"}),
+        }, {label: "ROTV.HitPoints"}),
         death: new foundry.data.fields.SchemaField({
           success: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.DeathSaveSuccesses"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DeathSaveSuccesses"
           }),
           failure: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.DeathSaveFailures"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DeathSaveFailures"
           })
-        }, {label: "DND5E.DeathSave"}),
+        }, {label: "ROTV.DeathSave"}),
         exhaustion: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.Exhaustion"
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Exhaustion"
         }),
-        inspiration: new foundry.data.fields.BooleanField({required: true, label: "DND5E.Inspiration"})
-      }, {label: "DND5E.Attributes"}),
+        inspiration: new foundry.data.fields.BooleanField({required: true, label: "ROTV.Inspiration"})
+      }, {label: "ROTV.Attributes"}),
       details: new foundry.data.fields.SchemaField({
         ...DetailsFields.common,
         ...DetailsFields.creature,
-        background: new foundry.data.fields.StringField({required: true, label: "DND5E.Background"}),
-        originalClass: new foundry.data.fields.StringField({required: true, label: "DND5E.ClassOriginal"}),
+        background: new foundry.data.fields.StringField({required: true, label: "ROTV.Background"}),
+        originalClass: new foundry.data.fields.StringField({required: true, label: "ROTV.ClassOriginal"}),
         xp: new foundry.data.fields.SchemaField({
           value: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.ExperiencePointsCurrent"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.ExperiencePointsCurrent"
           })
-        }, {label: "DND5E.ExperiencePoints"}),
-        appearance: new foundry.data.fields.StringField({required: true, label: "DND5E.Appearance"}),
-        trait: new foundry.data.fields.StringField({required: true, label: "DND5E.PersonalityTraits"}),
-        ideal: new foundry.data.fields.StringField({required: true, label: "DND5E.Ideals"}),
-        bond: new foundry.data.fields.StringField({required: true, label: "DND5E.Bonds"}),
-        flaw: new foundry.data.fields.StringField({required: true, label: "DND5E.Flaws"})
-      }, {label: "DND5E.Details"}),
+        }, {label: "ROTV.ExperiencePoints"}),
+        appearance: new foundry.data.fields.StringField({required: true, label: "ROTV.Appearance"}),
+        trait: new foundry.data.fields.StringField({required: true, label: "ROTV.PersonalityTraits"}),
+        ideal: new foundry.data.fields.StringField({required: true, label: "ROTV.Ideals"}),
+        bond: new foundry.data.fields.StringField({required: true, label: "ROTV.Bonds"}),
+        flaw: new foundry.data.fields.StringField({required: true, label: "ROTV.Flaws"})
+      }, {label: "ROTV.Details"}),
       traits: new foundry.data.fields.SchemaField({
         ...TraitsFields.common,
         ...TraitsFields.creature,
-        weaponProf: TraitsFields.makeSimpleTrait({label: "DND5E.TraitWeaponProf"}),
-        armorProf: TraitsFields.makeSimpleTrait({label: "DND5E.TraitArmorProf"}),
-        toolProf: TraitsFields.makeSimpleTrait({label: "DND5E.TraitToolProf"})
-      }, {label: "DND5E.Traits"}),
+        weaponProf: TraitsFields.makeSimpleTrait({label: "ROTV.TraitWeaponProf"}),
+        armorProf: TraitsFields.makeSimpleTrait({label: "ROTV.TraitArmorProf"}),
+        toolProf: TraitsFields.makeSimpleTrait({label: "ROTV.TraitToolProf"})
+      }, {label: "ROTV.Traits"}),
       resources: new foundry.data.fields.SchemaField({
-        primary: makeResourceField({label: "DND5E.ResourcePrimary"}),
-        secondary: makeResourceField({label: "DND5E.ResourceSecondary"}),
-        tertiary: makeResourceField({label: "DND5E.ResourceTertiary"})
-      }, {label: "DND5E.Resources"})
+        primary: makeResourceField({label: "ROTV.ResourcePrimary"}),
+        secondary: makeResourceField({label: "ROTV.ResourceSecondary"}),
+        tertiary: makeResourceField({label: "ROTV.ResourceTertiary"})
+      }, {label: "ROTV.Resources"})
     });
   }
 
@@ -150,13 +150,13 @@ export default class CharacterData extends CreatureTemplate {
 function makeResourceField(schemaOptions={}) {
   return new foundry.data.fields.SchemaField({
     value: new foundry.data.fields.NumberField({
-      required: true, integer: true, initial: 0, labels: "DND5E.ResourceValue"
+      required: true, integer: true, initial: 0, labels: "ROTV.ResourceValue"
     }),
     max: new foundry.data.fields.NumberField({
-      required: true, integer: true, initial: 0, labels: "DND5E.ResourceMax"
+      required: true, integer: true, initial: 0, labels: "ROTV.ResourceMax"
     }),
-    sr: new foundry.data.fields.BooleanField({required: true, labels: "DND5E.ShortRestRecovery"}),
-    lr: new foundry.data.fields.BooleanField({required: true, labels: "DND5E.LongRestRecovery"}),
-    label: new foundry.data.fields.StringField({required: true, labels: "DND5E.ResourceLabel"})
+    sr: new foundry.data.fields.BooleanField({required: true, labels: "ROTV.ShortRestRecovery"}),
+    lr: new foundry.data.fields.BooleanField({required: true, labels: "ROTV.LongRestRecovery"}),
+    label: new foundry.data.fields.StringField({required: true, labels: "ROTV.ResourceLabel"})
   }, schemaOptions);
 }

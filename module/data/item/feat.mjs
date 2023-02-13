@@ -26,14 +26,14 @@ export default class FeatData extends SystemDataModel.mixin(
       type: new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.StringField({required: true}),
         subtype: new foundry.data.fields.StringField({required: true})
-      }, {label: "DND5E.ItemFeatureType"}),
-      requirements: new foundry.data.fields.StringField({required: true, nullable: true, label: "DND5E.Requirements"}),
+      }, {label: "ROTV.ItemFeatureType"}),
+      requirements: new foundry.data.fields.StringField({required: true, nullable: true, label: "ROTV.Requirements"}),
       recharge: new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.NumberField({
-          required: true, integer: true, min: 1, label: "DND5E.FeatureRechargeOn"
+          required: true, integer: true, min: 1, label: "ROTV.FeatureRechargeOn"
         }),
-        charged: new foundry.data.fields.BooleanField({required: true, label: "DND5E.Charged"})
-      }, {label: "DND5E.FeatureActionRecharge"})
+        charged: new foundry.data.fields.BooleanField({required: true, label: "ROTV.Charged"})
+      }, {label: "ROTV.FeatureActionRecharge"})
     });
   }
 

@@ -4,7 +4,7 @@ import { FormulaField } from "../../fields.mjs";
  * Data model template for item actions.
  *
  * @property {string} ability             Ability score to use when determining modifier.
- * @property {string} actionType          Action type as defined in `DND5E.itemActionTypes`.
+ * @property {string} actionType          Action type as defined in `ROTV.itemActionTypes`.
  * @property {string} attackBonus         Numeric or dice bonus to attack rolls.
  * @property {string} chatFlavor          Extra text displayed in chat.
  * @property {object} critical            Information on how critical hits are handled.
@@ -25,35 +25,35 @@ export default class ActionTemplate extends foundry.abstract.DataModel {
   static defineSchema() {
     return {
       ability: new foundry.data.fields.StringField({
-        required: true, nullable: true, initial: null, label: "DND5E.AbilityModifier"
+        required: true, nullable: true, initial: null, label: "ROTV.AbilityModifier"
       }),
       actionType: new foundry.data.fields.StringField({
-        required: true, nullable: true, initial: null, label: "DND5E.ItemActionType"
+        required: true, nullable: true, initial: null, label: "ROTV.ItemActionType"
       }),
-      attackBonus: new FormulaField({required: true, label: "DND5E.ItemAttackBonus"}),
-      chatFlavor: new foundry.data.fields.StringField({required: true, label: "DND5E.ChatFlavor"}),
+      attackBonus: new FormulaField({required: true, label: "ROTV.ItemAttackBonus"}),
+      chatFlavor: new foundry.data.fields.StringField({required: true, label: "ROTV.ChatFlavor"}),
       critical: new foundry.data.fields.SchemaField({
         threshold: new foundry.data.fields.NumberField({
-          required: true, integer: true, initial: null, positive: true, label: "DND5E.ItemCritThreshold"
+          required: true, integer: true, initial: null, positive: true, label: "ROTV.ItemCritThreshold"
         }),
-        damage: new FormulaField({required: true, label: "DND5E.ItemCritExtraDamage"})
+        damage: new FormulaField({required: true, label: "ROTV.ItemCritExtraDamage"})
       }),
       damage: new foundry.data.fields.SchemaField({
         parts: new foundry.data.fields.ArrayField(new foundry.data.fields.ArrayField(
           new foundry.data.fields.StringField({nullable: true})
         ), {required: true}),
-        versatile: new FormulaField({required: true, label: "DND5E.VersatileDamage"})
-      }, {label: "DND5E.Damage"}),
-      formula: new FormulaField({required: true, label: "DND5E.OtherFormula"}),
+        versatile: new FormulaField({required: true, label: "ROTV.VersatileDamage"})
+      }, {label: "ROTV.Damage"}),
+      formula: new FormulaField({required: true, label: "ROTV.OtherFormula"}),
       save: new foundry.data.fields.SchemaField({
-        ability: new foundry.data.fields.StringField({required: true, blank: true, label: "DND5E.Ability"}),
+        ability: new foundry.data.fields.StringField({required: true, blank: true, label: "ROTV.Ability"}),
         dc: new foundry.data.fields.NumberField({
-          required: true, min: 0, integer: true, label: "DND5E.AbbreviationDC"
+          required: true, min: 0, integer: true, label: "ROTV.AbbreviationDC"
         }),
         scaling: new foundry.data.fields.StringField({
-          required: true, blank: false, initial: "spell", label: "DND5E.ScalingFormula"
+          required: true, blank: false, initial: "spell", label: "ROTV.ScalingFormula"
         })
-      }, {label: "DND5E.SavingThrow"})
+      }, {label: "ROTV.SavingThrow"})
     };
   }
 
