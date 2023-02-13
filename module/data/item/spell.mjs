@@ -24,10 +24,10 @@ import ItemDescriptionTemplate from "./templates/item-description.mjs";
  * @property {number} materials.cost             GP cost for the required components.
  * @property {number} materials.supply           Quantity of this component available.
  * @property {object} preparation                Details on how this spell is prepared.
- * @property {string} preparation.mode           Spell preparation mode as defined in `ROTV.spellPreparationModes`.
+ * @property {string} preparation.mode           Spell preparation mode as defined in `DND5E.spellPreparationModes`.
  * @property {boolean} preparation.prepared      Is the spell currently prepared?
  * @property {object} scaling                    Details on how casting at higher levels affects this spell.
- * @property {string} scaling.mode               Spell scaling mode as defined in `ROTV.spellScalingModes`.
+ * @property {string} scaling.mode               Spell scaling mode as defined in `DND5E.spellScalingModes`.
  * @property {string} scaling.formula            Dice formula used for scaling.
  */
 export default class SpellData extends SystemDataModel.mixin(
@@ -37,33 +37,33 @@ export default class SpellData extends SystemDataModel.mixin(
   static defineSchema() {
     return this.mergeSchema(super.defineSchema(), {
       level: new foundry.data.fields.NumberField({
-        required: true, integer: true, initial: 1, min: 0, label: "ROTV.SpellLevel"
+        required: true, integer: true, initial: 1, min: 0, label: "DND5E.SpellLevel"
       }),
-      school: new foundry.data.fields.StringField({required: true, label: "ROTV.SpellSchool"}),
+      school: new foundry.data.fields.StringField({required: true, label: "DND5E.SpellSchool"}),
       components: new MappingField(new foundry.data.fields.BooleanField(), {
-        required: true, label: "ROTV.SpellComponents",
-        initialKeys: [...Object.keys(CONFIG.ROTV.spellComponents), ...Object.keys(CONFIG.ROTV.spellTags)]
+        required: true, label: "DND5E.SpellComponents",
+        initialKeys: [...Object.keys(CONFIG.DND5E.spellComponents), ...Object.keys(CONFIG.DND5E.spellTags)]
       }),
       materials: new foundry.data.fields.SchemaField({
-        value: new foundry.data.fields.StringField({required: true, label: "ROTV.SpellMaterialsDescription"}),
-        consumed: new foundry.data.fields.BooleanField({required: true, label: "ROTV.SpellMaterialsConsumed"}),
+        value: new foundry.data.fields.StringField({required: true, label: "DND5E.SpellMaterialsDescription"}),
+        consumed: new foundry.data.fields.BooleanField({required: true, label: "DND5E.SpellMaterialsConsumed"}),
         cost: new foundry.data.fields.NumberField({
-          required: true, initial: 0, min: 0, label: "ROTV.SpellMaterialsCost"
+          required: true, initial: 0, min: 0, label: "DND5E.SpellMaterialsCost"
         }),
         supply: new foundry.data.fields.NumberField({
-          required: true, initial: 0, min: 0, label: "ROTV.SpellMaterialsSupply"
+          required: true, initial: 0, min: 0, label: "DND5E.SpellMaterialsSupply"
         })
-      }, {label: "ROTV.SpellMaterials"}),
+      }, {label: "DND5E.SpellMaterials"}),
       preparation: new foundry.data.fields.SchemaField({
         mode: new foundry.data.fields.StringField({
-          required: true, initial: "prepared", label: "ROTV.SpellPreparationMode"
+          required: true, initial: "prepared", label: "DND5E.SpellPreparationMode"
         }),
-        prepared: new foundry.data.fields.BooleanField({required: true, label: "ROTV.SpellPrepared"})
-      }, {label: "ROTV.SpellPreparation"}),
+        prepared: new foundry.data.fields.BooleanField({required: true, label: "DND5E.SpellPrepared"})
+      }, {label: "DND5E.SpellPreparation"}),
       scaling: new foundry.data.fields.SchemaField({
-        mode: new foundry.data.fields.StringField({required: true, initial: "none", label: "ROTV.ScalingMode"}),
-        formula: new FormulaField({required: true, nullable: true, initial: null, label: "ROTV.ScalingFormula"})
-      }, {label: "ROTV.LevelScaling"})
+        mode: new foundry.data.fields.StringField({required: true, initial: "none", label: "DND5E.ScalingMode"}),
+        formula: new FormulaField({required: true, nullable: true, initial: null, label: "DND5E.ScalingFormula"})
+      }, {label: "DND5E.LevelScaling"})
     });
   }
 

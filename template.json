@@ -135,6 +135,38 @@
           "race": ""
         },
         "skills": {
+          "acr": {
+            "value": 0,
+            "ability": "dex",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
+          "ani": {
+            "value": 0,
+            "ability": "wis",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
+          "arc": {
+            "value": 0,
+            "ability": "int",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
+          "ath": {
+            "value": 0,
+            "ability": "str",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
           "dec": {
             "value": 0,
             "ability": "cha",
@@ -143,17 +175,9 @@
               "passive": ""
             }
           },
-          "env": {
+          "his": {
             "value": 0,
             "ability": "int",
-            "bonuses": {
-              "check": "",
-              "passive": ""
-            }
-          },
-          "han": {
-            "value": 0,
-            "ability": "dex",
             "bonuses": {
               "check": "",
               "passive": ""
@@ -175,7 +199,7 @@
               "passive": ""
             }
           },
-          "med": {
+          "inv": {
             "value": 0,
             "ability": "int",
             "bonuses": {
@@ -183,7 +207,15 @@
               "passive": ""
             }
           },
-          "org": {
+          "med": {
+            "value": 0,
+            "ability": "wis",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
+          "nat": {
             "value": 0,
             "ability": "int",
             "bonuses": {
@@ -199,6 +231,14 @@
               "passive": ""
             }
           },
+          "prf": {
+            "value": 0,
+            "ability": "cha",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
           "per": {
             "value": 0,
             "ability": "cha",
@@ -207,9 +247,17 @@
               "passive": ""
             }
           },
-          "php": {
+          "rel": {
             "value": 0,
-            "ability": "str",
+            "ability": "int",
+            "bonuses": {
+              "check": "",
+              "passive": ""
+            }
+          },
+          "slt": {
+            "value": 0,
+            "ability": "dex",
             "bonuses": {
               "check": "",
               "passive": ""
@@ -226,14 +274,6 @@
           "sur": {
             "value": 0,
             "ability": "wis",
-            "bonuses": {
-              "check": "",
-              "passive": ""
-            }
-          },
-          "tch": {
-            "value": 0,
-            "ability": "int",
             "bonuses": {
               "check": "",
               "passive": ""
@@ -627,8 +667,7 @@
       "consumableType": "potion",
       "uses": {
         "autoDestroy": false
-      },
-      "proficient": true
+      }
     },
     "equipment": {
       "templates": ["itemDescription", "physicalItem", "activatedEffect", "action", "mountable"],
@@ -667,7 +706,7 @@
       "baseItem": "",
       "ability": "int",
       "chatFlavor": "",
-      "proficient": true,
+      "proficient": 0,
       "bonus": ""
     },
     "spell": {

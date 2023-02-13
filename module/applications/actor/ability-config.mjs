@@ -5,7 +5,7 @@ import BaseConfigSheet from "./base-config.mjs";
  *
  * @param {Actor5e} actor               The Actor instance being displayed within the sheet.
  * @param {ApplicationOptions} options  Additional application configuration options.
- * @param {string} abilityId            The ability key as defined in CONFIG.ROTV.abilities.
+ * @param {string} abilityId            The ability key as defined in CONFIG.DND5E.abilities.
  */
 export default class ActorAbilityConfig extends BaseConfigSheet {
   constructor(actor, options, abilityId) {
@@ -18,8 +18,8 @@ export default class ActorAbilityConfig extends BaseConfigSheet {
   /** @override */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["rotv"],
-      template: "systems/rotv/templates/apps/ability-config.hbs",
+      classes: ["dnd5e"],
+      template: "systems/dnd5e/templates/apps/ability-config.hbs",
       width: 500,
       height: "auto"
     });
@@ -29,7 +29,7 @@ export default class ActorAbilityConfig extends BaseConfigSheet {
 
   /** @override */
   get title() {
-    return `${game.i18n.format("ROTV.AbilityConfigureTitle", {ability: CONFIG.ROTV.abilities[this._abilityId]})}: ${this.document.name}`;
+    return `${game.i18n.format("DND5E.AbilityConfigureTitle", {ability: CONFIG.DND5E.abilities[this._abilityId]})}: ${this.document.name}`;
   }
 
   /* -------------------------------------------- */
@@ -39,12 +39,12 @@ export default class ActorAbilityConfig extends BaseConfigSheet {
     const src = this.document.toObject();
     return {
       ability: src.system.abilities[this._abilityId] ?? this.document.system.abilities[this._abilityId] ?? {},
-      labelSaves: game.i18n.format("ROTV.AbilitySaveConfigure", {ability: CONFIG.ROTV.abilities[this._abilityId]}),
-      labelChecks: game.i18n.format("ROTV.AbilityCheckConfigure", {ability: CONFIG.ROTV.abilities[this._abilityId]}),
+      labelSaves: game.i18n.format("DND5E.AbilitySaveConfigure", {ability: CONFIG.DND5E.abilities[this._abilityId]}),
+      labelChecks: game.i18n.format("DND5E.AbilityCheckConfigure", {ability: CONFIG.DND5E.abilities[this._abilityId]}),
       abilityId: this._abilityId,
       proficiencyLevels: {
-        0: CONFIG.ROTV.proficiencyLevels[0],
-        1: CONFIG.ROTV.proficiencyLevels[1]
+        0: CONFIG.DND5E.proficiencyLevels[0],
+        1: CONFIG.DND5E.proficiencyLevels[1]
       },
       bonusGlobalSave: src.system.bonuses?.abilities?.save,
       bonusGlobalCheck: src.system.bonuses?.abilities?.check

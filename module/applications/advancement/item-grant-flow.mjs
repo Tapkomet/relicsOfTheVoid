@@ -8,7 +8,7 @@ export default class ItemGrantFlow extends AdvancementFlow {
   /** @inheritdoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      template: "systems/rotv/templates/advancement/item-grant-flow.hbs"
+      template: "systems/dnd5e/templates/advancement/item-grant-flow.hbs"
     });
   }
 
@@ -17,7 +17,7 @@ export default class ItemGrantFlow extends AdvancementFlow {
   /** @inheritdoc */
   async getData() {
     const config = this.advancement.configuration.items;
-    const added = this.retainedData?.items.map(i => foundry.utils.getProperty(i, "flags.rotv.sourceId"))
+    const added = this.retainedData?.items.map(i => foundry.utils.getProperty(i, "flags.dnd5e.sourceId"))
       ?? this.advancement.value.added;
     const checked = new Set(Object.values(added ?? {}));
 
@@ -60,7 +60,7 @@ export default class ItemGrantFlow extends AdvancementFlow {
   /** @inheritdoc */
   async _updateObject(event, formData) {
     const retainedData = this.retainedData?.items.reduce((obj, i) => {
-      obj[foundry.utils.getProperty(i, "flags.rotv.sourceId")] = i;
+      obj[foundry.utils.getProperty(i, "flags.dnd5e.sourceId")] = i;
       return obj;
     }, {});
     await this.advancement.apply(this.level, formData, retainedData);

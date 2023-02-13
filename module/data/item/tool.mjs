@@ -10,11 +10,11 @@ import PhysicalItemTemplate from "./templates/physical-item.mjs";
  * @mixes PhysicalItemTemplate
  * @mixes EquippableItemTemplate
  *
- * @property {string} toolType    Tool category as defined in `ROTV.toolTypes`.
- * @property {string} baseItem    Base tool as defined in `ROTV.toolIds` for determining proficiency.
+ * @property {string} toolType    Tool category as defined in `DND5E.toolTypes`.
+ * @property {string} baseItem    Base tool as defined in `DND5E.toolIds` for determining proficiency.
  * @property {string} ability     Default ability when this tool is being used.
  * @property {string} chatFlavor  Additional text added to chat when this tool is used.
- * @property {number} proficient  Level of proficiency in this tool as defined in `ROTV.proficiencyLevels`.
+ * @property {number} proficient  Level of proficiency in this tool as defined in `DND5E.proficiencyLevels`.
  * @property {string} bonus       Bonus formula added to tool rolls.
  */
 export default class ToolData extends SystemDataModel.mixin(
@@ -23,16 +23,16 @@ export default class ToolData extends SystemDataModel.mixin(
   /** @inheritdoc */
   static defineSchema() {
     return this.mergeSchema(super.defineSchema(), {
-      toolType: new foundry.data.fields.StringField({required: true, label: "ROTV.ItemToolType"}),
-      baseItem: new foundry.data.fields.StringField({required: true, label: "ROTV.ItemToolBase"}),
+      toolType: new foundry.data.fields.StringField({required: true, label: "DND5E.ItemToolType"}),
+      baseItem: new foundry.data.fields.StringField({required: true, label: "DND5E.ItemToolBase"}),
       ability: new foundry.data.fields.StringField({
-        required: true, initial: "int", blank: false, label: "ROTV.DefaultAbilityCheck"
+        required: true, initial: "int", blank: false, label: "DND5E.DefaultAbilityCheck"
       }),
-      chatFlavor: new foundry.data.fields.StringField({required: true, label: "ROTV.ChatFlavor"}),
+      chatFlavor: new foundry.data.fields.StringField({required: true, label: "DND5E.ChatFlavor"}),
       proficient: new foundry.data.fields.NumberField({
-        required: true, nullable: false, initial: 0, min: 0, label: "ROTV.ItemToolProficiency"
+        required: true, nullable: false, initial: 0, min: 0, label: "DND5E.ItemToolProficiency"
       }),
-      bonus: new FormulaField({required: true, label: "ROTV.ItemToolBonus"})
+      bonus: new FormulaField({required: true, label: "DND5E.ItemToolBonus"})
     });
   }
 

@@ -16,9 +16,9 @@ export default class ItemGrantAdvancement extends Advancement {
         configuration: ItemGrantConfigurationData
       },
       order: 40,
-      icon: "systems/rotv/icons/svg/item-grant.svg",
-      title: game.i18n.localize("ROTV.AdvancementItemGrantTitle"),
-      hint: game.i18n.localize("ROTV.AdvancementItemGrantHint"),
+      icon: "systems/dnd5e/icons/svg/item-grant.svg",
+      title: game.i18n.localize("DND5E.AdvancementItemGrantTitle"),
+      hint: game.i18n.localize("DND5E.AdvancementItemGrantHint"),
       apps: {
         config: ItemGrantConfig,
         flow: ItemGrantFlow
@@ -49,7 +49,7 @@ export default class ItemGrantAdvancement extends Advancement {
   summaryForLevel(level, { configMode=false }={}) {
     // Link to compendium items
     if ( !this.value.added || configMode ) {
-      return this.configuration.items.reduce((html, uuid) => html + rotv.utils.linkForUuid(uuid), "");
+      return this.configuration.items.reduce((html, uuid) => html + dnd5e.utils.linkForUuid(uuid), "");
     }
 
     // Link to items on the actor
@@ -85,8 +85,8 @@ export default class ItemGrantAdvancement extends Advancement {
         if ( !source ) continue;
         itemData = source.clone({
           _id: foundry.utils.randomID(),
-          "flags.rotv.sourceId": uuid,
-          "flags.rotv.advancementOrigin": `${this.item.id}.${this.id}`
+          "flags.dnd5e.sourceId": uuid,
+          "flags.dnd5e.advancementOrigin": `${this.item.id}.${this.id}`
         }, {keepId: true}).toObject();
       }
       if ( itemData.type === "spell" ) foundry.utils.mergeObject(itemData, spellChanges);
@@ -105,7 +105,7 @@ export default class ItemGrantAdvancement extends Advancement {
     const updates = {};
     for ( const item of data.items ) {
       this.actor.updateSource({items: [item]});
-      updates[item._id] = item.flags.rotv.sourceId;
+      updates[item._id] = item.flags.dnd5e.sourceId;
     }
     this.updateSource({"value.added": updates});
   }

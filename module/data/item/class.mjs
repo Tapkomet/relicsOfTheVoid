@@ -8,7 +8,7 @@ import ItemDescriptionTemplate from "./templates/item-description.mjs";
  *
  * @property {string} identifier        Identifier slug for this class.
  * @property {number} levels            Current number of levels in this class.
- * @property {string} hitDice           Denomination of hit dice available as defined in `ROTV.hitDieTypes`.
+ * @property {string} hitDice           Denomination of hit dice available as defined in `DND5E.hitDieTypes`.
  * @property {number} hitDiceUsed       Number of hit dice consumed.
  * @property {object[]} advancement     Advancement objects for this class.
  * @property {string[]} saves           Savings throws in which this class grants proficiency.
@@ -17,43 +17,43 @@ import ItemDescriptionTemplate from "./templates/item-description.mjs";
  * @property {string[]} skills.choices  List of skill keys that are valid to be chosen.
  * @property {string[]} skills.value    List of skill keys the player has chosen.
  * @property {object} spellcasting      Details on class's spellcasting ability.
- * @property {string} spellcasting.progression  Spell progression granted by class as from `ROTV.spellProgression`.
+ * @property {string} spellcasting.progression  Spell progression granted by class as from `DND5E.spellProgression`.
  * @property {string} spellcasting.ability      Ability score to use for spellcasting.
  */
 export default class ClassData extends SystemDataModel.mixin(ItemDescriptionTemplate) {
   /** @inheritdoc */
   static defineSchema() {
     return this.mergeSchema(super.defineSchema(), {
-      identifier: new IdentifierField({required: true, label: "ROTV.Identifier"}),
+      identifier: new IdentifierField({required: true, label: "DND5E.Identifier"}),
       levels: new foundry.data.fields.NumberField({
-        required: true, nullable: false, integer: true, min: 0, initial: 1, label: "ROTV.ClassLevels"
+        required: true, nullable: false, integer: true, min: 0, initial: 1, label: "DND5E.ClassLevels"
       }),
       hitDice: new foundry.data.fields.StringField({
-        required: true, initial: "d6", blank: false, label: "ROTV.HitDice",
+        required: true, initial: "d6", blank: false, label: "DND5E.HitDice",
         validate: v => /d\d+/.test(v), validationError: "must be a dice value in the format d#"
       }),
       hitDiceUsed: new foundry.data.fields.NumberField({
-        required: true, nullable: false, integer: true, initial: 0, min: 0, label: "ROTV.HitDiceUsed"
+        required: true, nullable: false, integer: true, initial: 0, min: 0, label: "DND5E.HitDiceUsed"
       }),
-      advancement: new foundry.data.fields.ArrayField(new AdvancementField(), {label: "ROTV.AdvancementTitle"}),
-      saves: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField(), {label: "ROTV.ClassSaves"}),
+      advancement: new foundry.data.fields.ArrayField(new AdvancementField(), {label: "DND5E.AdvancementTitle"}),
+      saves: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField(), {label: "DND5E.ClassSaves"}),
       skills: new foundry.data.fields.SchemaField({
         number: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 2, label: "ROTV.ClassSkillsNumber"
+          required: true, nullable: false, integer: true, min: 0, initial: 2, label: "DND5E.ClassSkillsNumber"
         }),
         choices: new foundry.data.fields.ArrayField(
-          new foundry.data.fields.StringField(), {label: "ROTV.ClassSkillsEligible"}
+          new foundry.data.fields.StringField(), {label: "DND5E.ClassSkillsEligible"}
         ),
         value: new foundry.data.fields.ArrayField(
-          new foundry.data.fields.StringField(), {label: "ROTV.ClassSkillsChosen"}
+          new foundry.data.fields.StringField(), {label: "DND5E.ClassSkillsChosen"}
         )
       }),
       spellcasting: new foundry.data.fields.SchemaField({
         progression: new foundry.data.fields.StringField({
-          required: true, initial: "none", blank: false, label: "ROTV.SpellProgression"
+          required: true, initial: "none", blank: false, label: "DND5E.SpellProgression"
         }),
-        ability: new foundry.data.fields.StringField({required: true, label: "ROTV.SpellAbility"})
-      }, {label: "ROTV.Spellcasting"})
+        ability: new foundry.data.fields.StringField({required: true, label: "DND5E.SpellAbility"})
+      }, {label: "DND5E.Spellcasting"})
     });
   }
 

@@ -51,7 +51,7 @@ export default class SystemDataModel extends foundry.abstract.DataModel {
     const schema = {};
     for ( const template of this._schemaTemplates ) {
       if ( !template.defineSchema ) {
-        throw new Error(`Invalid rotv template mixin ${template} defined on class ${this.constructor}`);
+        throw new Error(`Invalid dnd5e template mixin ${template} defined on class ${this.constructor}`);
       }
       this.mergeSchema(schema, template.defineSchema());
     }

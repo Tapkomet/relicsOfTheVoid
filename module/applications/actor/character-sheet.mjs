@@ -10,7 +10,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
   /** @inheritDoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["rotv", "sheet", "actor", "character"]
+      classes: ["dnd5e", "sheet", "actor", "character"]
     });
   }
 
@@ -26,7 +26,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     context.resources = ["primary", "secondary", "tertiary"].reduce((arr, r) => {
       const res = context.actor.system.resources[r] || {};
       res.name = r;
-      res.placeholder = game.i18n.localize(`ROTV.Resource${r.titleCase()}`);
+      res.placeholder = game.i18n.localize(`DND5E.Resource${r.titleCase()}`);
       if (res && res.value === 0) delete res.value;
       if (res && res.max === 0) delete res.max;
       return arr.concat([res]);
@@ -34,11 +34,11 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
 
     const classes = this.actor.itemTypes.class;
     return foundry.utils.mergeObject(context, {
-      disableExperience: game.settings.get("rotv", "disableExperienceTracking"),
+      disableExperience: game.settings.get("dnd5e", "disableExperienceTracking"),
       classLabels: classes.map(c => c.name).join(", "),
       multiclassLabels: classes.map(c => [c.subclass?.name ?? "", c.name, c.system.levels].filterJoin(" ")).join(", "),
-      weightUnit: game.i18n.localize(`ROTV.Abbreviation${
-        game.settings.get("rotv", "metricWeightUnits") ? "Kgs" : "Lbs"}`),
+      weightUnit: game.i18n.localize(`DND5E.Abbreviation${
+        game.settings.get("dnd5e", "metricWeightUnits") ? "Kgs" : "Lbs"}`),
       encumbrance: context.system.attributes.encumbrance
     });
   }
@@ -66,15 +66,15 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
       const ctx = context.itemContext[item.id] ??= {};
       ctx.isStack = Number.isNumeric(quantity) && (quantity !== 1);
       ctx.attunement = {
-        [CONFIG.ROTV.attunementTypes.REQUIRED]: {
+        [CONFIG.DND5E.attunementTypes.REQUIRED]: {
           icon: "fa-sun",
           cls: "not-attuned",
-          title: "ROTV.AttunementRequired"
+          title: "DND5E.AttunementRequired"
         },
-        [CONFIG.ROTV.attunementTypes.ATTUNED]: {
+        [CONFIG.DND5E.attunementTypes.ATTUNED]: {
           icon: "fa-sun",
           cls: "attuned",
-          title: "ROTV.AttunementAttuned"
+          title: "DND5E.AttunementAttuned"
         }
       }[item.system.attunement];
 
@@ -121,10 +121,10 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
 
     // Sort classes and interleave matching subclasses, put unmatched subclasses into features so they don't disappear
     classes.sort((a, b) => b.system.levels - a.system.levels);
-    const maxLevelDelta = CONFIG.ROTV.maxLevel - this.actor.system.details.level;
+    const maxLevelDelta = CONFIG.DND5E.maxLevel - this.actor.system.details.level;
     classes = classes.reduce((arr, cls) => {
       const ctx = context.itemContext[cls.id] ??= {};
-      ctx.availableLevels = Array.fromRange(CONFIG.ROTV.maxLevel + 1).slice(1).map(level => {
+      ctx.availableLevels = Array.fromRange(CONFIG.DND5E.maxLevel + 1).slice(1).map(level => {
         const delta = level - cls.system.levels;
         return { level, delta, disabled: delta > maxLevelDelta };
       });
@@ -136,7 +136,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     }, []);
     for ( const subclass of subclasses ) {
       feats.push(subclass);
-      const message = game.i18n.format("ROTV.SubclassMismatchWarn", {
+      const message = game.i18n.format("DND5E.SubclassMismatchWarn", {
         name: subclass.name, class: subclass.system.classIdentifier
       });
       context.warnings.push({ message, type: "warning" });
@@ -151,10 +151,10 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
         label: "ITEM.TypeClassPl", items: classes,
         hasActions: false, dataset: {type: "class"}, isClass: true },
       active: {
-        label: "ROTV.FeatureActive", items: [],
+        label: "DND5E.FeatureActive", items: [],
         hasActions: true, dataset: {type: "feat", "activation.type": "action"} },
       passive: {
-        label: "ROTV.FeaturePassive", items: [],
+        label: "DND5E.FeaturePassive", items: [],
         hasActions: false, dataset: {type: "feat"} }
     };
     for ( const feat of feats ) {
@@ -186,14 +186,14 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
       const isPrepared = !!prep.prepared;
       context.toggleClass = isPrepared ? "active" : "";
       if ( isAlways ) context.toggleClass = "fixed";
-      if ( isAlways ) context.toggleTitle = CONFIG.ROTV.spellPreparationModes.always;
-      else if ( isPrepared ) context.toggleTitle = CONFIG.ROTV.spellPreparationModes.prepared;
-      else context.toggleTitle = game.i18n.localize("ROTV.SpellUnprepared");
+      if ( isAlways ) context.toggleTitle = CONFIG.DND5E.spellPreparationModes.always;
+      else if ( isPrepared ) context.toggleTitle = CONFIG.DND5E.spellPreparationModes.prepared;
+      else context.toggleTitle = game.i18n.localize("DND5E.SpellUnprepared");
     }
     else {
       const isActive = !!item.system.equipped;
       context.toggleClass = isActive ? "active" : "";
-      context.toggleTitle = game.i18n.localize(isActive ? "ROTV.Equipped" : "ROTV.Unequipped");
+      context.toggleTitle = game.i18n.localize(isActive ? "DND5E.Equipped" : "DND5E.Unequipped");
       context.canToggle = "equipped" in item.system;
     }
   }
@@ -227,8 +227,8 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     switch ( button.dataset.action ) {
       case "convertCurrency":
         return Dialog.confirm({
-          title: `${game.i18n.localize("ROTV.CurrencyConvert")}`,
-          content: `<p>${game.i18n.localize("ROTV.CurrencyConvertHint")}</p>`,
+          title: `${game.i18n.localize("DND5E.CurrencyConvert")}`,
+          content: `<p>${game.i18n.localize("DND5E.CurrencyConvertHint")}</p>`,
           yes: () => this.actor.convertCurrency()
         });
       case "rollDeathSave":
@@ -252,7 +252,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     const classId = event.target.closest(".item")?.dataset.itemId;
     if ( !delta || !classId ) return;
     const classItem = this.actor.items.get(classId);
-    if ( !game.settings.get("rotv", "disableAdvancements") ) {
+    if ( !game.settings.get("dnd5e", "disableAdvancements") ) {
       const manager = AdvancementManager.forLevelChange(this.actor, classId, delta);
       if ( manager.steps.length ) {
         if ( delta > 0 ) return manager.render(true);
@@ -320,9 +320,9 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     // Increment the number of class levels a character instead of creating a new item
     if ( itemData.type === "class" ) {
       const charLevel = this.actor.system.details.level;
-      itemData.system.levels = Math.min(itemData.system.levels, CONFIG.ROTV.maxLevel - charLevel);
+      itemData.system.levels = Math.min(itemData.system.levels, CONFIG.DND5E.maxLevel - charLevel);
       if ( itemData.system.levels <= 0 ) {
-        const err = game.i18n.format("ROTV.MaxCharacterLevelExceededWarn", { max: CONFIG.ROTV.maxLevel });
+        const err = game.i18n.format("DND5E.MaxCharacterLevelExceededWarn", { max: CONFIG.DND5E.maxLevel });
         ui.notifications.error(err);
         return false;
       }
@@ -330,7 +330,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
       const cls = this.actor.itemTypes.class.find(c => c.identifier === itemData.system.identifier);
       if ( cls ) {
         const priorLevel = cls.system.levels;
-        if ( !game.settings.get("rotv", "disableAdvancements") ) {
+        if ( !game.settings.get("dnd5e", "disableAdvancements") ) {
           const manager = AdvancementManager.forLevelChange(this.actor, cls.id, itemData.system.levels);
           if ( manager.steps.length ) {
             manager.render(true);
@@ -346,13 +346,13 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     else if ( itemData.type === "subclass" ) {
       const other = this.actor.itemTypes.subclass.find(i => i.identifier === itemData.system.identifier);
       if ( other ) {
-        const err = game.i18n.format("ROTV.SubclassDuplicateError", {identifier: other.identifier});
+        const err = game.i18n.format("DND5E.SubclassDuplicateError", {identifier: other.identifier});
         ui.notifications.error(err);
         return false;
       }
       const cls = this.actor.itemTypes.class.find(i => i.identifier === itemData.system.classIdentifier);
       if ( cls && cls.subclass ) {
-        const err = game.i18n.format("ROTV.SubclassAssignmentError", {class: cls.name, subclass: cls.subclass.name});
+        const err = game.i18n.format("DND5E.SubclassAssignmentError", {class: cls.name, subclass: cls.subclass.name});
         ui.notifications.error(err);
         return false;
       }

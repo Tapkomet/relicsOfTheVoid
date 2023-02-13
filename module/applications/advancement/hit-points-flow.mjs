@@ -8,7 +8,7 @@ export default class HitPointsFlow extends AdvancementFlow {
   /** @inheritdoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      template: "systems/rotv/templates/advancement/hit-points-flow.hbs"
+      template: "systems/dnd5e/templates/advancement/hit-points-flow.hbs"
     });
   }
 
@@ -77,7 +77,7 @@ export default class HitPointsFlow extends AdvancementFlow {
 
     this.form.querySelector(".rollResult")?.classList.add("error");
     const errorType = formData.value ? "Invalid" : "Empty";
-    throw new Advancement.ERROR(game.i18n.localize(`ROTV.AdvancementHitPoints${errorType}Error`));
+    throw new Advancement.ERROR(game.i18n.localize(`DND5E.AdvancementHitPoints${errorType}Error`));
   }
 
 }
