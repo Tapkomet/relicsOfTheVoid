@@ -11,7 +11,7 @@ export default class BaseConfigSheet extends DocumentSheet {
       for ( const override of this._getActorOverrides() ) {
         html.find(`input[name="${override}"],select[name="${override}"]`).each((i, el) => {
           el.disabled = true;
-          el.dataset.tooltip = "ROTV.ActiveEffectOverrideWarning";
+          el.dataset.tooltip = "DND5E.ActiveEffectOverrideWarning";
         });
       }
     }

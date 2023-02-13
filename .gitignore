@@ -1,6 +1,6 @@
 # Build Artifacts
-rotv-compiled*
-rotv.lock
+dnd5e-compiled*
+dnd5e.lock
 
 # IDE
 .idea/

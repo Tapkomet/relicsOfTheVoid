@@ -1,14 +1,14 @@
 import TraitSelector from "./trait-selector.mjs";
 
 /**
- * @deprecated since rotv 2.1, targeted for removal in 2.3
+ * @deprecated since dnd5e 2.1, targeted for removal in 2.3
  */
 export default class DamageTraitSelector extends TraitSelector {
 
   /** @inheritdoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      template: "systems/rotv/templates/apps/damage-trait-selector.hbs"
+      template: "systems/dnd5e/templates/apps/damage-trait-selector.hbs"
     });
   }
 

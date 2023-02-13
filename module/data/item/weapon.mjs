@@ -16,8 +16,8 @@ import MountableTemplate from "./templates/mountable.mjs";
  * @mixes ActionTemplate
  * @mixes MountableTemplate
  *
- * @property {string} weaponType   Weapon category as defined in `ROTV.weaponTypes`.
- * @property {string} baseItem     Base weapon as defined in `ROTV.weaponIds` for determining proficiency.
+ * @property {string} weaponType   Weapon category as defined in `DND5E.weaponTypes`.
+ * @property {string} baseItem     Base weapon as defined in `DND5E.weaponIds` for determining proficiency.
  * @property {object} properties   Mapping of various weapon property booleans.
  * @property {boolean} proficient  Does the weapon's owner have proficiency?
  */
@@ -29,13 +29,13 @@ export default class WeaponData extends SystemDataModel.mixin(
   static defineSchema() {
     return this.mergeSchema(super.defineSchema(), {
       weaponType: new foundry.data.fields.StringField({
-        required: true, initial: "simpleM", label: "ROTV.ItemWeaponType"
+        required: true, initial: "simpleM", label: "DND5E.ItemWeaponType"
       }),
-      baseItem: new foundry.data.fields.StringField({required: true, blank: true, label: "ROTV.ItemWeaponBase"}),
+      baseItem: new foundry.data.fields.StringField({required: true, blank: true, label: "DND5E.ItemWeaponBase"}),
       properties: new MappingField(new foundry.data.fields.BooleanField(), {
-        required: true, initialKeys: CONFIG.ROTV.weaponProperties, label: "ROTV.ItemWeaponProperties"
+        required: true, initialKeys: CONFIG.DND5E.weaponProperties, label: "DND5E.ItemWeaponProperties"
       }),
-      proficient: new foundry.data.fields.BooleanField({required: true, initial: true, label: "ROTV.Proficient"})
+      proficient: new foundry.data.fields.BooleanField({required: true, initial: true, label: "DND5E.Proficient"})
     });
   }
 

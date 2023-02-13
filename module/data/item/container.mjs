@@ -13,7 +13,7 @@ import CurrencyTemplate from "../shared/currency.mjs";
  * @mixes CurrencyTemplate
  *
  * @property {object} capacity              Information on container's carrying capacity.
- * @property {string} capacity.type         Method for tracking max capacity as defined in `ROTV.itemCapacityTypes`.
+ * @property {string} capacity.type         Method for tracking max capacity as defined in `DND5E.itemCapacityTypes`.
  * @property {number} capacity.value        Total amount of the type this container can carry.
  * @property {boolean} capacity.weightless  Does the weight of the items in the container carry over to the actor?
  */
@@ -25,13 +25,13 @@ export default class ContainerData extends SystemDataModel.mixin(
     return this.mergeSchema(super.defineSchema(), {
       capacity: new foundry.data.fields.SchemaField({
         type: new foundry.data.fields.StringField({
-          required: true, initial: "weight", blank: false, label: "ROTV.ItemContainerCapacityType"
+          required: true, initial: "weight", blank: false, label: "DND5E.ItemContainerCapacityType"
         }),
         value: new foundry.data.fields.NumberField({
-          required: true, min: 0, label: "ROTV.ItemContainerCapacityMax"
+          required: true, min: 0, label: "DND5E.ItemContainerCapacityMax"
         }),
-        weightless: new foundry.data.fields.BooleanField({required: true, label: "ROTV.ItemContainerWeightless"})
-      }, {label: "ROTV.ItemContainerCapacity"})
+        weightless: new foundry.data.fields.BooleanField({required: true, label: "DND5E.ItemContainerWeightless"})
+      }, {label: "DND5E.ItemContainerCapacity"})
     });
   }
 }

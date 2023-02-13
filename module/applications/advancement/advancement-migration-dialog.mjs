@@ -6,7 +6,7 @@ export default class AdvancementMigrationDialog extends Dialog {
   /** @inheritdoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["rotv", "advancement-migration", "dialog"],
+      classes: ["dnd5e", "advancement-migration", "dialog"],
       jQuery: false,
       width: 500
     });
@@ -27,15 +27,15 @@ export default class AdvancementMigrationDialog extends Dialog {
     }));
     return new Promise(async (resolve, reject) => {
       const dialog = new this({
-        title: `${game.i18n.localize("ROTV.AdvancementMigrationTitle")}: ${item.name}`,
+        title: `${game.i18n.localize("DND5E.AdvancementMigrationTitle")}: ${item.name}`,
         content: await renderTemplate(
-          "systems/rotv/templates/advancement/advancement-migration-dialog.hbs",
+          "systems/dnd5e/templates/advancement/advancement-migration-dialog.hbs",
           { item, advancements: advancementContext }
         ),
         buttons: {
           continue: {
             icon: '<i class="fas fa-check"></i>',
-            label: game.i18n.localize("ROTV.AdvancementMigrationConfirm"),
+            label: game.i18n.localize("DND5E.AdvancementMigrationConfirm"),
             callback: html => resolve(advancements.filter(a => html.querySelector(`[name="${a.id}"]`)?.checked))
           },
           cancel: {

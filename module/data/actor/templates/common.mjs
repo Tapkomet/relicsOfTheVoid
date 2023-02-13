@@ -24,14 +24,14 @@ export default class CommonTemplate extends SystemDataModel.mixin(CurrencyTempla
     return this.mergeSchema(super.defineSchema(), {
       abilities: new MappingField(new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 10, label: "ROTV.AbilityScore"
+          required: true, nullable: false, integer: true, min: 0, initial: 10, label: "DND5E.AbilityScore"
         }),
-        proficient: new foundry.data.fields.NumberField({required: true, initial: 0, label: "ROTV.ProficiencyLevel"}),
+        proficient: new foundry.data.fields.NumberField({required: true, initial: 0, label: "DND5E.ProficiencyLevel"}),
         bonuses: new foundry.data.fields.SchemaField({
-          check: new FormulaField({required: true, label: "ROTV.AbilityCheckBonus"}),
-          save: new FormulaField({required: true, label: "ROTV.SaveBonus"})
-        }, {label: "ROTV.AbilityBonuses"})
-      }), {initialKeys: CONFIG.ROTV.abilities, label: "ROTV.Abilities"})
+          check: new FormulaField({required: true, label: "DND5E.AbilityCheckBonus"}),
+          save: new FormulaField({required: true, label: "DND5E.SaveBonus"})
+        }, {label: "DND5E.AbilityBonuses"})
+      }), {initialKeys: CONFIG.DND5E.abilities, label: "DND5E.Abilities"})
     });
   }
 

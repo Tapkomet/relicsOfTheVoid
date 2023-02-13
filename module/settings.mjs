@@ -5,7 +5,7 @@ import { ModuleArtConfig } from "./module-art.mjs";
  */
 export default function registerSystemSettings() {
   // Internal System Migration Version
-  game.settings.register("rotv", "systemMigrationVersion", {
+  game.settings.register("dnd5e", "systemMigrationVersion", {
     name: "System Migration Version",
     scope: "world",
     config: false,
@@ -14,7 +14,7 @@ export default function registerSystemSettings() {
   });
 
   // Rest Recovery Rules
-  game.settings.register("rotv", "restVariant", {
+  game.settings.register("dnd5e", "restVariant", {
     name: "SETTINGS.5eRestN",
     hint: "SETTINGS.5eRestL",
     scope: "world",
@@ -29,7 +29,7 @@ export default function registerSystemSettings() {
   });
 
   // Diagonal Movement Rule
-  game.settings.register("rotv", "diagonalMovement", {
+  game.settings.register("dnd5e", "diagonalMovement", {
     name: "SETTINGS.5eDiagN",
     hint: "SETTINGS.5eDiagL",
     scope: "world",
@@ -45,7 +45,7 @@ export default function registerSystemSettings() {
   });
 
   // Proficiency modifier type
-  game.settings.register("rotv", "proficiencyModifier", {
+  game.settings.register("dnd5e", "proficiencyModifier", {
     name: "SETTINGS.5eProfN",
     hint: "SETTINGS.5eProfL",
     scope: "world",
@@ -59,7 +59,7 @@ export default function registerSystemSettings() {
   });
 
   // Use Honor ability score
-  game.settings.register("rotv", "honorScore", {
+  game.settings.register("dnd5e", "honorScore", {
     name: "SETTINGS.5eHonorN",
     hint: "SETTINGS.5eHonorL",
     scope: "world",
@@ -70,7 +70,7 @@ export default function registerSystemSettings() {
   });
 
   // Use Sanity ability score
-  game.settings.register("rotv", "sanityScore", {
+  game.settings.register("dnd5e", "sanityScore", {
     name: "SETTINGS.5eSanityN",
     hint: "SETTINGS.5eSanityL",
     scope: "world",
@@ -81,7 +81,7 @@ export default function registerSystemSettings() {
   });
 
   // Apply Dexterity as Initiative Tiebreaker
-  game.settings.register("rotv", "initiativeDexTiebreaker", {
+  game.settings.register("dnd5e", "initiativeDexTiebreaker", {
     name: "SETTINGS.5eInitTBN",
     hint: "SETTINGS.5eInitTBL",
     scope: "world",
@@ -91,7 +91,7 @@ export default function registerSystemSettings() {
   });
 
   // Record Currency Weight
-  game.settings.register("rotv", "currencyWeight", {
+  game.settings.register("dnd5e", "currencyWeight", {
     name: "SETTINGS.5eCurWtN",
     hint: "SETTINGS.5eCurWtL",
     scope: "world",
@@ -101,7 +101,7 @@ export default function registerSystemSettings() {
   });
 
   // Disable Experience Tracking
-  game.settings.register("rotv", "disableExperienceTracking", {
+  game.settings.register("dnd5e", "disableExperienceTracking", {
     name: "SETTINGS.5eNoExpN",
     hint: "SETTINGS.5eNoExpL",
     scope: "world",
@@ -111,7 +111,7 @@ export default function registerSystemSettings() {
   });
 
   // Disable Advancements
-  game.settings.register("rotv", "disableAdvancements", {
+  game.settings.register("dnd5e", "disableAdvancements", {
     name: "SETTINGS.5eNoAdvancementsN",
     hint: "SETTINGS.5eNoAdvancementsL",
     scope: "world",
@@ -121,7 +121,7 @@ export default function registerSystemSettings() {
   });
 
   // Collapse Item Cards (by default)
-  game.settings.register("rotv", "autoCollapseItemCards", {
+  game.settings.register("dnd5e", "autoCollapseItemCards", {
     name: "SETTINGS.5eAutoCollapseCardN",
     hint: "SETTINGS.5eAutoCollapseCardL",
     scope: "client",
@@ -134,7 +134,7 @@ export default function registerSystemSettings() {
   });
 
   // Allow Polymorphing
-  game.settings.register("rotv", "allowPolymorphing", {
+  game.settings.register("dnd5e", "allowPolymorphing", {
     name: "SETTINGS.5eAllowPolymorphingN",
     hint: "SETTINGS.5eAllowPolymorphingL",
     scope: "world",
@@ -144,7 +144,7 @@ export default function registerSystemSettings() {
   });
 
   // Polymorph Settings
-  game.settings.register("rotv", "polymorphSettings", {
+  game.settings.register("dnd5e", "polymorphSettings", {
     scope: "client",
     default: {
       keepPhysical: false,
@@ -173,7 +173,7 @@ export default function registerSystemSettings() {
   });
 
   // Metric Unit Weights
-  game.settings.register("rotv", "metricWeightUnits", {
+  game.settings.register("dnd5e", "metricWeightUnits", {
     name: "SETTINGS.5eMetricN",
     hint: "SETTINGS.5eMetricL",
     scope: "world",
@@ -183,7 +183,7 @@ export default function registerSystemSettings() {
   });
 
   // Critical Damage Modifiers
-  game.settings.register("rotv", "criticalDamageModifiers", {
+  game.settings.register("dnd5e", "criticalDamageModifiers", {
     name: "SETTINGS.5eCriticalModifiersN",
     hint: "SETTINGS.5eCriticalModifiersL",
     scope: "world",
@@ -193,7 +193,7 @@ export default function registerSystemSettings() {
   });
 
   // Critical Damage Maximize
-  game.settings.register("rotv", "criticalDamageMaxDice", {
+  game.settings.register("dnd5e", "criticalDamageMaxDice", {
     name: "SETTINGS.5eCriticalMaxDiceN",
     hint: "SETTINGS.5eCriticalMaxDiceL",
     scope: "world",
@@ -203,7 +203,7 @@ export default function registerSystemSettings() {
   });
 
   // Strict validation
-  game.settings.register("rotv", "strictValidation", {
+  game.settings.register("dnd5e", "strictValidation", {
     scope: "world",
     config: false,
     type: Boolean,
@@ -211,22 +211,22 @@ export default function registerSystemSettings() {
   });
 
   // Dynamic art.
-  game.settings.registerMenu("rotv", "moduleArtConfiguration", {
-    name: "ROTV.ModuleArtConfigN",
-    label: "ROTV.ModuleArtConfigL",
-    hint: "ROTV.ModuleArtConfigH",
+  game.settings.registerMenu("dnd5e", "moduleArtConfiguration", {
+    name: "DND5E.ModuleArtConfigN",
+    label: "DND5E.ModuleArtConfigL",
+    hint: "DND5E.ModuleArtConfigH",
     icon: "fa-solid fa-palette",
     type: ModuleArtConfig,
     restricted: true
   });
 
-  game.settings.register("rotv", "moduleArtConfiguration", {
+  game.settings.register("dnd5e", "moduleArtConfiguration", {
     name: "Module Art Configuration",
     scope: "world",
     config: false,
     type: Object,
     default: {
-      rotv: {
+      dnd5e: {
         portraits: true,
         tokens: true
       }

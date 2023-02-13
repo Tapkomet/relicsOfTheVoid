@@ -19,8 +19,8 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
   /** @override */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["rotv", "actor-hit-points-config"],
-      template: "systems/rotv/templates/apps/hit-points-config.hbs",
+      classes: ["dnd5e", "actor-hit-points-config"],
+      template: "systems/dnd5e/templates/apps/hit-points-config.hbs",
       width: 320,
       height: "auto",
       sheetConfig: false
@@ -31,7 +31,7 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
 
   /** @inheritdoc */
   get title() {
-    return `${game.i18n.localize("ROTV.HitPointsConfig")}: ${this.document.name}`;
+    return `${game.i18n.localize("DND5E.HitPointsConfig")}: ${this.document.name}`;
   }
 
   /* -------------------------------------------- */
@@ -99,7 +99,7 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
       this.clone.updateSource({"system.attributes.hp.max": roll.total});
       this.render();
     } catch(error) {
-      ui.notifications.error(game.i18n.localize("ROTV.HPFormulaError"));
+      ui.notifications.error(game.i18n.localize("DND5E.HPFormulaError"));
       throw error;
     }
   }

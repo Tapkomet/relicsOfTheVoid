@@ -53,68 +53,68 @@ export default class NPCData extends CreatureTemplate {
         ...AttributesFields.common,
         ...AttributesFields.creature,
         ac: new foundry.data.fields.SchemaField({
-          flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.ArmorClassFlat"}),
-          calc: new foundry.data.fields.StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
-          formula: new FormulaField({deterministic: true, label: "ROTV.ArmorClassFormula"})
-        }, {label: "ROTV.ArmorClass"}),
+          flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "DND5E.ArmorClassFlat"}),
+          calc: new foundry.data.fields.StringField({initial: "default", label: "DND5E.ArmorClassCalculation"}),
+          formula: new FormulaField({deterministic: true, label: "DND5E.ArmorClassFormula"})
+        }, {label: "DND5E.ArmorClass"}),
         hp: new foundry.data.fields.SchemaField({
           value: new foundry.data.fields.NumberField({
-            nullable: false, integer: true, min: 0, initial: 10, label: "ROTV.HitPointsCurrent"
+            nullable: false, integer: true, min: 0, initial: 10, label: "DND5E.HitPointsCurrent"
           }),
           max: new foundry.data.fields.NumberField({
-            nullable: false, integer: true, min: 0, initial: 10, label: "ROTV.HitPointsMax"
+            nullable: false, integer: true, min: 0, initial: 10, label: "DND5E.HitPointsMax"
           }),
-          temp: new foundry.data.fields.NumberField({integer: true, initial: 0, min: 0, label: "ROTV.HitPointsTemp"}),
-          tempmax: new foundry.data.fields.NumberField({integer: true, initial: 0, label: "ROTV.HitPointsTempMax"}),
-          formula: new FormulaField({required: true, label: "ROTV.HPFormula"})
-        }, {label: "ROTV.HitPoints"})
-      }, {label: "ROTV.Attributes"}),
+          temp: new foundry.data.fields.NumberField({integer: true, initial: 0, min: 0, label: "DND5E.HitPointsTemp"}),
+          tempmax: new foundry.data.fields.NumberField({integer: true, initial: 0, label: "DND5E.HitPointsTempMax"}),
+          formula: new FormulaField({required: true, label: "DND5E.HPFormula"})
+        }, {label: "DND5E.HitPoints"})
+      }, {label: "DND5E.Attributes"}),
       details: new foundry.data.fields.SchemaField({
         ...DetailsFields.common,
         ...DetailsFields.creature,
         type: new foundry.data.fields.SchemaField({
-          value: new foundry.data.fields.StringField({required: true, blank: true, label: "ROTV.CreatureType"}),
-          subtype: new foundry.data.fields.StringField({required: true, label: "ROTV.CreatureTypeSelectorSubtype"}),
-          swarm: new foundry.data.fields.StringField({required: true, blank: true, label: "ROTV.CreatureSwarmSize"}),
-          custom: new foundry.data.fields.StringField({required: true, label: "ROTV.CreatureTypeSelectorCustom"})
-        }, {label: "ROTV.CreatureType"}),
-        environment: new foundry.data.fields.StringField({required: true, label: "ROTV.Environment"}),
+          value: new foundry.data.fields.StringField({required: true, blank: true, label: "DND5E.CreatureType"}),
+          subtype: new foundry.data.fields.StringField({required: true, label: "DND5E.CreatureTypeSelectorSubtype"}),
+          swarm: new foundry.data.fields.StringField({required: true, blank: true, label: "DND5E.CreatureSwarmSize"}),
+          custom: new foundry.data.fields.StringField({required: true, label: "DND5E.CreatureTypeSelectorCustom"})
+        }, {label: "DND5E.CreatureType"}),
+        environment: new foundry.data.fields.StringField({required: true, label: "DND5E.Environment"}),
         cr: new foundry.data.fields.NumberField({
-          required: true, nullable: false, min: 0, initial: 1, label: "ROTV.ChallengeRating"
+          required: true, nullable: false, min: 0, initial: 1, label: "DND5E.ChallengeRating"
         }),
         spellLevel: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SpellcasterLevel"
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.SpellcasterLevel"
         }),
-        source: new foundry.data.fields.StringField({required: true, label: "ROTV.Source"})
-      }, {label: "ROTV.Details"}),
+        source: new foundry.data.fields.StringField({required: true, label: "DND5E.Source"})
+      }, {label: "DND5E.Details"}),
       resources: new foundry.data.fields.SchemaField({
         legact: new foundry.data.fields.SchemaField({
           value: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.LegActRemaining"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.LegActRemaining"
           }),
           max: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.LegActMax"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.LegActMax"
           })
-        }, {label: "ROTV.LegAct"}),
+        }, {label: "DND5E.LegAct"}),
         legres: new foundry.data.fields.SchemaField({
           value: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.LegResRemaining"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.LegResRemaining"
           }),
           max: new foundry.data.fields.NumberField({
-            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.LegResMax"
+            required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.LegResMax"
           })
-        }, {label: "ROTV.LegRes"}),
+        }, {label: "DND5E.LegRes"}),
         lair: new foundry.data.fields.SchemaField({
-          value: new foundry.data.fields.BooleanField({required: true, label: "ROTV.LairAct"}),
+          value: new foundry.data.fields.BooleanField({required: true, label: "DND5E.LairAct"}),
           initiative: new foundry.data.fields.NumberField({
-            required: true, integer: true, label: "ROTV.LairActionInitiative"
+            required: true, integer: true, label: "DND5E.LairActionInitiative"
           })
-        }, {label: "ROTV.LairActionLabel"})
-      }, {label: "ROTV.Resources"}),
+        }, {label: "DND5E.LairActionLabel"})
+      }, {label: "DND5E.Resources"}),
       traits: new foundry.data.fields.SchemaField({
         ...TraitsFields.common,
         ...TraitsFields.creature
-      }, {label: "ROTV.Traits"})
+      }, {label: "DND5E.Traits"})
     });
   }
 
@@ -151,7 +151,7 @@ export default class NPCData extends CreatureTemplate {
 
       // Match a known creature type
       const typeLc = match.groups.type.trim().toLowerCase();
-      const typeMatch = Object.entries(CONFIG.ROTV.creatureTypes).find(([k, v]) => {
+      const typeMatch = Object.entries(CONFIG.DND5E.creatureTypes).find(([k, v]) => {
         return (typeLc === k)
           || (typeLc === game.i18n.localize(v).toLowerCase())
           || (typeLc === game.i18n.localize(`${v}Pl`).toLowerCase());
@@ -166,7 +166,7 @@ export default class NPCData extends CreatureTemplate {
       // Match a swarm
       if ( match.groups.size ) {
         const sizeLc = match.groups.size ? match.groups.size.trim().toLowerCase() : "tiny";
-        const sizeMatch = Object.entries(CONFIG.ROTV.actorSizes).find(([k, v]) => {
+        const sizeMatch = Object.entries(CONFIG.DND5E.actorSizes).find(([k, v]) => {
           return (sizeLc === k) || (sizeLc === game.i18n.localize(v).toLowerCase());
         });
         source.type.swarm = sizeMatch ? sizeMatch[0] : "tiny";

@@ -6,7 +6,7 @@
 
         <div class="header-details flexrow">
             <h1 class="charname">
-                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}"/>
+                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'DND5E.ItemName' }}"/>
             </h1>
 
             <div class="item-subtitle">
@@ -24,7 +24,7 @@
                     </select>
                 </li>
                 <li>
-                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'ROTV.Source' }}"/>
+                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'DND5E.Source' }}"/>
                 </li>
             </ul>
         </div>
@@ -32,76 +32,67 @@
 
     {{!-- Item Sheet Navigation --}}
     <nav class="sheet-navigation tabs" data-group="primary">
-        <a class="item active" data-tab="description">{{ localize "ROTV.Description" }}</a>
-        <a class="item" data-tab="details">{{ localize "ROTV.Details" }}</a>
-        <a class="item" data-tab="effects">{{ localize "ROTV.Effects" }}</a>
+        <a class="item active" data-tab="description">{{ localize "DND5E.Description" }}</a>
+        <a class="item" data-tab="details">{{ localize "DND5E.Details" }}</a>
+        <a class="item" data-tab="effects">{{ localize "DND5E.Effects" }}</a>
     </nav>
 
     {{!-- Item Sheet Body --}}
     <section class="sheet-body">
 
         {{!-- Description Tab --}}
-        {{> "rotv.item-description"}}
+        {{> "dnd5e.item-description"}}
 
         {{!-- Details Tab --}}
         <div class="tab details" data-group="primary" data-tab="details">
-            <h3 class="form-header">{{ localize "ROTV.ItemConsumableDetails" }}</h3>
+            <h3 class="form-header">{{ localize "DND5E.ItemConsumableDetails" }}</h3>
 
             {{!-- Consumable Type --}}
             <div class="form-group">
-                <label>{{ localize "ROTV.ItemConsumableType" }}</label>
+                <label>{{ localize "DND5E.ItemConsumableType" }}</label>
                 <select name="system.consumableType">
                     {{selectOptions config.consumableTypes selected=system.consumableType}}
                 </select>
             </div>
 
-            {{!-- Weapon Status --}}
-                        <div class="form-group stacked">
-                            <label>{{ localize "ROTV.ItemConsumableStatus" }}</label>
-                            <div class="form-fields">
-                                <label class="checkbox">
-                                    <input type="checkbox" name="system.proficient" {{checked system.proficient}}/> {{ localize "ROTV.Proficient" }}
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="system.equipped" {{checked system.equipped}}/> {{ localize "ROTV.Equipped" }}
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="system.identified" {{checked system.identified}}/> {{ localize "ROTV.Identified" }}
-                                </label>
-                            </div>
-                        </div>
-            
-                        {{!-- Weapon Properties --}}
-                        <div class="form-group stacked weapon-properties">
-                            <label>{{ localize "ROTV.ItemWeaponProperties" }}</label>
-                            {{#each config.weaponProperties as |name prop|}}
-                            <label class="checkbox">
-                                <input type="checkbox" name="system.properties.{{prop}}" {{checked (lookup ../system.properties prop)}}/> {{ name }}
-                            </label>
-                            {{/each}}
-                        </div>
+            <div class="form-group">
+                <label>{{localize "DND5E.Attunement"}}</label>
+                <select name="system.attunement" data-dtype="Number">
+                    {{selectOptions config.attunements selected=system.attunement}}
+                </select>
+            </div>
 
-            <h3 class="form-header">{{ localize "ROTV.ItemConsumableUsage" }}</h3>
+            <div class="form-group stacked">
+                <label>{{ localize "DND5E.ItemConsumableStatus" }}</label>
+                <label class="checkbox">
+                    <input type="checkbox" name="system.equipped" {{checked system.equipped}}/> {{ localize "DND5E.Equipped" }}
+                </label>
+                <label class="checkbox">
+                    <input type="checkbox" name="system.identified" {{checked system.identified}}/> {{ localize "DND5E.Identified" }}
+                </label>
+            </div>
+
+            <h3 class="form-header">{{ localize "DND5E.ItemConsumableUsage" }}</h3>
 
             {{!-- Item Activation Template --}}
-            {{> "rotv.item-activation"}}
+            {{> "dnd5e.item-activation"}}
             {{#if system.activation.type}}
             <div class="form-group">
                 <label class="checkbox">
-                    <input type="checkbox" name="system.uses.autoDestroy" {{checked system.uses.autoDestroy}}/> {{ localize "ROTV.ItemDestroyEmpty" }}
+                    <input type="checkbox" name="system.uses.autoDestroy" {{checked system.uses.autoDestroy}}/> {{ localize "DND5E.ItemDestroyEmpty" }}
                 </label>
             </div>
             {{/if}}
 
-            <h3 class="form-header">{{ localize "ROTV.ItemConsumableActivation" }}</h3>
+            <h3 class="form-header">{{ localize "DND5E.ItemConsumableActivation" }}</h3>
 
             {{!-- Item Action Template --}}
-            {{> "rotv.item-action"}}
+            {{> "dnd5e.item-action"}}
         </div>
 
         {{!-- Effects Tab --}}
         <div class="tab effects flexcol" data-group="primary" data-tab="effects">
-            {{> "rotv.active-effects"}}
+            {{> "dnd5e.active-effects"}}
         </div>
     </section>
 </form>
