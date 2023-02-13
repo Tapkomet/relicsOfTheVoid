@@ -1,15 +1,15 @@
 <form autocomplete="off">
-  {{> "dnd5e.advancement-controls"}}
+  {{> "rotv.advancement-controls"}}
   <div class="form-group">
-    <label>{{localize "DND5E.AdvancementItemGrantOptional"}}</label>
+    <label>{{localize "ROTV.AdvancementItemGrantOptional"}}</label>
     <div class="form-fields">
       <input type="checkbox" name="configuration.optional" {{checked configuration.optional}}>
     </div>
-    <p class="hint">{{localize "DND5E.AdvancementItemGrantOptionalHint"}}</p>
+    <p class="hint">{{localize "ROTV.AdvancementItemGrantOptionalHint"}}</p>
   </div>
 
   {{#if showSpellConfig}}
-    {{> "dnd5e.advancement-spell-config"}}
+    {{> "rotv.advancement-spell-config"}}
   {{/if}}
 
   <div class="drop-target">
@@ -18,9 +18,9 @@
       <ol class="item-list">
       {{#each configuration.items}}
         <li class="item flexrow" data-item-uuid="{{this}}">
-          <div class="item-name">{{{dnd5e-linkForUuid this}}}</div>
+          <div class="item-name">{{{rotv-linkForUuid this}}}</div>
           <div class="item-controls flexrow">
-            <a class="item-control item-action" data-action="delete" data-tooltip="DND5E.ItemDelete">
+            <a class="item-control item-action" data-action="delete" data-tooltip="ROTV.ItemDelete">
               <i class="fas fa-trash"></i>
             </a>
           </div>
@@ -29,6 +29,6 @@
       </ol>
     </ol>
 
-    <p class="hint centered">{{localize "DND5E.AdvancementItemGrantDropHint"}}</p>
+    <p class="hint centered">{{localize "ROTV.AdvancementItemGrantDropHint"}}</p>
   </div>
 </form>

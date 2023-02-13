@@ -70,7 +70,7 @@ export default class D20Roll extends Roll {
    * The HTML template path used to configure evaluation of this Roll
    * @type {string}
    */
-  static EVALUATION_TEMPLATE = "systems/dnd5e/templates/chat/roll-dialog.hbs";
+  static EVALUATION_TEMPLATE = "systems/rotv/templates/chat/roll-dialog.hbs";
 
   /* -------------------------------------------- */
 
@@ -147,17 +147,18 @@ export default class D20Roll extends Roll {
     if ( this.options.reliableTalent ) d20.modifiers.push("min10");
 
     // Handle Advantage or Disadvantage
-    if ( this.hasAdvantage ) {
-      d20.number = this.options.elvenAccuracy ? 3 : 2;
-      d20.modifiers.push("kh");
-      d20.options.advantage = true;
-    }
-    else if ( this.hasDisadvantage ) {
-      d20.number = 2;
-      d20.modifiers.push("kl");
-      d20.options.disadvantage = true;
-    }
-    else d20.number = 1;
+    //if ( this.hasAdvantage ) {
+   //   d20.number = this.options.elvenAccuracy ? 3 : 2;
+    //  d20.modifiers.push("kh");
+    //  d20.options.advantage = true;
+   // }
+    //else if ( this.hasDisadvantage ) {
+    //  d20.number = 2;
+    //  d20.modifiers.push("kl");
+    //  d20.options.disadvantage = true;
+    //}
+    //else
+    d20.number = 1;
 
     // Assign critical and fumble thresholds
     if ( this.options.critical ) d20.options.critical = this.options.critical;
@@ -179,16 +180,16 @@ export default class D20Roll extends Roll {
     // Evaluate the roll now so we have the results available to determine whether reliable talent came into play
     if ( !this._evaluated ) await this.evaluate({async: true});
 
-    // Add appropriate advantage mode message flavor and dnd5e roll flags
+    // Add appropriate advantage mode message flavor and rotv roll flags
     messageData.flavor = messageData.flavor || this.options.flavor;
-    if ( this.hasAdvantage ) messageData.flavor += ` (${game.i18n.localize("DND5E.Advantage")})`;
-    else if ( this.hasDisadvantage ) messageData.flavor += ` (${game.i18n.localize("DND5E.Disadvantage")})`;
+    if ( this.hasAdvantage ) messageData.flavor += ` (${game.i18n.localize("ROTV.Advantage")})`;
+    else if ( this.hasDisadvantage ) messageData.flavor += ` (${game.i18n.localize("ROTV.Disadvantage")})`;
 
     // Add reliable talent to the d20-term flavor text if it applied
     if ( this.validD20Roll && this.options.reliableTalent ) {
       const d20 = this.dice[0];
       const isRT = d20.results.every(r => !r.active || (r.result < 10));
-      const label = `(${game.i18n.localize("DND5E.FlagsReliableTalent")})`;
+      const label = `(${game.i18n.localize("ROTV.FlagsReliableTalent")})`;
       if ( isRT ) d20.options.flavor = d20.options.flavor ? `${d20.options.flavor} (${label})` : label;
     }
 
@@ -224,7 +225,7 @@ export default class D20Roll extends Roll {
       rollModes: CONFIG.Dice.rollModes,
       chooseModifier,
       defaultAbility,
-      abilities: CONFIG.DND5E.abilities
+      abilities: CONFIG.ROTV.abilities
     });
 
     let defaultButton = "normal";
@@ -233,30 +234,52 @@ export default class D20Roll extends Roll {
       case D20Roll.ADV_MODE.DISADVANTAGE: defaultButton = "disadvantage"; break;
     }
 
-    // Create the Dialog window and await submission of the form
-    return new Promise(resolve => {
-      new Dialog({
-        title,
-        content,
-        buttons: {
-          advantage: {
-            label: game.i18n.localize("DND5E.Advantage"),
-            callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.ADVANTAGE))
-          },
-          normal: {
-            label: game.i18n.localize("DND5E.Normal"),
-            callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.NORMAL))
-          },
-          disadvantage: {
-            label: game.i18n.localize("DND5E.Disadvantage"),
-            callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.DISADVANTAGE))
-          }
-        },
-        default: defaultButton,
-        close: () => resolve(null)
-      }, options).render(true);
-    });
-  }
+    if(this.options.attackRoll){
+            // Create the Dialog window and await submission of the form
+                return new Promise(resolve => {
+                  new Dialog({
+                    title,
+                    content,
+                    buttons: {
+                      normal: {
+                        label: game.i18n.localize("ROTV.NoCover"),
+                        callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.NORMAL))
+                      },
+                      disadvantage: {
+                        label: game.i18n.localize("ROTV.Disadvantage"),
+                        callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.DISADVANTAGE))
+                      },
+                      advantage: {
+                        label: game.i18n.localize("ROTV.Advantage"),
+                        callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.ADVANTAGE))
+                      }
+                    },
+                    default: defaultButton,
+                    close: () => resolve(null)
+                  }, options).render(true);
+                });
+
+            }
+        else{
+        // Create the Dialog window and await submission of the form
+            return new Promise(resolve => {
+              new Dialog({
+                title,
+                content,
+                buttons: {
+                  normal: {
+                    label: game.i18n.localize("ROTV.Roll"),
+                    callback: html => resolve(this._onDialogSubmit(html, D20Roll.ADV_MODE.NORMAL))
+                  }
+                },
+                default: defaultButton,
+                close: () => resolve(null)
+              }, options).render(true);
+            });
+    }
+
+
+}
 
   /* -------------------------------------------- */
 
@@ -277,6 +300,18 @@ export default class D20Roll extends Roll {
       this.terms = this.terms.concat(bonus.terms);
     }
 
+
+    if (advantageMode == D20Roll.ADV_MODE.ADVANTAGE) {
+        this.terms.push(new OperatorTerm({operator: "-"}));
+        this.terms.push(new NumericTerm({number: "9"}));
+    }
+
+
+    if (advantageMode == D20Roll.ADV_MODE.DISADVANTAGE) {
+        this.terms.push(new OperatorTerm({operator: "-"}));
+        this.terms.push(new NumericTerm({number: "6"}));
+    }
+
     // Customize the modifier
     if ( form.ability?.value ) {
       const abl = this.data.abilities[form.ability.value];
@@ -289,7 +324,7 @@ export default class D20Roll extends Roll {
         }
         return t;
       });
-      this.options.flavor += ` (${CONFIG.DND5E.abilities[form.ability.value]})`;
+      this.options.flavor += ` (${CONFIG.ROTV.abilities[form.ability.value]})`;
     }
 
     // Apply advantage or disadvantage

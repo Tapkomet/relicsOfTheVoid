@@ -35,8 +35,8 @@ export default class AdvancementConfig extends FormApplication {
   /** @inheritDoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["dnd5e", "advancement", "dialog"],
-      template: "systems/dnd5e/templates/advancement/advancement-config.hbs",
+      classes: ["rotv", "advancement", "dialog"],
+      template: "systems/rotv/templates/advancement/advancement-config.hbs",
       width: 400,
       height: "auto",
       submitOnChange: true,
@@ -60,7 +60,7 @@ export default class AdvancementConfig extends FormApplication {
   /** @inheritDoc */
   get title() {
     const type = this.advancement.constructor.metadata.title;
-    return `${game.i18n.format("DND5E.AdvancementConfigureTitle", { item: this.item.name })}: ${type}`;
+    return `${game.i18n.format("ROTV.AdvancementConfigureTitle", { item: this.item.name })}: ${type}`;
   }
 
   /* -------------------------------------------- */
@@ -75,11 +75,11 @@ export default class AdvancementConfig extends FormApplication {
 
   /** @inheritdoc */
   getData() {
-    const levels = Object.fromEntries(Array.fromRange(CONFIG.DND5E.maxLevel + 1).map(l => [l, l]));
+    const levels = Object.fromEntries(Array.fromRange(CONFIG.ROTV.maxLevel + 1).map(l => [l, l]));
     if ( ["class", "subclass"].includes(this.item.type) ) delete levels[0];
-    else levels[0] = game.i18n.localize("DND5E.AdvancementLevelAnyHeader");
+    else levels[0] = game.i18n.localize("ROTV.AdvancementLevelAnyHeader");
     const context = {
-      CONFIG: CONFIG.DND5E,
+      CONFIG: CONFIG.ROTV,
       ...this.advancement.toObject(false),
       src: this.advancement.toObject(),
       default: {
@@ -96,7 +96,7 @@ export default class AdvancementConfig extends FormApplication {
           `You are accessing the ${this.constructor.name}#data object which is no longer used. `
           + "Since 2.1 the Advancement class and its contained DataModel are merged into a combined data structure. "
           + "You should now reference keys which were previously contained within the data object directly.",
-          { since: "DnD5e 2.1", until: "DnD5e 2.2" }
+          { since: "RotV 2.1", until: "RotV 2.2" }
         );
         return context;
       }
@@ -142,7 +142,7 @@ export default class AdvancementConfig extends FormApplication {
       foundry.utils.logCompatibilityWarning(
         "An update being performed on an advancement points to `data`. Advancement data has moved to the top level so the"
         + " leading `data.` is no longer required.",
-        { since: "DnD5e 2.1", until: "DnD5e 2.2" }
+        { since: "RotV 2.1", until: "RotV 2.2" }
       );
       const data = updates.data;
       delete updates.data;
@@ -222,12 +222,12 @@ export default class AdvancementConfig extends FormApplication {
 
     // Abort if this uuid is the parent item
     if ( item.uuid === this.item.uuid ) {
-      return ui.notifications.error(game.i18n.localize("DND5E.AdvancementItemGrantRecursiveWarning"));
+      return ui.notifications.error(game.i18n.localize("ROTV.AdvancementItemGrantRecursiveWarning"));
     }
 
     // Abort if this uuid exists already
     if ( existingItems.includes(item.uuid) ) {
-      return ui.notifications.warn(game.i18n.localize("DND5E.AdvancementItemGrantDuplicateWarning"));
+      return ui.notifications.warn(game.i18n.localize("ROTV.AdvancementItemGrantDuplicateWarning"));
     }
 
     await this.advancement.update({[`configuration.${this.options.dropKeyPath}`]: [...existingItems, item.uuid]});

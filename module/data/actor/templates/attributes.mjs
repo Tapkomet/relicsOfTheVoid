@@ -23,28 +23,28 @@ export default class AttributesFields {
   static get common() {
     return {
       init: new foundry.data.fields.SchemaField({
-        ability: new foundry.data.fields.StringField({label: "DND5E.AbilityModifier"}),
-        bonus: new FormulaField({label: "DND5E.InitiativeBonus"})
-      }, { label: "DND5E.Initiative" }),
+        ability: new foundry.data.fields.StringField({label: "ROTV.AbilityModifier"}),
+        bonus: new FormulaField({label: "ROTV.InitiativeBonus"})
+      }, { label: "ROTV.Initiative" }),
       movement: new foundry.data.fields.SchemaField({
         burrow: new foundry.data.fields.NumberField({
-          nullable: false, min: 0, step: 0.1, initial: 0, label: "DND5E.MovementBurrow"
+          nullable: false, min: 0, step: 0.1, initial: 0, label: "ROTV.MovementBurrow"
         }),
         climb: new foundry.data.fields.NumberField({
-          nullable: false, min: 0, step: 0.1, initial: 0, label: "DND5E.MovementClimb"
+          nullable: false, min: 0, step: 0.1, initial: 0, label: "ROTV.MovementClimb"
         }),
         fly: new foundry.data.fields.NumberField({
-          nullable: false, min: 0, step: 0.1, initial: 0, label: "DND5E.MovementFly"
+          nullable: false, min: 0, step: 0.1, initial: 0, label: "ROTV.MovementFly"
         }),
         swim: new foundry.data.fields.NumberField({
-          nullable: false, min: 0, step: 0.1, initial: 0, label: "DND5E.MovementSwim"
+          nullable: false, min: 0, step: 0.1, initial: 0, label: "ROTV.MovementSwim"
         }),
         walk: new foundry.data.fields.NumberField({
-          nullable: false, min: 0, step: 0.1, initial: 30, label: "DND5E.MovementWalk"
+          nullable: false, min: 0, step: 0.1, initial: 30, label: "ROTV.MovementWalk"
         }),
-        units: new foundry.data.fields.StringField({initial: "ft", label: "DND5E.MovementUnits"}),
-        hover: new foundry.data.fields.BooleanField({label: "DND5E.MovementHover"})
-      }, {label: "DND5E.Movement"})
+        units: new foundry.data.fields.StringField({initial: "ft", label: "ROTV.MovementUnits"}),
+        hover: new foundry.data.fields.BooleanField({label: "ROTV.MovementHover"})
+      }, {label: "ROTV.Movement"})
     };
   }
 
@@ -69,27 +69,27 @@ export default class AttributesFields {
     return {
       attunement: new foundry.data.fields.SchemaField({
         max: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 3, label: "DND5E.AttunementMax"
+          required: true, nullable: false, integer: true, min: 0, initial: 3, label: "ROTV.AttunementMax"
         })
-      }, {label: "DND5E.Attunement"}),
+      }, {label: "ROTV.Attunement"}),
       senses: new foundry.data.fields.SchemaField({
         darkvision: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.SenseDarkvision"
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SenseDarkvision"
         }),
         blindsight: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.SenseBlindsight"
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SenseBlindsight"
         }),
         tremorsense: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.SenseTremorsense"
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SenseTremorsense"
         }),
         truesight: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "DND5E.SenseTruesight"
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SenseTruesight"
         }),
-        units: new foundry.data.fields.StringField({required: true, initial: "ft", label: "DND5E.SenseUnits"}),
-        special: new foundry.data.fields.StringField({required: true, label: "DND5E.SenseSpecial"})
-      }, {label: "DND5E.Senses"}),
+        units: new foundry.data.fields.StringField({required: true, initial: "ft", label: "ROTV.SenseUnits"}),
+        special: new foundry.data.fields.StringField({required: true, label: "ROTV.SenseSpecial"})
+      }, {label: "ROTV.Senses"}),
       spellcasting: new foundry.data.fields.StringField({
-        required: true, blank: true, initial: "int", label: "DND5E.SpellAbility"
+        required: true, blank: true, initial: "int", label: "ROTV.SpellAbility"
       })
     };
   }

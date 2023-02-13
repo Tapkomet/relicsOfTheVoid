@@ -10,24 +10,24 @@ import ItemDescriptionTemplate from "./templates/item-description.mjs";
  * @property {string} classIdentifier  Identifier slug for the class with which this subclass should be associated.
  * @property {object[]} advancement    Advancement objects for this subclass.
  * @property {object} spellcasting              Details on subclass's spellcasting ability.
- * @property {string} spellcasting.progression  Spell progression granted by class as from `DND5E.spellProgression`.
+ * @property {string} spellcasting.progression  Spell progression granted by class as from `ROTV.spellProgression`.
  * @property {string} spellcasting.ability      Ability score to use for spellcasting.
  */
 export default class SubclassData extends SystemDataModel.mixin(ItemDescriptionTemplate) {
   /** @inheritdoc */
   static defineSchema() {
     return this.mergeSchema(super.defineSchema(), {
-      identifier: new IdentifierField({required: true, label: "DND5E.Identifier"}),
+      identifier: new IdentifierField({required: true, label: "ROTV.Identifier"}),
       classIdentifier: new IdentifierField({
-        required: true, label: "DND5E.ClassIdentifier", hint: "DND5E.ClassIdentifierHint"
+        required: true, label: "ROTV.ClassIdentifier", hint: "ROTV.ClassIdentifierHint"
       }),
-      advancement: new foundry.data.fields.ArrayField(new AdvancementField(), {label: "DND5E.AdvancementTitle"}),
+      advancement: new foundry.data.fields.ArrayField(new AdvancementField(), {label: "ROTV.AdvancementTitle"}),
       spellcasting: new foundry.data.fields.SchemaField({
         progression: new foundry.data.fields.StringField({
-          required: true, initial: "none", blank: false, label: "DND5E.SpellProgression"
+          required: true, initial: "none", blank: false, label: "ROTV.SpellProgression"
         }),
-        ability: new foundry.data.fields.StringField({required: true, label: "DND5E.SpellAbility"})
-      }, {label: "DND5E.Spellcasting"})
+        ability: new foundry.data.fields.StringField({required: true, label: "ROTV.SpellAbility"})
+      }, {label: "ROTV.Spellcasting"})
     });
   }
 }
