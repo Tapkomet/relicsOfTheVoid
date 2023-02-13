@@ -10,7 +10,7 @@ export default class ItemGrantConfig extends AdvancementConfig {
     return foundry.utils.mergeObject(super.defaultOptions, {
       dragDrop: [{ dropSelector: ".drop-target" }],
       dropKeyPath: "items",
-      template: "systems/dnd5e/templates/advancement/item-grant-config.hbs"
+      template: "systems/rotv/templates/advancement/item-grant-config.hbs"
     });
   }
 
@@ -29,6 +29,6 @@ export default class ItemGrantConfig extends AdvancementConfig {
   _validateDroppedItem(event, item) {
     if ( this.advancement.constructor.VALID_TYPES.has(item.type) ) return true;
     const type = game.i18n.localize(`ITEM.Type${item.type.capitalize()}`);
-    throw new Error(game.i18n.format("DND5E.AdvancementItemTypeInvalidWarning", { type }));
+    throw new Error(game.i18n.format("ROTV.AdvancementItemTypeInvalidWarning", { type }));
   }
 }

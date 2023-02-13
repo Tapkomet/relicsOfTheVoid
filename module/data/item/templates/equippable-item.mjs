@@ -1,7 +1,7 @@
 /**
  * Data model template with information on items that can be attuned and equipped.
  *
- * @property {number} attunement  Attunement information as defined in `DND5E.attunementTypes`.
+ * @property {number} attunement  Attunement information as defined in `ROTV.attunementTypes`.
  * @property {boolean} equipped   Is this item equipped on its owning actor.
  * @mixin
  */
@@ -10,9 +10,9 @@ export default class EquippableItemTemplate extends foundry.abstract.DataModel {
   static defineSchema() {
     return {
       attunement: new foundry.data.fields.NumberField({
-        required: true, integer: true, initial: CONFIG.DND5E.attunementTypes.NONE, label: "DND5E.Attunement"
+        required: true, integer: true, initial: CONFIG.ROTV.attunementTypes.NONE, label: "ROTV.Attunement"
       }),
-      equipped: new foundry.data.fields.BooleanField({required: true, label: "DND5E.Equipped"})
+      equipped: new foundry.data.fields.BooleanField({required: true, label: "ROTV.Equipped"})
     };
   }
 
@@ -32,7 +32,7 @@ export default class EquippableItemTemplate extends foundry.abstract.DataModel {
    */
   static #migrateAttunement(source) {
     if ( (source.attuned === undefined) || (source.attunement !== undefined) ) return;
-    source.attunement = source.attuned ? CONFIG.DND5E.attunementTypes.ATTUNED : CONFIG.DND5E.attunementTypes.NONE;
+    source.attunement = source.attuned ? CONFIG.ROTV.attunementTypes.ATTUNED : CONFIG.ROTV.attunementTypes.NONE;
   }
 
   /* -------------------------------------------- */

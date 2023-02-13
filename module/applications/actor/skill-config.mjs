@@ -5,7 +5,7 @@ import BaseConfigSheet from "./base-config.mjs";
  *
  * @param {Actor} actor                 The Actor instance being displayed within the sheet.
  * @param {ApplicationOptions} options  Additional application configuration options.
- * @param {string} skillId              The skill key as defined in CONFIG.DND5E.skills.
+ * @param {string} skillId              The skill key as defined in CONFIG.ROTV.skills.
  */
 export default class ActorSkillConfig extends BaseConfigSheet {
   constructor(actor, options, skillId) {
@@ -18,8 +18,8 @@ export default class ActorSkillConfig extends BaseConfigSheet {
   /** @inheritdoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["dnd5e"],
-      template: "systems/dnd5e/templates/apps/skill-config.hbs",
+      classes: ["rotv"],
+      template: "systems/rotv/templates/apps/skill-config.hbs",
       width: 500,
       height: "auto"
     });
@@ -29,8 +29,8 @@ export default class ActorSkillConfig extends BaseConfigSheet {
 
   /** @inheritdoc */
   get title() {
-    const label = CONFIG.DND5E.skills[this._skillId].label;
-    return `${game.i18n.format("DND5E.SkillConfigureTitle", {skill: label})}: ${this.document.name}`;
+    const label = CONFIG.ROTV.skills[this._skillId].label;
+    return `${game.i18n.format("ROTV.SkillConfigureTitle", {skill: label})}: ${this.document.name}`;
   }
 
   /* -------------------------------------------- */
@@ -39,10 +39,10 @@ export default class ActorSkillConfig extends BaseConfigSheet {
   getData(options) {
     const src = this.document.toObject();
     return {
-      abilities: CONFIG.DND5E.abilities,
+      abilities: CONFIG.ROTV.abilities,
       skill: src.system.skills?.[this._skillId] ?? this.document.system.skills[this._skillId] ?? {},
       skillId: this._skillId,
-      proficiencyLevels: CONFIG.DND5E.proficiencyLevels,
+      proficiencyLevels: CONFIG.ROTV.proficiencyLevels,
       bonusGlobal: src.system.bonuses?.abilities.skill
     };
   }
@@ -54,8 +54,8 @@ export default class ActorSkillConfig extends BaseConfigSheet {
     const passive = formData[`system.skills.${this._skillId}.bonuses.passive`];
     const passiveRoll = new Roll(passive);
     if ( !passiveRoll.isDeterministic ) {
-      const message = game.i18n.format("DND5E.FormulaCannotContainDiceError", {
-        name: game.i18n.localize("DND5E.SkillBonusPassive")
+      const message = game.i18n.format("ROTV.FormulaCannotContainDiceError", {
+        name: game.i18n.localize("ROTV.SkillBonusPassive")
       });
       ui.notifications.error(message);
       throw new Error(message);

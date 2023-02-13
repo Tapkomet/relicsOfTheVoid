@@ -1,15 +1,15 @@
 {
-  "id": "dnd5e",
-  "title": "DnD5e - Fifth Edition System",
+  "id": "rotv",
+  "title": "RotV - Fifth Edition System",
   "description": "A system for playing the fifth edition of the worlds most popular role-playing game in the Foundry Virtual Tabletop environment.",
   "version": "2.1.4",
   "compatibility": {
     "minimum": "10.291",
     "verified": "10"
   },
-  "url": "https://github.com/foundryvtt/dnd5e/",
-  "manifest": "https://raw.githubusercontent.com/foundryvtt/dnd5e/master/system.json",
-  "download": "https://github.com/foundryvtt/dnd5e/releases/download/release-2.1.4/dnd5e-release-2.1.4.zip",
+  "url": "https://github.com/foundryvtt/rotv/",
+  "manifest": "https://raw.githubusercontent.com/foundryvtt/rotv/master/system.json",
+  "download": "https://github.com/foundryvtt/rotv/releases/download/release-2.1.4/rotv-release-2.1.4.zip",
   "authors": [
     {
       "name": "Atropos",
@@ -18,16 +18,16 @@
     }
   ],
   "esmodules": [
-    "dnd5e.mjs"
+    "rotv.mjs"
   ],
   "styles": [
-    "dnd5e.css"
+    "rotv.css"
   ],
   "packs": [
     {
       "name": "heroes",
       "label": "Starter Heroes",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/heroes.db",
       "type": "Actor",
       "private": false,
@@ -36,7 +36,7 @@
     {
       "name": "monsters",
       "label": "Monsters (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/monsters.db",
       "type": "Actor",
       "private": false,
@@ -45,7 +45,7 @@
     {
       "name": "items",
       "label": "Items (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/items.db",
       "type": "Item",
       "private": false,
@@ -54,7 +54,7 @@
     {
       "name": "tradegoods",
       "label": "Trade Goods (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/tradegoods.db",
       "type": "Item",
       "private": false,
@@ -63,7 +63,7 @@
     {
       "name": "spells",
       "label": "Spells (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/spells.db",
       "type": "Item",
       "private": false,
@@ -72,7 +72,7 @@
     {
       "name": "backgrounds",
       "label": "Backgrounds (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/backgrounds.db",
       "type": "Item",
       "private": false,
@@ -81,7 +81,7 @@
     {
       "name": "classes",
       "label": "Classes (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/classes.db",
       "type": "Item",
       "private": false,
@@ -90,7 +90,7 @@
     {
       "name": "subclasses",
       "label": "Subclasses (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/subclasses.db",
       "type": "Item",
       "private": false,
@@ -99,7 +99,7 @@
     {
       "name": "classfeatures",
       "label": "Class Features (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/classfeatures.db",
       "type": "Item",
       "private": false,
@@ -108,7 +108,7 @@
     {
       "name": "races",
       "label": "Racial Features (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/races.db",
       "type": "Item",
       "private": false,
@@ -117,7 +117,7 @@
     {
       "name": "monsterfeatures",
       "label": "Monster Features (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/monsterfeatures.db",
       "type": "Item",
       "private": false,
@@ -126,7 +126,7 @@
     {
       "name": "rules",
       "label": "Rules (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/rules.db",
       "type": "JournalEntry",
       "private": false,
@@ -135,7 +135,7 @@
     {
       "name": "tables",
       "label": "Tables (SRD)",
-      "system": "dnd5e",
+      "system": "rotv",
       "path": "packs/tables.db",
       "type": "RollTable",
       "private": false,

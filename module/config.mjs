@@ -2,10 +2,10 @@ import * as advancement from "./documents/advancement/_module.mjs";
 import { preLocalize } from "./utils.mjs";
 
 // Namespace Configuration Values
-const DND5E = {};
+const ROTV = {};
 
 // ASCII Artwork
-DND5E.ASCII = `_______________________________
+ROTV.ASCII = `_______________________________
 ______      ______ _____ _____
 |  _  \\___  |  _  \\  ___|  ___|
 | | | ( _ ) | | | |___ \\| |__
@@ -18,15 +18,15 @@ _______________________________`;
  * The set of Ability Scores used within the system.
  * @enum {string}
  */
-DND5E.abilities = {
-  str: "DND5E.AbilityStr",
-  dex: "DND5E.AbilityDex",
-  con: "DND5E.AbilityCon",
-  int: "DND5E.AbilityInt",
-  wis: "DND5E.AbilityWis",
-  cha: "DND5E.AbilityCha",
-  hon: "DND5E.AbilityHon",
-  san: "DND5E.AbilitySan"
+ROTV.abilities = {
+  str: "ROTV.AbilityStr",
+  dex: "ROTV.AbilityDex",
+  con: "ROTV.AbilityCon",
+  int: "ROTV.AbilityInt",
+  wis: "ROTV.AbilityWis",
+  cha: "ROTV.AbilityCha",
+  hon: "ROTV.AbilityHon",
+  san: "ROTV.AbilitySan"
 };
 preLocalize("abilities");
 
@@ -34,15 +34,15 @@ preLocalize("abilities");
  * Localized abbreviations for Ability Scores.
  * @enum {string}
  */
-DND5E.abilityAbbreviations = {
-  str: "DND5E.AbilityStrAbbr",
-  dex: "DND5E.AbilityDexAbbr",
-  con: "DND5E.AbilityConAbbr",
-  int: "DND5E.AbilityIntAbbr",
-  wis: "DND5E.AbilityWisAbbr",
-  cha: "DND5E.AbilityChaAbbr",
-  hon: "DND5E.AbilityHonAbbr",
-  san: "DND5E.AbilitySanAbbr"
+ROTV.abilityAbbreviations = {
+  str: "ROTV.AbilityStrAbbr",
+  dex: "ROTV.AbilityDexAbbr",
+  con: "ROTV.AbilityConAbbr",
+  int: "ROTV.AbilityIntAbbr",
+  wis: "ROTV.AbilityWisAbbr",
+  cha: "ROTV.AbilityChaAbbr",
+  hon: "ROTV.AbilityHonAbbr",
+  san: "ROTV.AbilitySanAbbr"
 };
 preLocalize("abilityAbbreviations");
 
@@ -50,13 +50,13 @@ preLocalize("abilityAbbreviations");
  * Configure which ability score is used as the default modifier for initiative rolls.
  * @type {string}
  */
-DND5E.initiativeAbility = "dex";
+ROTV.initiativeAbility = "dex";
 
 /**
  * Configure which ability score is used when calculating hit points per level.
  * @type {string}
  */
-DND5E.hitPointsAbility = "con";
+ROTV.hitPointsAbility = "con";
 
 /* -------------------------------------------- */
 
@@ -72,25 +72,25 @@ DND5E.hitPointsAbility = "con";
  * The set of skill which can be trained with their default ability scores.
  * @enum {SkillConfiguration}
  */
-DND5E.skills = {
-  acr: { label: "DND5E.SkillAcr", ability: "dex" },
-  ani: { label: "DND5E.SkillAni", ability: "wis" },
-  arc: { label: "DND5E.SkillArc", ability: "int" },
-  ath: { label: "DND5E.SkillAth", ability: "str" },
-  dec: { label: "DND5E.SkillDec", ability: "cha" },
-  his: { label: "DND5E.SkillHis", ability: "int" },
-  ins: { label: "DND5E.SkillIns", ability: "wis" },
-  itm: { label: "DND5E.SkillItm", ability: "cha" },
-  inv: { label: "DND5E.SkillInv", ability: "int" },
-  med: { label: "DND5E.SkillMed", ability: "wis" },
-  nat: { label: "DND5E.SkillNat", ability: "int" },
-  prc: { label: "DND5E.SkillPrc", ability: "wis" },
-  prf: { label: "DND5E.SkillPrf", ability: "cha" },
-  per: { label: "DND5E.SkillPer", ability: "cha" },
-  rel: { label: "DND5E.SkillRel", ability: "int" },
-  slt: { label: "DND5E.SkillSlt", ability: "dex" },
-  ste: { label: "DND5E.SkillSte", ability: "dex" },
-  sur: { label: "DND5E.SkillSur", ability: "wis" }
+ROTV.skills = {
+  acr: { label: "ROTV.SkillAcr", ability: "dex" },
+  ani: { label: "ROTV.SkillAni", ability: "wis" },
+  arc: { label: "ROTV.SkillArc", ability: "int" },
+  ath: { label: "ROTV.SkillAth", ability: "str" },
+  dec: { label: "ROTV.SkillDec", ability: "cha" },
+  his: { label: "ROTV.SkillHis", ability: "int" },
+  ins: { label: "ROTV.SkillIns", ability: "wis" },
+  itm: { label: "ROTV.SkillItm", ability: "cha" },
+  inv: { label: "ROTV.SkillInv", ability: "int" },
+  med: { label: "ROTV.SkillMed", ability: "wis" },
+  nat: { label: "ROTV.SkillNat", ability: "int" },
+  prc: { label: "ROTV.SkillPrc", ability: "wis" },
+  prf: { label: "ROTV.SkillPrf", ability: "cha" },
+  per: { label: "ROTV.SkillPer", ability: "cha" },
+  rel: { label: "ROTV.SkillRel", ability: "int" },
+  slt: { label: "ROTV.SkillSlt", ability: "dex" },
+  ste: { label: "ROTV.SkillSte", ability: "dex" },
+  sur: { label: "ROTV.SkillSur", ability: "wis" }
 };
 preLocalize("skills", { key: "label", sort: true });
 patchConfig("skills", "label", { since: 2.0, until: 2.2 });
@@ -101,16 +101,16 @@ patchConfig("skills", "label", { since: 2.0, until: 2.2 });
  * Character alignment options.
  * @enum {string}
  */
-DND5E.alignments = {
-  lg: "DND5E.AlignmentLG",
-  ng: "DND5E.AlignmentNG",
-  cg: "DND5E.AlignmentCG",
-  ln: "DND5E.AlignmentLN",
-  tn: "DND5E.AlignmentTN",
-  cn: "DND5E.AlignmentCN",
-  le: "DND5E.AlignmentLE",
-  ne: "DND5E.AlignmentNE",
-  ce: "DND5E.AlignmentCE"
+ROTV.alignments = {
+  lg: "ROTV.AlignmentLG",
+  ng: "ROTV.AlignmentNG",
+  cg: "ROTV.AlignmentCG",
+  ln: "ROTV.AlignmentLN",
+  tn: "ROTV.AlignmentTN",
+  cn: "ROTV.AlignmentCN",
+  le: "ROTV.AlignmentLE",
+  ne: "ROTV.AlignmentNE",
+  ce: "ROTV.AlignmentCE"
 };
 preLocalize("alignments");
 
@@ -120,7 +120,7 @@ preLocalize("alignments");
  * An enumeration of item attunement types.
  * @enum {number}
  */
-DND5E.attunementTypes = {
+ROTV.attunementTypes = {
   NONE: 0,
   REQUIRED: 1,
   ATTUNED: 2
@@ -130,10 +130,10 @@ DND5E.attunementTypes = {
  * An enumeration of item attunement states.
  * @type {{"0": string, "1": string, "2": string}}
  */
-DND5E.attunements = {
-  0: "DND5E.AttunementNone",
-  1: "DND5E.AttunementRequired",
-  2: "DND5E.AttunementAttuned"
+ROTV.attunements = {
+  0: "ROTV.AttunementNone",
+  1: "ROTV.AttunementRequired",
+  2: "ROTV.AttunementAttuned"
 };
 preLocalize("attunements");
 
@@ -143,18 +143,18 @@ preLocalize("attunements");
  * General weapon categories.
  * @enum {string}
  */
-DND5E.weaponProficiencies = {
-  sim: "DND5E.WeaponSimpleProficiency",
-  mar: "DND5E.WeaponMartialProficiency"
+ROTV.weaponProficiencies = {
+  sim: "ROTV.WeaponSimpleProficiency",
+  mar: "ROTV.WeaponMartialProficiency"
 };
 preLocalize("weaponProficiencies");
 
 /**
- * A mapping between `DND5E.weaponTypes` and `DND5E.weaponProficiencies` that
+ * A mapping between `ROTV.weaponTypes` and `ROTV.weaponProficiencies` that
  * is used to determine if character has proficiency when adding an item.
  * @enum {(boolean|string)}
  */
-DND5E.weaponProficienciesMap = {
+ROTV.weaponProficienciesMap = {
   natural: true,
   simpleM: "sim",
   simpleR: "sim",
@@ -167,7 +167,7 @@ DND5E.weaponProficienciesMap = {
  * starting equipment provided by classes and backgrounds.
  * @enum {string}
  */
-DND5E.weaponIds = {
+ROTV.weaponIds = {
   battleaxe: "I0WocDSuNpGJayPb",
   blowgun: "wNWK6yJMHG9ANqQV",
   club: "nfIRTECQIG81CvM4",
@@ -214,10 +214,10 @@ DND5E.weaponIds = {
  *
  * @enum {string}
  */
-DND5E.toolTypes = {
-  art: "DND5E.ToolArtisans",
-  game: "DND5E.ToolGamingSet",
-  music: "DND5E.ToolMusicalInstrument"
+ROTV.toolTypes = {
+  art: "ROTV.ToolArtisans",
+  game: "ROTV.ToolGamingSet",
+  music: "ROTV.ToolMusicalInstrument"
 };
 preLocalize("toolTypes", { sort: true });
 
@@ -226,9 +226,9 @@ preLocalize("toolTypes", { sort: true });
  *
  * @enum {string}
  */
-DND5E.toolProficiencies = {
-  ...DND5E.toolTypes,
-  vehicle: "DND5E.ToolVehicle"
+ROTV.toolProficiencies = {
+  ...ROTV.toolTypes,
+  vehicle: "ROTV.ToolVehicle"
 };
 preLocalize("toolProficiencies", { sort: true });
 
@@ -237,7 +237,7 @@ preLocalize("toolProficiencies", { sort: true });
  * starting equipment provided by classes and backgrounds.
  * @enum {string}
  */
-DND5E.toolIds = {
+ROTV.toolIds = {
   alchemist: "SztwZhbhZeCqyAes",
   bagpipes: "yxHi57T5mmVt0oDr",
   brewer: "Y9S75go1hLMXUD48",
@@ -282,17 +282,17 @@ DND5E.toolIds = {
  * The various lengths of time over which effects can occur.
  * @enum {string}
  */
-DND5E.timePeriods = {
-  inst: "DND5E.TimeInst",
-  turn: "DND5E.TimeTurn",
-  round: "DND5E.TimeRound",
-  minute: "DND5E.TimeMinute",
-  hour: "DND5E.TimeHour",
-  day: "DND5E.TimeDay",
-  month: "DND5E.TimeMonth",
-  year: "DND5E.TimeYear",
-  perm: "DND5E.TimePerm",
-  spec: "DND5E.Special"
+ROTV.timePeriods = {
+  inst: "ROTV.TimeInst",
+  turn: "ROTV.TimeTurn",
+  round: "ROTV.TimeRound",
+  minute: "ROTV.TimeMinute",
+  hour: "ROTV.TimeHour",
+  day: "ROTV.TimeDay",
+  month: "ROTV.TimeMonth",
+  year: "ROTV.TimeYear",
+  perm: "ROTV.TimePerm",
+  spec: "ROTV.Special"
 };
 preLocalize("timePeriods");
 
@@ -302,17 +302,17 @@ preLocalize("timePeriods");
  * Various ways in which an item or ability can be activated.
  * @enum {string}
  */
-DND5E.abilityActivationTypes = {
-  action: "DND5E.Action",
-  bonus: "DND5E.BonusAction",
-  reaction: "DND5E.Reaction",
-  minute: DND5E.timePeriods.minute,
-  hour: DND5E.timePeriods.hour,
-  day: DND5E.timePeriods.day,
-  special: DND5E.timePeriods.spec,
-  legendary: "DND5E.LegendaryActionLabel",
-  lair: "DND5E.LairActionLabel",
-  crew: "DND5E.VehicleCrewAction"
+ROTV.abilityActivationTypes = {
+  action: "ROTV.Action",
+  bonus: "ROTV.BonusAction",
+  reaction: "ROTV.Reaction",
+  minute: ROTV.timePeriods.minute,
+  hour: ROTV.timePeriods.hour,
+  day: ROTV.timePeriods.day,
+  special: ROTV.timePeriods.spec,
+  legendary: "ROTV.LegendaryActionLabel",
+  lair: "ROTV.LairActionLabel",
+  crew: "ROTV.VehicleCrewAction"
 };
 preLocalize("abilityActivationTypes");
 
@@ -322,12 +322,12 @@ preLocalize("abilityActivationTypes");
  * Different things that an ability can consume upon use.
  * @enum {string}
  */
-DND5E.abilityConsumptionTypes = {
-  ammo: "DND5E.ConsumeAmmunition",
-  attribute: "DND5E.ConsumeAttribute",
-  hitDice: "DND5E.ConsumeHitDice",
-  material: "DND5E.ConsumeMaterial",
-  charges: "DND5E.ConsumeCharges"
+ROTV.abilityConsumptionTypes = {
+  ammo: "ROTV.ConsumeAmmunition",
+  attribute: "ROTV.ConsumeAttribute",
+  hitDice: "ROTV.ConsumeHitDice",
+  material: "ROTV.ConsumeMaterial",
+  charges: "ROTV.ConsumeCharges"
 };
 preLocalize("abilityConsumptionTypes", { sort: true });
 
@@ -337,21 +337,21 @@ preLocalize("abilityConsumptionTypes", { sort: true });
  * Creature sizes.
  * @enum {string}
  */
-DND5E.actorSizes = {
-  tiny: "DND5E.SizeTiny",
-  sm: "DND5E.SizeSmall",
-  med: "DND5E.SizeMedium",
-  lg: "DND5E.SizeLarge",
-  huge: "DND5E.SizeHuge",
-  grg: "DND5E.SizeGargantuan"
+ROTV.actorSizes = {
+  tiny: "ROTV.SizeTiny",
+  sm: "ROTV.SizeSmall",
+  med: "ROTV.SizeMedium",
+  lg: "ROTV.SizeLarge",
+  huge: "ROTV.SizeHuge",
+  grg: "ROTV.SizeGargantuan"
 };
 preLocalize("actorSizes");
 
 /**
- * Default token image size for the values of `DND5E.actorSizes`.
+ * Default token image size for the values of `ROTV.actorSizes`.
  * @enum {number}
  */
-DND5E.tokenSizes = {
+ROTV.tokenSizes = {
   tiny: 0.5,
   sm: 1,
   med: 1,
@@ -364,7 +364,7 @@ DND5E.tokenSizes = {
  * Colors used to visualize temporary and temporary maximum HP in token health bars.
  * @enum {number}
  */
-DND5E.tokenHPColors = {
+ROTV.tokenHPColors = {
   damage: 0xFF0000,
   healing: 0x00FF00,
   temp: 0x66CCFF,
@@ -379,21 +379,21 @@ DND5E.tokenHPColors = {
  * *Note: Not pre-localized to allow for easy fetching of pluralized forms.*
  * @enum {string}
  */
-DND5E.creatureTypes = {
-  aberration: "DND5E.CreatureAberration",
-  beast: "DND5E.CreatureBeast",
-  celestial: "DND5E.CreatureCelestial",
-  construct: "DND5E.CreatureConstruct",
-  dragon: "DND5E.CreatureDragon",
-  elemental: "DND5E.CreatureElemental",
-  fey: "DND5E.CreatureFey",
-  fiend: "DND5E.CreatureFiend",
-  giant: "DND5E.CreatureGiant",
-  humanoid: "DND5E.CreatureHumanoid",
-  monstrosity: "DND5E.CreatureMonstrosity",
-  ooze: "DND5E.CreatureOoze",
-  plant: "DND5E.CreaturePlant",
-  undead: "DND5E.CreatureUndead"
+ROTV.creatureTypes = {
+  aberration: "ROTV.CreatureAberration",
+  beast: "ROTV.CreatureBeast",
+  celestial: "ROTV.CreatureCelestial",
+  construct: "ROTV.CreatureConstruct",
+  dragon: "ROTV.CreatureDragon",
+  elemental: "ROTV.CreatureElemental",
+  fey: "ROTV.CreatureFey",
+  fiend: "ROTV.CreatureFiend",
+  giant: "ROTV.CreatureGiant",
+  humanoid: "ROTV.CreatureHumanoid",
+  monstrosity: "ROTV.CreatureMonstrosity",
+  ooze: "ROTV.CreatureOoze",
+  plant: "ROTV.CreaturePlant",
+  undead: "ROTV.CreatureUndead"
 };
 
 /* -------------------------------------------- */
@@ -402,16 +402,16 @@ DND5E.creatureTypes = {
  * Classification types for item action types.
  * @enum {string}
  */
-DND5E.itemActionTypes = {
-  mwak: "DND5E.ActionMWAK",
-  rwak: "DND5E.ActionRWAK",
-  msak: "DND5E.ActionMSAK",
-  rsak: "DND5E.ActionRSAK",
-  save: "DND5E.ActionSave",
-  heal: "DND5E.ActionHeal",
-  abil: "DND5E.ActionAbil",
-  util: "DND5E.ActionUtil",
-  other: "DND5E.ActionOther"
+ROTV.itemActionTypes = {
+  mwak: "ROTV.ActionMWAK",
+  rwak: "ROTV.ActionRWAK",
+  msak: "ROTV.ActionMSAK",
+  rsak: "ROTV.ActionRSAK",
+  save: "ROTV.ActionSave",
+  heal: "ROTV.ActionHeal",
+  abil: "ROTV.ActionAbil",
+  util: "ROTV.ActionUtil",
+  other: "ROTV.ActionOther"
 };
 preLocalize("itemActionTypes");
 
@@ -421,9 +421,9 @@ preLocalize("itemActionTypes");
  * Different ways in which item capacity can be limited.
  * @enum {string}
  */
-DND5E.itemCapacityTypes = {
-  items: "DND5E.ItemContainerCapacityItems",
-  weight: "DND5E.ItemContainerCapacityWeight"
+ROTV.itemCapacityTypes = {
+  items: "ROTV.ItemContainerCapacityItems",
+  weight: "ROTV.ItemContainerCapacityWeight"
 };
 preLocalize("itemCapacityTypes", { sort: true });
 
@@ -433,13 +433,13 @@ preLocalize("itemCapacityTypes", { sort: true });
  * List of various item rarities.
  * @enum {string}
  */
-DND5E.itemRarity = {
-  common: "DND5E.ItemRarityCommon",
-  uncommon: "DND5E.ItemRarityUncommon",
-  rare: "DND5E.ItemRarityRare",
-  veryRare: "DND5E.ItemRarityVeryRare",
-  legendary: "DND5E.ItemRarityLegendary",
-  artifact: "DND5E.ItemRarityArtifact"
+ROTV.itemRarity = {
+  common: "ROTV.ItemRarityCommon",
+  uncommon: "ROTV.ItemRarityUncommon",
+  rare: "ROTV.ItemRarityRare",
+  veryRare: "ROTV.ItemRarityVeryRare",
+  legendary: "ROTV.ItemRarityLegendary",
+  artifact: "ROTV.ItemRarityArtifact"
 };
 preLocalize("itemRarity");
 
@@ -449,11 +449,11 @@ preLocalize("itemRarity");
  * Enumerate the lengths of time over which an item can have limited use ability.
  * @enum {string}
  */
-DND5E.limitedUsePeriods = {
-  sr: "DND5E.ShortRest",
-  lr: "DND5E.LongRest",
-  day: "DND5E.Day",
-  charges: "DND5E.Charges"
+ROTV.limitedUsePeriods = {
+  sr: "ROTV.ShortRest",
+  lr: "ROTV.LongRest",
+  day: "ROTV.Day",
+  charges: "ROTV.Charges"
 };
 preLocalize("limitedUsePeriods");
 
@@ -463,12 +463,12 @@ preLocalize("limitedUsePeriods");
  * Specific equipment types that modify base AC.
  * @enum {string}
  */
-DND5E.armorTypes = {
-  light: "DND5E.EquipmentLight",
-  medium: "DND5E.EquipmentMedium",
-  heavy: "DND5E.EquipmentHeavy",
-  natural: "DND5E.EquipmentNatural",
-  shield: "DND5E.EquipmentShield"
+ROTV.armorTypes = {
+  light: "ROTV.EquipmentLight",
+  medium: "ROTV.EquipmentMedium",
+  heavy: "ROTV.EquipmentHeavy",
+  natural: "ROTV.EquipmentNatural",
+  shield: "ROTV.EquipmentShield"
 };
 preLocalize("armorTypes");
 
@@ -478,10 +478,10 @@ preLocalize("armorTypes");
  * Equipment types that aren't armor.
  * @enum {string}
  */
-DND5E.miscEquipmentTypes = {
-  clothing: "DND5E.EquipmentClothing",
-  trinket: "DND5E.EquipmentTrinket",
-  vehicle: "DND5E.EquipmentVehicle"
+ROTV.miscEquipmentTypes = {
+  clothing: "ROTV.EquipmentClothing",
+  trinket: "ROTV.EquipmentTrinket",
+  vehicle: "ROTV.EquipmentVehicle"
 };
 preLocalize("miscEquipmentTypes", { sort: true });
 
@@ -491,9 +491,9 @@ preLocalize("miscEquipmentTypes", { sort: true });
  * The set of equipment types for armor, clothing, and other objects which can be worn by the character.
  * @enum {string}
  */
-DND5E.equipmentTypes = {
-  ...DND5E.miscEquipmentTypes,
-  ...DND5E.armorTypes
+ROTV.equipmentTypes = {
+  ...ROTV.miscEquipmentTypes,
+  ...ROTV.armorTypes
 };
 preLocalize("equipmentTypes", { sort: true });
 
@@ -503,11 +503,11 @@ preLocalize("equipmentTypes", { sort: true });
  * The various types of vehicles in which characters can be proficient.
  * @enum {string}
  */
-DND5E.vehicleTypes = {
-  air: "DND5E.VehicleTypeAir",
-  land: "DND5E.VehicleTypeLand",
-  space: "DND5E.VehicleTypeSpace",
-  water: "DND5E.VehicleTypeWater"
+ROTV.vehicleTypes = {
+  air: "ROTV.VehicleTypeAir",
+  land: "ROTV.VehicleTypeLand",
+  space: "ROTV.VehicleTypeSpace",
+  water: "ROTV.VehicleTypeWater"
 };
 preLocalize("vehicleTypes", { sort: true });
 
@@ -517,20 +517,20 @@ preLocalize("vehicleTypes", { sort: true });
  * The set of Armor Proficiencies which a character may have.
  * @type {object}
  */
-DND5E.armorProficiencies = {
-  lgt: DND5E.equipmentTypes.light,
-  med: DND5E.equipmentTypes.medium,
-  hvy: DND5E.equipmentTypes.heavy,
-  shl: "DND5E.EquipmentShieldProficiency"
+ROTV.armorProficiencies = {
+  lgt: ROTV.equipmentTypes.light,
+  med: ROTV.equipmentTypes.medium,
+  hvy: ROTV.equipmentTypes.heavy,
+  shl: "ROTV.EquipmentShieldProficiency"
 };
 preLocalize("armorProficiencies");
 
 /**
- * A mapping between `DND5E.equipmentTypes` and `DND5E.armorProficiencies` that
+ * A mapping between `ROTV.equipmentTypes` and `ROTV.armorProficiencies` that
  * is used to determine if character has proficiency when adding an item.
  * @enum {(boolean|string)}
  */
-DND5E.armorProficienciesMap = {
+ROTV.armorProficienciesMap = {
   natural: true,
   clothing: true,
   light: "lgt",
@@ -544,7 +544,7 @@ DND5E.armorProficienciesMap = {
  * automated AC calculation in NPCs, and starting equipment.
  * @enum {string}
  */
-DND5E.armorIds = {
+ROTV.armorIds = {
   breastplate: "SK2HATQ4abKUlV8i",
   chainmail: "rLMflzmxpe8JGTOA",
   chainshirt: "p2zChy24ZJdVqMSH",
@@ -563,7 +563,7 @@ DND5E.armorIds = {
  * The basic shield in 5e.
  * @enum {string}
  */
-DND5E.shieldIds = {
+ROTV.shieldIds = {
   shield: "sSs3hSzkKBMNBgTs"
 };
 
@@ -571,37 +571,37 @@ DND5E.shieldIds = {
  * Common armor class calculations.
  * @enum {{ label: string, [formula]: string }}
  */
-DND5E.armorClasses = {
+ROTV.armorClasses = {
   flat: {
-    label: "DND5E.ArmorClassFlat",
+    label: "ROTV.ArmorClassFlat",
     formula: "@attributes.ac.flat"
   },
   natural: {
-    label: "DND5E.ArmorClassNatural",
+    label: "ROTV.ArmorClassNatural",
     formula: "@attributes.ac.flat"
   },
   default: {
-    label: "DND5E.ArmorClassEquipment",
+    label: "ROTV.ArmorClassEquipment",
     formula: "@attributes.ac.armor + @attributes.ac.dex"
   },
   mage: {
-    label: "DND5E.ArmorClassMage",
+    label: "ROTV.ArmorClassMage",
     formula: "13 + @abilities.dex.mod"
   },
   draconic: {
-    label: "DND5E.ArmorClassDraconic",
+    label: "ROTV.ArmorClassDraconic",
     formula: "13 + @abilities.dex.mod"
   },
   unarmoredMonk: {
-    label: "DND5E.ArmorClassUnarmoredMonk",
+    label: "ROTV.ArmorClassUnarmoredMonk",
     formula: "10 + @abilities.dex.mod + @abilities.wis.mod"
   },
   unarmoredBarb: {
-    label: "DND5E.ArmorClassUnarmoredBarbarian",
+    label: "ROTV.ArmorClassUnarmoredBarbarian",
     formula: "10 + @abilities.dex.mod + @abilities.con.mod"
   },
   custom: {
-    label: "DND5E.ArmorClassCustom"
+    label: "ROTV.ArmorClassCustom"
   }
 };
 preLocalize("armorClasses", { key: "label" });
@@ -612,15 +612,15 @@ preLocalize("armorClasses", { key: "label" });
  * Enumerate the valid consumable types which are recognized by the system.
  * @enum {string}
  */
-DND5E.consumableTypes = {
-  ammo: "DND5E.ConsumableAmmo",
-  potion: "DND5E.ConsumablePotion",
-  poison: "DND5E.ConsumablePoison",
-  food: "DND5E.ConsumableFood",
-  scroll: "DND5E.ConsumableScroll",
-  wand: "DND5E.ConsumableWand",
-  rod: "DND5E.ConsumableRod",
-  trinket: "DND5E.ConsumableTrinket"
+ROTV.consumableTypes = {
+  ammo: "ROTV.ConsumableAmmo",
+  potion: "ROTV.ConsumablePotion",
+  poison: "ROTV.ConsumablePoison",
+  food: "ROTV.ConsumableFood",
+  scroll: "ROTV.ConsumableScroll",
+  wand: "ROTV.ConsumableWand",
+  rod: "ROTV.ConsumableRod",
+  trinket: "ROTV.ConsumableTrinket"
 };
 preLocalize("consumableTypes", { sort: true });
 
@@ -638,38 +638,38 @@ preLocalize("consumableTypes", { sort: true });
  * Types of "features" items.
  * @enum {FeatureTypeConfiguration}
  */
-DND5E.featureTypes = {
+ROTV.featureTypes = {
   background: {
-    label: "DND5E.Feature.Background"
+    label: "ROTV.Feature.Background"
   },
   class: {
-    label: "DND5E.Feature.Class",
+    label: "ROTV.Feature.Class",
     subtypes: {
-      artificerInfusion: "DND5E.ClassFeature.ArtificerInfusion",
-      channelDivinity: "DND5E.ClassFeature.ChannelDivinity",
-      defensiveTactic: "DND5E.ClassFeature.DefensiveTactic",
-      eldritchInvocation: "DND5E.ClassFeature.EldritchInvocation",
-      elementalDiscipline: "DND5E.ClassFeature.ElementalDiscipline",
-      fightingStyle: "DND5E.ClassFeature.FightingStyle",
-      huntersPrey: "DND5E.ClassFeature.HuntersPrey",
-      ki: "DND5E.ClassFeature.Ki",
-      maneuver: "DND5E.ClassFeature.Maneuver",
-      metamagic: "DND5E.ClassFeature.Metamagic",
-      multiattack: "DND5E.ClassFeature.Multiattack",
-      pact: "DND5E.ClassFeature.PactBoon",
-      psionicPower: "DND5E.ClassFeature.PsionicPower",
-      rune: "DND5E.ClassFeature.Rune",
-      superiorHuntersDefense: "DND5E.ClassFeature.SuperiorHuntersDefense"
+      artificerInfusion: "ROTV.ClassFeature.ArtificerInfusion",
+      channelDivinity: "ROTV.ClassFeature.ChannelDivinity",
+      defensiveTactic: "ROTV.ClassFeature.DefensiveTactic",
+      eldritchInvocation: "ROTV.ClassFeature.EldritchInvocation",
+      elementalDiscipline: "ROTV.ClassFeature.ElementalDiscipline",
+      fightingStyle: "ROTV.ClassFeature.FightingStyle",
+      huntersPrey: "ROTV.ClassFeature.HuntersPrey",
+      ki: "ROTV.ClassFeature.Ki",
+      maneuver: "ROTV.ClassFeature.Maneuver",
+      metamagic: "ROTV.ClassFeature.Metamagic",
+      multiattack: "ROTV.ClassFeature.Multiattack",
+      pact: "ROTV.ClassFeature.PactBoon",
+      psionicPower: "ROTV.ClassFeature.PsionicPower",
+      rune: "ROTV.ClassFeature.Rune",
+      superiorHuntersDefense: "ROTV.ClassFeature.SuperiorHuntersDefense"
     }
   },
   monster: {
-    label: "DND5E.Feature.Monster"
+    label: "ROTV.Feature.Monster"
   },
   race: {
-    label: "DND5E.Feature.Race"
+    label: "ROTV.Feature.Race"
   },
   feat: {
-    label: "DND5E.Feature.Feat"
+    label: "ROTV.Feature.Feat"
   }
 };
 preLocalize("featureTypes", { key: "label" });
@@ -689,30 +689,30 @@ preLocalize("featureTypes.class.subtypes", { sort: true });
  * The conversion number defines how many of that currency are equal to one GP.
  * @enum {CurrencyConfiguration}
  */
-DND5E.currencies = {
+ROTV.currencies = {
   pp: {
-    label: "DND5E.CurrencyPP",
-    abbreviation: "DND5E.CurrencyAbbrPP",
+    label: "ROTV.CurrencyPP",
+    abbreviation: "ROTV.CurrencyAbbrPP",
     conversion: 0.1
   },
   gp: {
-    label: "DND5E.CurrencyGP",
-    abbreviation: "DND5E.CurrencyAbbrGP",
+    label: "ROTV.CurrencyGP",
+    abbreviation: "ROTV.CurrencyAbbrGP",
     conversion: 1
   },
   ep: {
-    label: "DND5E.CurrencyEP",
-    abbreviation: "DND5E.CurrencyAbbrEP",
+    label: "ROTV.CurrencyEP",
+    abbreviation: "ROTV.CurrencyAbbrEP",
     conversion: 2
   },
   sp: {
-    label: "DND5E.CurrencySP",
-    abbreviation: "DND5E.CurrencyAbbrSP",
+    label: "ROTV.CurrencySP",
+    abbreviation: "ROTV.CurrencyAbbrSP",
     conversion: 10
   },
   cp: {
-    label: "DND5E.CurrencyCP",
-    abbreviation: "DND5E.CurrencyAbbrCP",
+    label: "ROTV.CurrencyCP",
+    abbreviation: "ROTV.CurrencyAbbrCP",
     conversion: 100
   }
 };
@@ -726,10 +726,10 @@ preLocalize("currencies", { keys: ["label", "abbreviation"] });
  * Types of damage that are considered physical.
  * @enum {string}
  */
-DND5E.physicalDamageTypes = {
-  bludgeoning: "DND5E.DamageBludgeoning",
-  piercing: "DND5E.DamagePiercing",
-  slashing: "DND5E.DamageSlashing"
+ROTV.physicalDamageTypes = {
+  bludgeoning: "ROTV.DamageBludgeoning",
+  piercing: "ROTV.DamagePiercing",
+  slashing: "ROTV.DamageSlashing"
 };
 preLocalize("physicalDamageTypes", { sort: true });
 
@@ -739,18 +739,18 @@ preLocalize("physicalDamageTypes", { sort: true });
  * Types of damage the can be caused by abilities.
  * @enum {string}
  */
-DND5E.damageTypes = {
-  ...DND5E.physicalDamageTypes,
-  acid: "DND5E.DamageAcid",
-  cold: "DND5E.DamageCold",
-  fire: "DND5E.DamageFire",
-  force: "DND5E.DamageForce",
-  lightning: "DND5E.DamageLightning",
-  necrotic: "DND5E.DamageNecrotic",
-  poison: "DND5E.DamagePoison",
-  psychic: "DND5E.DamagePsychic",
-  radiant: "DND5E.DamageRadiant",
-  thunder: "DND5E.DamageThunder"
+ROTV.damageTypes = {
+  ...ROTV.physicalDamageTypes,
+  acid: "ROTV.DamageAcid",
+  cold: "ROTV.DamageCold",
+  fire: "ROTV.DamageFire",
+  force: "ROTV.DamageForce",
+  lightning: "ROTV.DamageLightning",
+  necrotic: "ROTV.DamageNecrotic",
+  poison: "ROTV.DamagePoison",
+  psychic: "ROTV.DamagePsychic",
+  radiant: "ROTV.DamageRadiant",
+  thunder: "ROTV.DamageThunder"
 };
 preLocalize("damageTypes", { sort: true });
 
@@ -761,9 +761,9 @@ preLocalize("damageTypes", { sort: true });
  * @enum {string}
  * @deprecated
  */
-DND5E.damageResistanceTypes = {
-  ...DND5E.damageTypes,
-  physical: "DND5E.DamagePhysical"
+ROTV.damageResistanceTypes = {
+  ...ROTV.damageTypes,
+  physical: "ROTV.DamagePhysical"
 };
 preLocalize("damageResistanceTypes", { sort: true });
 
@@ -775,9 +775,9 @@ preLocalize("damageResistanceTypes", { sort: true });
  * Different types of healing that can be applied using abilities.
  * @enum {string}
  */
-DND5E.healingTypes = {
-  healing: "DND5E.Healing",
-  temphp: "DND5E.HealingTemp"
+ROTV.healingTypes = {
+  healing: "ROTV.Healing",
+  temphp: "ROTV.HealingTemp"
 };
 preLocalize("healingTypes");
 
@@ -788,12 +788,12 @@ preLocalize("healingTypes");
  * By default this uses the imperial units of feet and miles.
  * @enum {string}
  */
-DND5E.movementTypes = {
-  burrow: "DND5E.MovementBurrow",
-  climb: "DND5E.MovementClimb",
-  fly: "DND5E.MovementFly",
-  swim: "DND5E.MovementSwim",
-  walk: "DND5E.MovementWalk"
+ROTV.movementTypes = {
+  burrow: "ROTV.MovementBurrow",
+  climb: "ROTV.MovementClimb",
+  fly: "ROTV.MovementFly",
+  swim: "ROTV.MovementSwim",
+  walk: "ROTV.MovementWalk"
 };
 preLocalize("movementTypes", { sort: true });
 
@@ -806,11 +806,11 @@ preLocalize("movementTypes", { sort: true });
  * By default this uses the imperial units of feet and miles.
  * @enum {string}
  */
-DND5E.movementUnits = {
-  ft: "DND5E.DistFt",
-  mi: "DND5E.DistMi",
-  m: "DND5E.DistM",
-  km: "DND5E.DistKm"
+ROTV.movementUnits = {
+  ft: "ROTV.DistFt",
+  mi: "ROTV.DistMi",
+  m: "ROTV.DistM",
+  km: "ROTV.DistKm"
 };
 preLocalize("movementUnits");
 
@@ -820,24 +820,24 @@ preLocalize("movementUnits");
  * The types of range that are used for measuring actions and effects.
  * @enum {string}
  */
-DND5E.rangeTypes = {
-  self: "DND5E.DistSelf",
-  touch: "DND5E.DistTouch",
-  spec: "DND5E.Special",
-  any: "DND5E.DistAny"
+ROTV.rangeTypes = {
+  self: "ROTV.DistSelf",
+  touch: "ROTV.DistTouch",
+  spec: "ROTV.Special",
+  any: "ROTV.DistAny"
 };
 preLocalize("rangeTypes");
 
 /* -------------------------------------------- */
 
 /**
- * The valid units of measure for the range of an action or effect. A combination of `DND5E.movementUnits` and
- * `DND5E.rangeUnits`.
+ * The valid units of measure for the range of an action or effect. A combination of `ROTV.movementUnits` and
+ * `ROTV.rangeUnits`.
  * @enum {string}
  */
-DND5E.distanceUnits = {
-  ...DND5E.movementUnits,
-  ...DND5E.rangeTypes
+ROTV.distanceUnits = {
+  ...ROTV.movementUnits,
+  ...ROTV.rangeTypes
 };
 preLocalize("distanceUnits");
 
@@ -847,7 +847,7 @@ preLocalize("distanceUnits");
  * Configure aspects of encumbrance calculation so that it could be configured by modules.
  * @enum {{ imperial: number, metric: number }}
  */
-DND5E.encumbrance = {
+ROTV.encumbrance = {
   currencyPerWeight: {
     imperial: 50,
     metric: 110
@@ -870,13 +870,13 @@ DND5E.encumbrance = {
  * Targeting types that apply to one or more distinct targets.
  * @enum {string}
  */
-DND5E.individualTargetTypes = {
-  self: "DND5E.TargetSelf",
-  ally: "DND5E.TargetAlly",
-  enemy: "DND5E.TargetEnemy",
-  creature: "DND5E.TargetCreature",
-  object: "DND5E.TargetObject",
-  space: "DND5E.TargetSpace"
+ROTV.individualTargetTypes = {
+  self: "ROTV.TargetSelf",
+  ally: "ROTV.TargetAlly",
+  enemy: "ROTV.TargetEnemy",
+  creature: "ROTV.TargetCreature",
+  object: "ROTV.TargetObject",
+  space: "ROTV.TargetSpace"
 };
 preLocalize("individualTargetTypes");
 
@@ -894,37 +894,37 @@ preLocalize("individualTargetTypes");
  * Targeting types that cover an area.
  * @enum {AreaTargetDefinition}
  */
-DND5E.areaTargetTypes = {
+ROTV.areaTargetTypes = {
   radius: {
-    label: "DND5E.TargetRadius",
+    label: "ROTV.TargetRadius",
     template: "circle"
   },
   sphere: {
-    label: "DND5E.TargetSphere",
+    label: "ROTV.TargetSphere",
     template: "circle"
   },
   cylinder: {
-    label: "DND5E.TargetCylinder",
+    label: "ROTV.TargetCylinder",
     template: "circle"
   },
   cone: {
-    label: "DND5E.TargetCone",
+    label: "ROTV.TargetCone",
     template: "cone"
   },
   square: {
-    label: "DND5E.TargetSquare",
+    label: "ROTV.TargetSquare",
     template: "rect"
   },
   cube: {
-    label: "DND5E.TargetCube",
+    label: "ROTV.TargetCube",
     template: "rect"
   },
   line: {
-    label: "DND5E.TargetLine",
+    label: "ROTV.TargetLine",
     template: "ray"
   },
   wall: {
-    label: "DND5E.TargetWall",
+    label: "ROTV.TargetWall",
     template: "ray"
   }
 };
@@ -937,9 +937,9 @@ patchConfig("areaTargetTypes", "template", { since: 2.0, until: 2.2 });
  * The types of single or area targets which can be applied to abilities.
  * @enum {string}
  */
-DND5E.targetTypes = {
-  ...DND5E.individualTargetTypes,
-  ...Object.fromEntries(Object.entries(DND5E.areaTargetTypes).map(([k, v]) => [k, v.label]))
+ROTV.targetTypes = {
+  ...ROTV.individualTargetTypes,
+  ...Object.fromEntries(Object.entries(ROTV.areaTargetTypes).map(([k, v]) => [k, v.label]))
 };
 preLocalize("targetTypes", { sort: true });
 
@@ -949,7 +949,7 @@ preLocalize("targetTypes", { sort: true });
  * Denominations of hit dice which can apply to classes.
  * @type {string[]}
  */
-DND5E.hitDieTypes = ["d4", "d6", "d8", "d10", "d12"];
+ROTV.hitDieTypes = ["d4", "d6", "d8", "d10", "d12"];
 
 /* -------------------------------------------- */
 
@@ -957,11 +957,11 @@ DND5E.hitDieTypes = ["d4", "d6", "d8", "d10", "d12"];
  * The set of possible sensory perception types which an Actor may have.
  * @enum {string}
  */
-DND5E.senses = {
-  blindsight: "DND5E.SenseBlindsight",
-  darkvision: "DND5E.SenseDarkvision",
-  tremorsense: "DND5E.SenseTremorsense",
-  truesight: "DND5E.SenseTruesight"
+ROTV.senses = {
+  blindsight: "ROTV.SenseBlindsight",
+  darkvision: "ROTV.SenseDarkvision",
+  tremorsense: "ROTV.SenseTremorsense",
+  truesight: "ROTV.SenseTruesight"
 };
 preLocalize("senses", { sort: true });
 
@@ -974,7 +974,7 @@ preLocalize("senses", { sort: true });
  * The entries of this array represent the spell slot progression for a full spell-caster.
  * @type {number[][]}
  */
-DND5E.SPELL_SLOT_TABLE = [
+ROTV.SPELL_SLOT_TABLE = [
   [2],
   [3],
   [4, 2],
@@ -1002,22 +1002,22 @@ DND5E.SPELL_SLOT_TABLE = [
 /**
  * Various different ways a spell can be prepared.
  */
-DND5E.spellPreparationModes = {
-  prepared: "DND5E.SpellPrepPrepared",
-  pact: "DND5E.PactMagic",
-  always: "DND5E.SpellPrepAlways",
-  atwill: "DND5E.SpellPrepAtWill",
-  innate: "DND5E.SpellPrepInnate"
+ROTV.spellPreparationModes = {
+  prepared: "ROTV.SpellPrepPrepared",
+  pact: "ROTV.PactMagic",
+  always: "ROTV.SpellPrepAlways",
+  atwill: "ROTV.SpellPrepAtWill",
+  innate: "ROTV.SpellPrepInnate"
 };
 preLocalize("spellPreparationModes");
 
 /* -------------------------------------------- */
 
 /**
- * Subset of `DND5E.spellPreparationModes` that consume spell slots.
+ * Subset of `ROTV.spellPreparationModes` that consume spell slots.
  * @type {boolean[]}
  */
-DND5E.spellUpcastModes = ["always", "pact", "prepared"];
+ROTV.spellUpcastModes = ["always", "pact", "prepared"];
 
 /* -------------------------------------------- */
 
@@ -1042,31 +1042,31 @@ DND5E.spellUpcastModes = ["always", "pact", "prepared"];
  * Different spellcasting types and their progression.
  * @type {SpellcastingTypeConfiguration}
  */
-DND5E.spellcastingTypes = {
+ROTV.spellcastingTypes = {
   leveled: {
-    label: "DND5E.SpellProgLeveled",
+    label: "ROTV.SpellProgLeveled",
     progression: {
       full: {
-        label: "DND5E.SpellProgFull",
+        label: "ROTV.SpellProgFull",
         divisor: 1
       },
       half: {
-        label: "DND5E.SpellProgHalf",
+        label: "ROTV.SpellProgHalf",
         divisor: 2
       },
       third: {
-        label: "DND5E.SpellProgThird",
+        label: "ROTV.SpellProgThird",
         divisor: 3
       },
       artificer: {
-        label: "DND5E.SpellProgArt",
+        label: "ROTV.SpellProgArt",
         divisor: 2,
         roundUp: true
       }
     }
   },
   pact: {
-    label: "DND5E.SpellProgPact"
+    label: "ROTV.SpellProgPact"
   }
 };
 preLocalize("spellcastingTypes", { key: "label", sort: true });
@@ -1078,13 +1078,13 @@ preLocalize("spellcastingTypes.leveled.progression", { key: "label" });
  * Ways in which a class can contribute to spellcasting levels.
  * @enum {string}
  */
-DND5E.spellProgression = {
-  none: "DND5E.SpellNone",
-  full: "DND5E.SpellProgFull",
-  half: "DND5E.SpellProgHalf",
-  third: "DND5E.SpellProgThird",
-  pact: "DND5E.SpellProgPact",
-  artificer: "DND5E.SpellProgArt"
+ROTV.spellProgression = {
+  none: "ROTV.SpellNone",
+  full: "ROTV.SpellProgFull",
+  half: "ROTV.SpellProgHalf",
+  third: "ROTV.SpellProgThird",
+  pact: "ROTV.SpellProgPact",
+  artificer: "ROTV.SpellProgArt"
 };
 preLocalize("spellProgression", { key: "label" });
 
@@ -1094,17 +1094,17 @@ preLocalize("spellProgression", { key: "label" });
  * Valid spell levels.
  * @enum {string}
  */
-DND5E.spellLevels = {
-  0: "DND5E.SpellLevel0",
-  1: "DND5E.SpellLevel1",
-  2: "DND5E.SpellLevel2",
-  3: "DND5E.SpellLevel3",
-  4: "DND5E.SpellLevel4",
-  5: "DND5E.SpellLevel5",
-  6: "DND5E.SpellLevel6",
-  7: "DND5E.SpellLevel7",
-  8: "DND5E.SpellLevel8",
-  9: "DND5E.SpellLevel9"
+ROTV.spellLevels = {
+  0: "ROTV.SpellLevel0",
+  1: "ROTV.SpellLevel1",
+  2: "ROTV.SpellLevel2",
+  3: "ROTV.SpellLevel3",
+  4: "ROTV.SpellLevel4",
+  5: "ROTV.SpellLevel5",
+  6: "ROTV.SpellLevel6",
+  7: "ROTV.SpellLevel7",
+  8: "ROTV.SpellLevel8",
+  9: "ROTV.SpellLevel9"
 };
 preLocalize("spellLevels");
 
@@ -1114,10 +1114,10 @@ preLocalize("spellLevels");
  * The available choices for how spell damage scaling may be computed.
  * @enum {string}
  */
-DND5E.spellScalingModes = {
-  none: "DND5E.SpellNone",
-  cantrip: "DND5E.SpellCantrip",
-  level: "DND5E.SpellLevel"
+ROTV.spellScalingModes = {
+  none: "ROTV.SpellNone",
+  cantrip: "ROTV.SpellCantrip",
+  level: "ROTV.SpellLevel"
 };
 preLocalize("spellScalingModes", { sort: true });
 
@@ -1127,18 +1127,18 @@ preLocalize("spellScalingModes", { sort: true });
  * Types of components that can be required when casting a spell.
  * @enum {object}
  */
-DND5E.spellComponents = {
+ROTV.spellComponents = {
   vocal: {
-    label: "DND5E.ComponentVerbal",
-    abbr: "DND5E.ComponentVerbalAbbr"
+    label: "ROTV.ComponentVerbal",
+    abbr: "ROTV.ComponentVerbalAbbr"
   },
   somatic: {
-    label: "DND5E.ComponentSomatic",
-    abbr: "DND5E.ComponentSomaticAbbr"
+    label: "ROTV.ComponentSomatic",
+    abbr: "ROTV.ComponentSomaticAbbr"
   },
   material: {
-    label: "DND5E.ComponentMaterial",
-    abbr: "DND5E.ComponentMaterialAbbr"
+    label: "ROTV.ComponentMaterial",
+    abbr: "ROTV.ComponentMaterialAbbr"
   }
 };
 preLocalize("spellComponents", {keys: ["label", "abbr"]});
@@ -1149,14 +1149,14 @@ preLocalize("spellComponents", {keys: ["label", "abbr"]});
  * Supplementary rules keywords that inform a spell's use.
  * @enum {object}
  */
-DND5E.spellTags = {
+ROTV.spellTags = {
   concentration: {
-    label: "DND5E.Concentration",
-    abbr: "DND5E.ConcentrationAbbr"
+    label: "ROTV.Concentration",
+    abbr: "ROTV.ConcentrationAbbr"
   },
   ritual: {
-    label: "DND5E.Ritual",
-    abbr: "DND5E.RitualAbbr"
+    label: "ROTV.Ritual",
+    abbr: "ROTV.RitualAbbr"
   }
 };
 preLocalize("spellTags", {keys: ["label", "abbr"]});
@@ -1167,25 +1167,25 @@ preLocalize("spellTags", {keys: ["label", "abbr"]});
  * Schools to which a spell can belong.
  * @enum {string}
  */
-DND5E.spellSchools = {
-  abj: "DND5E.SchoolAbj",
-  con: "DND5E.SchoolCon",
-  div: "DND5E.SchoolDiv",
-  enc: "DND5E.SchoolEnc",
-  evo: "DND5E.SchoolEvo",
-  ill: "DND5E.SchoolIll",
-  nec: "DND5E.SchoolNec",
-  trs: "DND5E.SchoolTrs"
+ROTV.spellSchools = {
+  abj: "ROTV.SchoolAbj",
+  con: "ROTV.SchoolCon",
+  div: "ROTV.SchoolDiv",
+  enc: "ROTV.SchoolEnc",
+  evo: "ROTV.SchoolEvo",
+  ill: "ROTV.SchoolIll",
+  nec: "ROTV.SchoolNec",
+  trs: "ROTV.SchoolTrs"
 };
 preLocalize("spellSchools", { sort: true });
 
 /* -------------------------------------------- */
 
 /**
- * Spell scroll item ID within the `DND5E.sourcePacks` compendium for each level.
+ * Spell scroll item ID within the `ROTV.sourcePacks` compendium for each level.
  * @enum {string}
  */
-DND5E.spellScrollIds = {
+ROTV.spellScrollIds = {
   0: "rQ6sO7HDWzqMhSI3",
   1: "9GSfMg0VOA2b4uFN",
   2: "XdDp6CKh9qEvPTuS",
@@ -1206,14 +1206,14 @@ DND5E.spellScrollIds = {
  * The set of types which a weapon item can take.
  * @enum {string}
  */
-DND5E.weaponTypes = {
-  simpleM: "DND5E.WeaponSimpleM",
-  simpleR: "DND5E.WeaponSimpleR",
-  martialM: "DND5E.WeaponMartialM",
-  martialR: "DND5E.WeaponMartialR",
-  natural: "DND5E.WeaponNatural",
-  improv: "DND5E.WeaponImprov",
-  siege: "DND5E.WeaponSiege"
+ROTV.weaponTypes = {
+  simpleM: "ROTV.WeaponSimpleM",
+  simpleR: "ROTV.WeaponSimpleR",
+  martialM: "ROTV.WeaponMartialM",
+  martialR: "ROTV.WeaponMartialR",
+  natural: "ROTV.WeaponNatural",
+  improv: "ROTV.WeaponImprov",
+  siege: "ROTV.WeaponSiege"
 };
 preLocalize("weaponTypes");
 
@@ -1224,10 +1224,10 @@ preLocalize("weaponTypes");
  * These properties are used for determining physical resistance bypasses.
  * @enum {string}
  */
-DND5E.physicalWeaponProperties = {
-  ada: "DND5E.WeaponPropertiesAda",
-  mgc: "DND5E.WeaponPropertiesMgc",
-  sil: "DND5E.WeaponPropertiesSil"
+ROTV.physicalWeaponProperties = {
+  ada: "ROTV.WeaponPropertiesAda",
+  mgc: "ROTV.WeaponPropertiesMgc",
+  sil: "ROTV.WeaponPropertiesSil"
 };
 preLocalize("physicalWeaponProperties", { sort: true });
 
@@ -1237,22 +1237,22 @@ preLocalize("physicalWeaponProperties", { sort: true });
  * The set of weapon property flags which can exist on a weapon.
  * @enum {string}
  */
-DND5E.weaponProperties = {
-  ...DND5E.physicalWeaponProperties,
-  amm: "DND5E.WeaponPropertiesAmm",
-  fin: "DND5E.WeaponPropertiesFin",
-  fir: "DND5E.WeaponPropertiesFir",
-  foc: "DND5E.WeaponPropertiesFoc",
-  hvy: "DND5E.WeaponPropertiesHvy",
-  lgt: "DND5E.WeaponPropertiesLgt",
-  lod: "DND5E.WeaponPropertiesLod",
-  rch: "DND5E.WeaponPropertiesRch",
-  rel: "DND5E.WeaponPropertiesRel",
-  ret: "DND5E.WeaponPropertiesRet",
-  spc: "DND5E.WeaponPropertiesSpc",
-  thr: "DND5E.WeaponPropertiesThr",
-  two: "DND5E.WeaponPropertiesTwo",
-  ver: "DND5E.WeaponPropertiesVer"
+ROTV.weaponProperties = {
+  ...ROTV.physicalWeaponProperties,
+  amm: "ROTV.WeaponPropertiesAmm",
+  fin: "ROTV.WeaponPropertiesFin",
+  fir: "ROTV.WeaponPropertiesFir",
+  foc: "ROTV.WeaponPropertiesFoc",
+  hvy: "ROTV.WeaponPropertiesHvy",
+  lgt: "ROTV.WeaponPropertiesLgt",
+  lod: "ROTV.WeaponPropertiesLod",
+  rch: "ROTV.WeaponPropertiesRch",
+  rel: "ROTV.WeaponPropertiesRel",
+  ret: "ROTV.WeaponPropertiesRet",
+  spc: "ROTV.WeaponPropertiesSpc",
+  thr: "ROTV.WeaponPropertiesThr",
+  two: "ROTV.WeaponPropertiesTwo",
+  ver: "ROTV.WeaponPropertiesVer"
 };
 preLocalize("weaponProperties", { sort: true });
 
@@ -1263,20 +1263,20 @@ preLocalize("weaponProperties", { sort: true });
  * Settings to configure how actors are merged when polymorphing is applied.
  * @enum {string}
  */
-DND5E.polymorphSettings = {
-  keepPhysical: "DND5E.PolymorphKeepPhysical",
-  keepMental: "DND5E.PolymorphKeepMental",
-  keepSaves: "DND5E.PolymorphKeepSaves",
-  keepSkills: "DND5E.PolymorphKeepSkills",
-  mergeSaves: "DND5E.PolymorphMergeSaves",
-  mergeSkills: "DND5E.PolymorphMergeSkills",
-  keepClass: "DND5E.PolymorphKeepClass",
-  keepFeats: "DND5E.PolymorphKeepFeats",
-  keepSpells: "DND5E.PolymorphKeepSpells",
-  keepItems: "DND5E.PolymorphKeepItems",
-  keepBio: "DND5E.PolymorphKeepBio",
-  keepVision: "DND5E.PolymorphKeepVision",
-  keepSelf: "DND5E.PolymorphKeepSelf"
+ROTV.polymorphSettings = {
+  keepPhysical: "ROTV.PolymorphKeepPhysical",
+  keepMental: "ROTV.PolymorphKeepMental",
+  keepSaves: "ROTV.PolymorphKeepSaves",
+  keepSkills: "ROTV.PolymorphKeepSkills",
+  mergeSaves: "ROTV.PolymorphMergeSaves",
+  mergeSkills: "ROTV.PolymorphMergeSkills",
+  keepClass: "ROTV.PolymorphKeepClass",
+  keepFeats: "ROTV.PolymorphKeepFeats",
+  keepSpells: "ROTV.PolymorphKeepSpells",
+  keepItems: "ROTV.PolymorphKeepItems",
+  keepBio: "ROTV.PolymorphKeepBio",
+  keepVision: "ROTV.PolymorphKeepVision",
+  keepSelf: "ROTV.PolymorphKeepSelf"
 };
 preLocalize("polymorphSettings", { sort: true });
 
@@ -1284,15 +1284,15 @@ preLocalize("polymorphSettings", { sort: true });
  * Settings to configure how actors are effects are merged when polymorphing is applied.
  * @enum {string}
  */
-DND5E.polymorphEffectSettings = {
-  keepAE: "DND5E.PolymorphKeepAE",
-  keepOtherOriginAE: "DND5E.PolymorphKeepOtherOriginAE",
-  keepOriginAE: "DND5E.PolymorphKeepOriginAE",
-  keepEquipmentAE: "DND5E.PolymorphKeepEquipmentAE",
-  keepFeatAE: "DND5E.PolymorphKeepFeatureAE",
-  keepSpellAE: "DND5E.PolymorphKeepSpellAE",
-  keepClassAE: "DND5E.PolymorphKeepClassAE",
-  keepBackgroundAE: "DND5E.PolymorphKeepBackgroundAE"
+ROTV.polymorphEffectSettings = {
+  keepAE: "ROTV.PolymorphKeepAE",
+  keepOtherOriginAE: "ROTV.PolymorphKeepOtherOriginAE",
+  keepOriginAE: "ROTV.PolymorphKeepOriginAE",
+  keepEquipmentAE: "ROTV.PolymorphKeepEquipmentAE",
+  keepFeatAE: "ROTV.PolymorphKeepFeatureAE",
+  keepSpellAE: "ROTV.PolymorphKeepSpellAE",
+  keepClassAE: "ROTV.PolymorphKeepClassAE",
+  keepBackgroundAE: "ROTV.PolymorphKeepBackgroundAE"
 };
 preLocalize("polymorphEffectSettings", { sort: true });
 
@@ -1300,10 +1300,10 @@ preLocalize("polymorphEffectSettings", { sort: true });
  * Settings to configure how actors are merged when preset polymorphing is applied.
  * @enum {object}
  */
-DND5E.transformationPresets = {
+ROTV.transformationPresets = {
   wildshape: {
     icon: '<i class="fas fa-paw"></i>',
-    label: "DND5E.PolymorphWildShape",
+    label: "ROTV.PolymorphWildShape",
     options: {
       keepBio: true,
       keepClass: true,
@@ -1315,7 +1315,7 @@ DND5E.transformationPresets = {
   },
   polymorph: {
     icon: '<i class="fas fa-pastafarianism"></i>',
-    label: "DND5E.Polymorph",
+    label: "ROTV.Polymorph",
     options: {
       keepEquipmentAE: false,
       keepClassAE: false,
@@ -1325,7 +1325,7 @@ DND5E.transformationPresets = {
   },
   polymorphSelf: {
     icon: '<i class="fas fa-eye"></i>',
-    label: "DND5E.PolymorphSelf",
+    label: "ROTV.PolymorphSelf",
     options: {
       keepSelf: true
     }
@@ -1340,11 +1340,11 @@ preLocalize("transformationPresets", { sort: true, keys: ["label"] });
  * The key for each level represents its proficiency multiplier.
  * @enum {string}
  */
-DND5E.proficiencyLevels = {
-  0: "DND5E.NotProficient",
-  1: "DND5E.Proficient",
-  0.5: "DND5E.HalfProficient",
-  2: "DND5E.Expertise"
+ROTV.proficiencyLevels = {
+  0: "ROTV.NotProficient",
+  1: "ROTV.Proficient",
+  0.5: "ROTV.HalfProficient",
+  2: "ROTV.Expertise"
 };
 preLocalize("proficiencyLevels");
 
@@ -1355,11 +1355,11 @@ preLocalize("proficiencyLevels");
  * of cover are in play, we take the highest value.
  * @enum {string}
  */
-DND5E.cover = {
-  0: "DND5E.None",
-  .5: "DND5E.CoverHalf",
-  .75: "DND5E.CoverThreeQuarters",
-  1: "DND5E.CoverTotal"
+ROTV.cover = {
+  0: "ROTV.None",
+  .5: "ROTV.CoverHalf",
+  .75: "ROTV.CoverThreeQuarters",
+  1: "ROTV.CoverTotal"
 };
 preLocalize("cover");
 
@@ -1369,7 +1369,7 @@ preLocalize("cover");
  * A selection of actor attributes that can be tracked on token resource bars.
  * @type {string[]}
  */
-DND5E.trackableAttributes = [
+ROTV.trackableAttributes = [
   "attributes.ac.value", "attributes.init.bonus", "attributes.movement", "attributes.senses", "attributes.spelldc",
   "attributes.spellLevel", "details.cr", "details.spellLevel", "details.xp.value", "skills.*.passive",
   "abilities.*.value"
@@ -1381,7 +1381,7 @@ DND5E.trackableAttributes = [
  * A selection of actor and item attributes that are valid targets for item resource consumption.
  * @type {string[]}
  */
-DND5E.consumableResources = [
+ROTV.consumableResources = [
   "item.quantity", "item.weight", "item.duration.value", "currency", "details.xp.value", "abilities.*.value",
   "attributes.senses", "attributes.movement", "attributes.ac.flat", "item.armor.value", "item.target", "item.range",
   "item.save.dc"
@@ -1393,23 +1393,23 @@ DND5E.consumableResources = [
  * Conditions that can effect an actor.
  * @enum {string}
  */
-DND5E.conditionTypes = {
-  blinded: "DND5E.ConBlinded",
-  charmed: "DND5E.ConCharmed",
-  deafened: "DND5E.ConDeafened",
-  diseased: "DND5E.ConDiseased",
-  exhaustion: "DND5E.ConExhaustion",
-  frightened: "DND5E.ConFrightened",
-  grappled: "DND5E.ConGrappled",
-  incapacitated: "DND5E.ConIncapacitated",
-  invisible: "DND5E.ConInvisible",
-  paralyzed: "DND5E.ConParalyzed",
-  petrified: "DND5E.ConPetrified",
-  poisoned: "DND5E.ConPoisoned",
-  prone: "DND5E.ConProne",
-  restrained: "DND5E.ConRestrained",
-  stunned: "DND5E.ConStunned",
-  unconscious: "DND5E.ConUnconscious"
+ROTV.conditionTypes = {
+  blinded: "ROTV.ConBlinded",
+  charmed: "ROTV.ConCharmed",
+  deafened: "ROTV.ConDeafened",
+  diseased: "ROTV.ConDiseased",
+  exhaustion: "ROTV.ConExhaustion",
+  frightened: "ROTV.ConFrightened",
+  grappled: "ROTV.ConGrappled",
+  incapacitated: "ROTV.ConIncapacitated",
+  invisible: "ROTV.ConInvisible",
+  paralyzed: "ROTV.ConParalyzed",
+  petrified: "ROTV.ConPetrified",
+  poisoned: "ROTV.ConPoisoned",
+  prone: "ROTV.ConProne",
+  restrained: "ROTV.ConRestrained",
+  stunned: "ROTV.ConStunned",
+  unconscious: "ROTV.ConUnconscious"
 };
 preLocalize("conditionTypes", { sort: true });
 
@@ -1417,32 +1417,32 @@ preLocalize("conditionTypes", { sort: true });
  * Languages a character can learn.
  * @enum {string}
  */
-DND5E.languages = {
-  common: "DND5E.LanguagesCommon",
-  aarakocra: "DND5E.LanguagesAarakocra",
-  abyssal: "DND5E.LanguagesAbyssal",
-  aquan: "DND5E.LanguagesAquan",
-  auran: "DND5E.LanguagesAuran",
-  celestial: "DND5E.LanguagesCelestial",
-  deep: "DND5E.LanguagesDeepSpeech",
-  draconic: "DND5E.LanguagesDraconic",
-  druidic: "DND5E.LanguagesDruidic",
-  dwarvish: "DND5E.LanguagesDwarvish",
-  elvish: "DND5E.LanguagesElvish",
-  giant: "DND5E.LanguagesGiant",
-  gith: "DND5E.LanguagesGith",
-  gnomish: "DND5E.LanguagesGnomish",
-  goblin: "DND5E.LanguagesGoblin",
-  gnoll: "DND5E.LanguagesGnoll",
-  halfling: "DND5E.LanguagesHalfling",
-  ignan: "DND5E.LanguagesIgnan",
-  infernal: "DND5E.LanguagesInfernal",
-  orc: "DND5E.LanguagesOrc",
-  primordial: "DND5E.LanguagesPrimordial",
-  sylvan: "DND5E.LanguagesSylvan",
-  terran: "DND5E.LanguagesTerran",
-  cant: "DND5E.LanguagesThievesCant",
-  undercommon: "DND5E.LanguagesUndercommon"
+ROTV.languages = {
+  common: "ROTV.LanguagesCommon",
+  aarakocra: "ROTV.LanguagesAarakocra",
+  abyssal: "ROTV.LanguagesAbyssal",
+  aquan: "ROTV.LanguagesAquan",
+  auran: "ROTV.LanguagesAuran",
+  celestial: "ROTV.LanguagesCelestial",
+  deep: "ROTV.LanguagesDeepSpeech",
+  draconic: "ROTV.LanguagesDraconic",
+  druidic: "ROTV.LanguagesDruidic",
+  dwarvish: "ROTV.LanguagesDwarvish",
+  elvish: "ROTV.LanguagesElvish",
+  giant: "ROTV.LanguagesGiant",
+  gith: "ROTV.LanguagesGith",
+  gnomish: "ROTV.LanguagesGnomish",
+  goblin: "ROTV.LanguagesGoblin",
+  gnoll: "ROTV.LanguagesGnoll",
+  halfling: "ROTV.LanguagesHalfling",
+  ignan: "ROTV.LanguagesIgnan",
+  infernal: "ROTV.LanguagesInfernal",
+  orc: "ROTV.LanguagesOrc",
+  primordial: "ROTV.LanguagesPrimordial",
+  sylvan: "ROTV.LanguagesSylvan",
+  terran: "ROTV.LanguagesTerran",
+  cant: "ROTV.LanguagesThievesCant",
+  undercommon: "ROTV.LanguagesUndercommon"
 };
 preLocalize("languages", { sort: true });
 
@@ -1450,13 +1450,13 @@ preLocalize("languages", { sort: true });
  * Maximum allowed character level.
  * @type {number}
  */
-DND5E.maxLevel = 20;
+ROTV.maxLevel = 20;
 
 /**
  * XP required to achieve each character level.
  * @type {number[]}
  */
-DND5E.CHARACTER_EXP_LEVELS = [
+ROTV.CHARACTER_EXP_LEVELS = [
   0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000,
   120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000
 ];
@@ -1465,7 +1465,7 @@ DND5E.CHARACTER_EXP_LEVELS = [
  * XP granted for each challenge rating.
  * @type {number[]}
  */
-DND5E.CR_EXP_LEVELS = [
+ROTV.CR_EXP_LEVELS = [
   10, 200, 450, 700, 1100, 1800, 2300, 2900, 3900, 5000, 5900, 7200, 8400, 10000, 11500, 13000, 15000, 18000,
   20000, 22000, 25000, 33000, 41000, 50000, 62000, 75000, 90000, 105000, 120000, 135000, 155000
 ];
@@ -1492,11 +1492,11 @@ DND5E.CR_EXP_LEVELS = [
  * @property {string} [actorKeyPath]      If the trait doesn't directly map to an entry as `traits.[key]`, where is
  *                                        this trait's data stored on the actor?
  * @property {string} [configKey]         If the list of trait options doesn't match the name of the trait, where can
- *                                        the options be found within `CONFIG.DND5E`?
+ *                                        the options be found within `CONFIG.ROTV`?
  * @property {string} [labelKey]          If config is an enum of objects, where can the label be found?
  * @property {object} [subtypes]          Configuration for traits that take some sort of base item.
  * @property {string} [subtypes.keyPath]  Path to subtype value on base items, should match a category key.
- * @property {string[]} [subtypes.ids]    Key for base item ID objects within `CONFIG.DND5E`.
+ * @property {string[]} [subtypes.ids]    Key for base item ID objects within `CONFIG.ROTV`.
  * @property {object} [children]          Mapping of category key to an object defining its children.
  * @property {boolean} [sortCategories]   Whether top-level categories should be sorted.
  */
@@ -1505,48 +1505,48 @@ DND5E.CR_EXP_LEVELS = [
  * Configurable traits on actors.
  * @enum {TraitConfiguration}
  */
-DND5E.traits = {
+ROTV.traits = {
   saves: {
-    label: "DND5E.ClassSaves",
+    label: "ROTV.ClassSaves",
     configKey: "abilities"
   },
   skills: {
-    label: "DND5E.TraitSkillProf",
+    label: "ROTV.TraitSkillProf",
     labelKey: "label"
   },
   languages: {
-    label: "DND5E.Languages"
+    label: "ROTV.Languages"
   },
   di: {
-    label: "DND5E.DamImm",
+    label: "ROTV.DamImm",
     configKey: "damageTypes"
   },
   dr: {
-    label: "DND5E.DamRes",
+    label: "ROTV.DamRes",
     configKey: "damageTypes"
   },
   dv: {
-    label: "DND5E.DamVuln",
+    label: "ROTV.DamVuln",
     configKey: "damageTypes"
   },
   ci: {
-    label: "DND5E.ConImm",
+    label: "ROTV.ConImm",
     configKey: "conditionTypes"
   },
   weapon: {
-    label: "DND5E.TraitWeaponProf",
+    label: "ROTV.TraitWeaponProf",
     actorKeyPath: "traits.weaponProf",
     configKey: "weaponProficiencies",
     subtypes: { keyPath: "weaponType", ids: ["weaponIds"] }
   },
   armor: {
-    label: "DND5E.TraitArmorProf",
+    label: "ROTV.TraitArmorProf",
     actorKeyPath: "traits.armorProf",
     configKey: "armorProficiencies",
     subtypes: { keyPath: "armor.type", ids: ["armorIds", "shieldIds"] }
   },
   tool: {
-    label: "DND5E.TraitToolProf",
+    label: "ROTV.TraitToolProf",
     actorKeyPath: "traits.toolProf",
     configKey: "toolProficiencies",
     subtypes: { keyPath: "toolType", ids: ["toolIds"] },
@@ -1562,88 +1562,88 @@ preLocalize("traits", { key: "label" });
  * Special character flags.
  * @enum {CharacterFlagConfig}
  */
-DND5E.characterFlags = {
+ROTV.characterFlags = {
   diamondSoul: {
-    name: "DND5E.FlagsDiamondSoul",
-    hint: "DND5E.FlagsDiamondSoulHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsDiamondSoul",
+    hint: "ROTV.FlagsDiamondSoulHint",
+    section: "ROTV.Feats",
     type: Boolean
   },
   elvenAccuracy: {
-    name: "DND5E.FlagsElvenAccuracy",
-    hint: "DND5E.FlagsElvenAccuracyHint",
-    section: "DND5E.RacialTraits",
+    name: "ROTV.FlagsElvenAccuracy",
+    hint: "ROTV.FlagsElvenAccuracyHint",
+    section: "ROTV.RacialTraits",
     abilities: ["dex", "int", "wis", "cha"],
     type: Boolean
   },
   halflingLucky: {
-    name: "DND5E.FlagsHalflingLucky",
-    hint: "DND5E.FlagsHalflingLuckyHint",
-    section: "DND5E.RacialTraits",
+    name: "ROTV.FlagsHalflingLucky",
+    hint: "ROTV.FlagsHalflingLuckyHint",
+    section: "ROTV.RacialTraits",
     type: Boolean
   },
   initiativeAdv: {
-    name: "DND5E.FlagsInitiativeAdv",
-    hint: "DND5E.FlagsInitiativeAdvHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsInitiativeAdv",
+    hint: "ROTV.FlagsInitiativeAdvHint",
+    section: "ROTV.Feats",
     type: Boolean
   },
   initiativeAlert: {
-    name: "DND5E.FlagsAlert",
-    hint: "DND5E.FlagsAlertHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsAlert",
+    hint: "ROTV.FlagsAlertHint",
+    section: "ROTV.Feats",
     type: Boolean
   },
   jackOfAllTrades: {
-    name: "DND5E.FlagsJOAT",
-    hint: "DND5E.FlagsJOATHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsJOAT",
+    hint: "ROTV.FlagsJOATHint",
+    section: "ROTV.Feats",
     type: Boolean
   },
   observantFeat: {
-    name: "DND5E.FlagsObservant",
-    hint: "DND5E.FlagsObservantHint",
+    name: "ROTV.FlagsObservant",
+    hint: "ROTV.FlagsObservantHint",
     skills: ["prc", "inv"],
-    section: "DND5E.Feats",
+    section: "ROTV.Feats",
     type: Boolean
   },
   powerfulBuild: {
-    name: "DND5E.FlagsPowerfulBuild",
-    hint: "DND5E.FlagsPowerfulBuildHint",
-    section: "DND5E.RacialTraits",
+    name: "ROTV.FlagsPowerfulBuild",
+    hint: "ROTV.FlagsPowerfulBuildHint",
+    section: "ROTV.RacialTraits",
     type: Boolean
   },
   reliableTalent: {
-    name: "DND5E.FlagsReliableTalent",
-    hint: "DND5E.FlagsReliableTalentHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsReliableTalent",
+    hint: "ROTV.FlagsReliableTalentHint",
+    section: "ROTV.Feats",
     type: Boolean
   },
   remarkableAthlete: {
-    name: "DND5E.FlagsRemarkableAthlete",
-    hint: "DND5E.FlagsRemarkableAthleteHint",
+    name: "ROTV.FlagsRemarkableAthlete",
+    hint: "ROTV.FlagsRemarkableAthleteHint",
     abilities: ["str", "dex", "con"],
-    section: "DND5E.Feats",
+    section: "ROTV.Feats",
     type: Boolean
   },
   weaponCriticalThreshold: {
-    name: "DND5E.FlagsWeaponCritThreshold",
-    hint: "DND5E.FlagsWeaponCritThresholdHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsWeaponCritThreshold",
+    hint: "ROTV.FlagsWeaponCritThresholdHint",
+    section: "ROTV.Feats",
     type: Number,
     placeholder: 20
   },
   spellCriticalThreshold: {
-    name: "DND5E.FlagsSpellCritThreshold",
-    hint: "DND5E.FlagsSpellCritThresholdHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsSpellCritThreshold",
+    hint: "ROTV.FlagsSpellCritThresholdHint",
+    section: "ROTV.Feats",
     type: Number,
     placeholder: 20
   },
   meleeCriticalDamageDice: {
-    name: "DND5E.FlagsMeleeCriticalDice",
-    hint: "DND5E.FlagsMeleeCriticalDiceHint",
-    section: "DND5E.Feats",
+    name: "ROTV.FlagsMeleeCriticalDice",
+    hint: "ROTV.FlagsMeleeCriticalDiceHint",
+    section: "ROTV.Feats",
     type: Number,
     placeholder: 0
   }
@@ -1654,7 +1654,7 @@ preLocalize("characterFlags", { keys: ["name", "hint", "section"] });
  * Flags allowed on actors. Any flags not in the list may be deleted during a migration.
  * @type {string[]}
  */
-DND5E.allowedActorFlags = ["isPolymorphed", "originalActor"].concat(Object.keys(DND5E.characterFlags));
+ROTV.allowedActorFlags = ["isPolymorphed", "originalActor"].concat(Object.keys(ROTV.characterFlags));
 
 /* -------------------------------------------- */
 
@@ -1662,7 +1662,7 @@ DND5E.allowedActorFlags = ["isPolymorphed", "originalActor"].concat(Object.keys(
  * Advancement types that can be added to items.
  * @enum {*}
  */
-DND5E.advancementTypes = {
+ROTV.advancementTypes = {
   HitPoints: advancement.HitPointsAdvancement,
   ItemGrant: advancement.ItemGrantAdvancement,
   ScaleValue: advancement.ScaleValueAdvancement
@@ -1673,22 +1673,22 @@ DND5E.advancementTypes = {
 /**
  * Patch an existing config enum to allow conversion from string values to object values without
  * breaking existing modules that are expecting strings.
- * @param {string} key          Key within DND5E that has been replaced with an enum of objects.
+ * @param {string} key          Key within ROTV that has been replaced with an enum of objects.
  * @param {string} fallbackKey  Key within the new config object from which to get the fallback value.
  * @param {object} [options]    Additional options passed through to logCompatibilityWarning.
  */
 function patchConfig(key, fallbackKey, options) {
   /** @override */
   function toString() {
-    const message = `The value of CONFIG.DND5E.${key} has been changed to an object.`
+    const message = `The value of CONFIG.ROTV.${key} has been changed to an object.`
       +` The former value can be acccessed from .${fallbackKey}.`;
     foundry.utils.logCompatibilityWarning(message, options);
     return this[fallbackKey];
   }
 
-  Object.values(DND5E[key]).forEach(o => o.toString = toString);
+  Object.values(ROTV[key]).forEach(o => o.toString = toString);
 }
 
 /* -------------------------------------------- */
 
-export default DND5E;
+export default ROTV;
