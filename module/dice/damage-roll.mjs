@@ -121,7 +121,7 @@ export default class DamageRoll extends Roll {
         term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
         term.number = term.options.baseNumber;
         if ( this.isCritical ) {
-          let cm = this.options.criticalMultiplier ?? 2;
+          let cm = this.options.criticalMultiplier ?? 1;
 
           // Powerful critical - maximize damage and reduce the multiplier by 1
           if ( this.options.powerfulCritical ) {
@@ -141,7 +141,7 @@ export default class DamageRoll extends Roll {
         term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
         term.number = term.options.baseNumber;
         if ( this.isCritical ) {
-          term.number *= (this.options.criticalMultiplier ?? 2);
+          term.number *= (this.options.criticalMultiplier ?? 1);
           term.options.critical = true;
         }
       }
@@ -211,17 +211,12 @@ export default class DamageRoll extends Roll {
         title,
         content,
         buttons: {
-          critical: {
-            condition: allowCritical,
-            label: game.i18n.localize("ROTV.CriticalHit"),
-            callback: html => resolve(this._onDialogSubmit(html, true))
-          },
           normal: {
             label: game.i18n.localize(allowCritical ? "ROTV.Normal" : "ROTV.Roll"),
             callback: html => resolve(this._onDialogSubmit(html, false))
           }
         },
-        default: defaultCritical ? "critical" : "normal",
+        default: "normal",
         close: () => resolve(null)
       }, options).render(true);
     });

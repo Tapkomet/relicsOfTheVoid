@@ -122,9 +122,6 @@ ROTV.attunementTypes = {
  * @type {{"0": string, "1": string, "2": string}}
  */
 ROTV.attunements = {
-  0: "ROTV.AttunementNone",
-  1: "ROTV.AttunementRequired",
-  2: "ROTV.AttunementAttuned"
 };
 preLocalize("attunements");
 
@@ -346,8 +343,6 @@ ROTV.creatureTypes = {
 ROTV.itemActionTypes = {
   mwak: "ROTV.ActionMWAK",
   rwak: "ROTV.ActionRWAK",
-  msak: "ROTV.ActionMSAK",
-  rsak: "ROTV.ActionRSAK",
   save: "ROTV.ActionSave",
   heal: "ROTV.ActionHeal",
   abil: "ROTV.ActionAbil",

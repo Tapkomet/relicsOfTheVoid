@@ -24,7 +24,6 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {number} attributes.death.success            Number of successful death saves.
  * @property {number} attributes.death.failure            Number of failed death saves.
  * @property {number} attributes.exhaustion               Number of levels of exhaustion.
- * @property {number} attributes.inspiration              Does this character have inspiration?
  * @property {object} details
  * @property {string} details.background                  Name of character's background.
  * @property {string} details.originalClass               ID of first class taken by character.

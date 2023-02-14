@@ -55,15 +55,13 @@ export default class Item5e extends Item {
 
       // If a specific attack type is defined
       if ( this.hasAttack ) return {
-        mwak: "str",
-        rwak: "dex",
-        msak: spellcasting || "int",
-        rsak: spellcasting || "int"
+        mwak: "con",
+        rwak: "con"
       }[this.system.actionType];
     }
 
     // Case 3 - unknown
-    return null;
+    return "con";
   }
 
   /* -------------------------------------------- */
@@ -93,7 +91,7 @@ export default class Item5e extends Item {
    * @type {boolean}
    */
   get hasAttack() {
-    return ["mwak", "rwak", "msak", "rsak"].includes(this.system.actionType);
+    return ["mwak", "rwak"].includes(this.system.actionType);
   }
 
   /* -------------------------------------------- */
@@ -2330,7 +2328,7 @@ export default class Item5e extends Item {
     const desc = `${scrollIntro}<hr/><h3>${itemData.name} (Level ${level})</h3><hr/>${description.value}<hr/><h3>Scroll Details</h3><hr/>${scrollDetails}`;
 
     // Used a fixed attack modifier and saving throw according to the level of spell scroll.
-    if ( ["mwak", "rwak", "msak", "rsak"].includes(actionType) ) {
+    if ( ["mwak", "rwak"].includes(actionType) ) {
       attackBonus = `${scrollData.system.attackBonus} - @mod`;
     }
     if ( save.ability ) {

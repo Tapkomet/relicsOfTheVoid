@@ -25,7 +25,7 @@ export default class PhysicalItemTemplate extends foundry.abstract.DataModel {
           required: true, nullable: false, initial: 0, min: 0, label: "ROTV.Price"
         }),
         denomination: new foundry.data.fields.StringField({
-          required: true, blank: false, initial: "gp", label: "ROTV.Currency"
+          required: true, blank: false, initial: "cr", label: "ROTV.Currency"
         })
       }, {label: "ROTV.Price"}),
       rarity: new foundry.data.fields.StringField({required: true, blank: true, label: "ROTV.Rarity"}),
@@ -52,7 +52,7 @@ export default class PhysicalItemTemplate extends foundry.abstract.DataModel {
     if ( foundry.utils.getType(source.price) === "Object" ) return;
     source.price = {
       value: Number.isNumeric(source.price) ? Number(source.price) : 0,
-      denomination: "gp"
+      denomination: "cr"
     };
   }
 

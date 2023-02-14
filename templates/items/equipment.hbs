@@ -67,12 +67,6 @@
             </div>
 
             {{#unless isMountable}}
-            <div class="form-group">
-                <label>{{localize "ROTV.Attunement"}}</label>
-                <select name="system.attunement" data-dtype="Number">
-                    {{selectOptions config.attunements selected=system.attunement}}
-                </select>
-            </div>
 
             {{!-- Equipment Status --}}
             <div class="form-group stacked">

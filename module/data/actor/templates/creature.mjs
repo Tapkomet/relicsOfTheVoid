@@ -16,8 +16,6 @@ import CommonTemplate from "./common.mjs";
  * @property {object} bonuses
  * @property {AttackBonusesData} bonuses.mwak        Bonuses to melee weapon attacks.
  * @property {AttackBonusesData} bonuses.rwak        Bonuses to ranged weapon attacks.
- * @property {AttackBonusesData} bonuses.msak        Bonuses to melee spell attacks.
- * @property {AttackBonusesData} bonuses.rsak        Bonuses to ranged spell attacks.
  * @property {object} bonuses.abilities              Bonuses to ability scores.
  * @property {string} bonuses.abilities.check        Numeric or dice bonus to ability checks.
  * @property {string} bonuses.abilities.save         Numeric or dice bonus to ability saves.
@@ -33,8 +31,6 @@ export default class CreatureTemplate extends CommonTemplate {
       bonuses: new foundry.data.fields.SchemaField({
         mwak: makeAttackBonuses({label: "ROTV.BonusMWAttack"}),
         rwak: makeAttackBonuses({label: "ROTV.BonusRWAttack"}),
-        msak: makeAttackBonuses({label: "ROTV.BonusMSAttack"}),
-        rsak: makeAttackBonuses({label: "ROTV.BonusRSAttack"}),
         abilities: new foundry.data.fields.SchemaField({
           check: new FormulaField({required: true, label: "ROTV.BonusAbilityCheck"}),
           save: new FormulaField({required: true, label: "ROTV.BonusAbilitySave"}),

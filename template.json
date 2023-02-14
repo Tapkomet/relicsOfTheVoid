@@ -109,7 +109,7 @@
         },
         "currency": {
           "pp": 0,
-          "gp": 0,
+          "cr": 0,
           "ep": 0,
           "sp": 0,
           "cp": 0
@@ -337,14 +337,6 @@
             "attack": "",
             "damage": ""
           },
-          "msak": {
-            "attack": "",
-            "damage": ""
-          },
-          "rsak": {
-            "attack": "",
-            "damage": ""
-          },
           "abilities": {
             "check": "",
             "save": "",
@@ -371,8 +363,7 @@
           "success": 0,
           "failure": 0
         },
-        "exhaustion": 0,
-        "inspiration": false
+        "exhaustion": 0
       },
       "details": {
         "background": "",
@@ -528,7 +519,7 @@
       },
       "currency": {
         "pp": 0,
-        "gp": 0,
+        "cr": 0,
         "ep": 0,
         "sp": 0,
         "cp": 0
@@ -551,7 +542,7 @@
         "weight": 0,
         "price": {
           "value": 0,
-          "denomination": "gp"
+          "denomination": "cr"
         },
         "attunement": 0,
         "equipped": false,
@@ -640,7 +631,7 @@
         "cp": 0,
         "sp": 0,
         "ep": 0,
-        "gp": 0,
+        "cr": 0,
         "pp": 0
       }
     },
