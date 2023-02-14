@@ -106,6 +106,13 @@
 
             {{!-- Item Activation Template --}}
             {{> "rotv.item-activation"}}
+            {{#if data.activation.type}}
+                <div class="form-group">
+                    <label class="checkbox">
+                        <input type="checkbox" name="data.uses.autoDestroy" {{checked data.uses.autoDestroy}}/> {{ localize "RELICS.ItemDestroyEmpty" }}
+                    </label>
+                </div>
+            {{/if}}
 
             <h3 class="form-header">{{ localize "ROTV.ItemWeaponAttack" }}</h3>
 

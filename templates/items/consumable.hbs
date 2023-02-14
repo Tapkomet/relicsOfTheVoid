@@ -56,14 +56,30 @@
             </div>
 
 
+            {{!-- Weapon Status --}}
             <div class="form-group stacked">
                 <label>{{ localize "ROTV.ItemConsumableStatus" }}</label>
-                <label class="checkbox">
-                    <input type="checkbox" name="system.equipped" {{checked system.equipped}}/> {{ localize "ROTV.Equipped" }}
-                </label>
-                <label class="checkbox">
-                    <input type="checkbox" name="system.identified" {{checked system.identified}}/> {{ localize "ROTV.Identified" }}
-                </label>
+                <div class="form-fields">
+                    <label class="checkbox">
+                        <input type="checkbox" name="system.proficient" {{checked system.proficient}}/> {{ localize "ROTV.Proficient" }}
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox" name="system.equipped" {{checked system.equipped}}/> {{ localize "ROTV.Equipped" }}
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox" name="system.identified" {{checked system.identified}}/> {{ localize "ROTV.Identified" }}
+                    </label>
+                </div>
+            </div>
+
+            {{!-- Weapon Properties --}}
+            <div class="form-group stacked weapon-properties">
+                <label>{{ localize "ROTV.ItemWeaponProperties" }}</label>
+                {{#each config.weaponProperties as |name prop|}}
+                    <label class="checkbox">
+                        <input type="checkbox" name="system.properties.{{prop}}" {{checked (lookup ../system.properties prop)}}/> {{ name }}
+                    </label>
+                {{/each}}
             </div>
 
             <h3 class="form-header">{{ localize "ROTV.ItemConsumableUsage" }}</h3>
