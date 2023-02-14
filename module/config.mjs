@@ -24,9 +24,7 @@ ROTV.abilities = {
   con: "ROTV.AbilityCon",
   int: "ROTV.AbilityInt",
   wis: "ROTV.AbilityWis",
-  cha: "ROTV.AbilityCha",
-  hon: "ROTV.AbilityHon",
-  san: "ROTV.AbilitySan"
+  cha: "ROTV.AbilityCha"
 };
 preLocalize("abilities");
 
@@ -40,9 +38,7 @@ ROTV.abilityAbbreviations = {
   con: "ROTV.AbilityConAbbr",
   int: "ROTV.AbilityIntAbbr",
   wis: "ROTV.AbilityWisAbbr",
-  cha: "ROTV.AbilityChaAbbr",
-  hon: "ROTV.AbilityHonAbbr",
-  san: "ROTV.AbilitySanAbbr"
+  cha: "ROTV.AbilityChaAbbr"
 };
 preLocalize("abilityAbbreviations");
 
@@ -56,7 +52,7 @@ ROTV.initiativeAbility = "dex";
  * Configure which ability score is used when calculating hit points per level.
  * @type {string}
  */
-ROTV.hitPointsAbility = "con";
+ROTV.hitPointsAbility = "str";
 
 /* -------------------------------------------- */
 
@@ -73,24 +69,19 @@ ROTV.hitPointsAbility = "con";
  * @enum {SkillConfiguration}
  */
 ROTV.skills = {
-  acr: { label: "ROTV.SkillAcr", ability: "dex" },
-  ani: { label: "ROTV.SkillAni", ability: "wis" },
-  arc: { label: "ROTV.SkillArc", ability: "int" },
-  ath: { label: "ROTV.SkillAth", ability: "str" },
   dec: { label: "ROTV.SkillDec", ability: "cha" },
-  his: { label: "ROTV.SkillHis", ability: "int" },
+  env: { label: "ROTV.SkillEnv", ability: "int" },
+  han: { label: "ROTV.SkillHan", ability: "dex" },
   ins: { label: "ROTV.SkillIns", ability: "wis" },
   itm: { label: "ROTV.SkillItm", ability: "cha" },
-  inv: { label: "ROTV.SkillInv", ability: "int" },
-  med: { label: "ROTV.SkillMed", ability: "wis" },
-  nat: { label: "ROTV.SkillNat", ability: "int" },
+  med: { label: "ROTV.SkillMed", ability: "int" },
+  org: { label: "ROTV.SkillOrg", ability: "int" },
   prc: { label: "ROTV.SkillPrc", ability: "wis" },
-  prf: { label: "ROTV.SkillPrf", ability: "cha" },
   per: { label: "ROTV.SkillPer", ability: "cha" },
-  rel: { label: "ROTV.SkillRel", ability: "int" },
-  slt: { label: "ROTV.SkillSlt", ability: "dex" },
+  php: { label: "ROTV.SkillPhp", ability: "str" },
   ste: { label: "ROTV.SkillSte", ability: "dex" },
-  sur: { label: "ROTV.SkillSur", ability: "wis" }
+  sur: { label: "ROTV.SkillSur", ability: "wis" },
+  tch: { label: "ROTV.SkillTch", ability: "int" }
 };
 preLocalize("skills", { key: "label", sort: true });
 patchConfig("skills", "label", { since: 2.0, until: 2.2 });
@@ -144,8 +135,20 @@ preLocalize("attunements");
  * @enum {string}
  */
 ROTV.weaponProficiencies = {
-  sim: "ROTV.WeaponSimpleProficiency",
-  mar: "ROTV.WeaponMartialProficiency"
+    sim: "ROTV.WeaponSimpleProficiency",
+    mar: "ROTV.WeaponMartialProficiency",
+    ass: "ROTV.WeaponAssaultProficiency",
+    pis: "ROTV.WeaponPistolProficiency",
+    sho: "ROTV.WeaponShotgunProficiency",
+    smg: "ROTV.WeaponSMGProficiency",
+    lmg: "ROTV.WeaponLMGProficiency",
+    sni: "ROTV.WeaponSniperProficiency",
+    gre: "ROTV.WeaponGrenadeProficiency",
+    gla: "ROTV.WeaponGrenadeLauncherProficiency",
+    rla: "ROTV.WeaponRocketLauncherProficiency",
+    fla: "ROTV.WeaponFlamethrowerProficiency",
+    shi: "ROTV.WeaponShieldProficiency",
+    lca: "ROTV.WeaponCannonProficiency"
 };
 preLocalize("weaponProficiencies");
 
@@ -155,11 +158,22 @@ preLocalize("weaponProficiencies");
  * @enum {(boolean|string)}
  */
 ROTV.weaponProficienciesMap = {
-  natural: true,
-  simpleM: "sim",
-  simpleR: "sim",
-  martialM: "mar",
-  martialR: "mar"
+    natural: true,
+    improvised: true,
+    simpleM: "sim",
+    martialM: "mar",
+    assault: "ass",
+    pistol: "pis",
+    shotgun: "sho",
+    smg: "smg",
+    lmg: "lmg",
+    sniper: "sni",
+    grenade: "gre",
+    grenadeL: "gla",
+    rocketL: "rla",
+    flamethrower: "fla",
+    shield: "shi",
+    lightC: "lca"
 };
 
 /**
@@ -168,43 +182,6 @@ ROTV.weaponProficienciesMap = {
  * @enum {string}
  */
 ROTV.weaponIds = {
-  battleaxe: "I0WocDSuNpGJayPb",
-  blowgun: "wNWK6yJMHG9ANqQV",
-  club: "nfIRTECQIG81CvM4",
-  dagger: "0E565kQUBmndJ1a2",
-  dart: "3rCO8MTIdPGSW6IJ",
-  flail: "UrH3sMdnUDckIHJ6",
-  glaive: "rOG1OM2ihgPjOvFW",
-  greataxe: "1Lxk6kmoRhG8qQ0u",
-  greatclub: "QRCsxkCwWNwswL9o",
-  greatsword: "xMkP8BmFzElcsMaR",
-  halberd: "DMejWAc8r8YvDPP1",
-  handaxe: "eO7Fbv5WBk5zvGOc",
-  handcrossbow: "qaSro7kFhxD6INbZ",
-  heavycrossbow: "RmP0mYRn2J7K26rX",
-  javelin: "DWLMnODrnHn8IbAG",
-  lance: "RnuxdHUAIgxccVwj",
-  lightcrossbow: "ddWvQRLmnnIS0eLF",
-  lighthammer: "XVK6TOL4sGItssAE",
-  longbow: "3cymOVja8jXbzrdT",
-  longsword: "10ZP2Bu3vnCuYMIB",
-  mace: "Ajyq6nGwF7FtLhDQ",
-  maul: "DizirD7eqjh8n95A",
-  morningstar: "dX8AxCh9o0A9CkT3",
-  net: "aEiM49V8vWpWw7rU",
-  pike: "tC0kcqZT9HHAO0PD",
-  quarterstaff: "g2dWN7PQiMRYWzyk",
-  rapier: "Tobce1hexTnDk4sV",
-  scimitar: "fbC0Mg1a73wdFbqO",
-  shortsword: "osLzOwQdPtrK3rQH",
-  sickle: "i4NeNZ30ycwPDHMx",
-  spear: "OG4nBBydvmfWYXIk",
-  shortbow: "GJv6WkD7D2J6rP6M",
-  sling: "3gynWO9sN4OLGMWD",
-  trident: "F65ANO66ckP8FDMa",
-  warpick: "2YdfjN1PIIrSHZii",
-  warhammer: "F0Df164Xv1gWcYt0",
-  whip: "QKTyxoO0YDnAsbYe"
 };
 
 /* -------------------------------------------- */
@@ -238,42 +215,6 @@ preLocalize("toolProficiencies", { sort: true });
  * @enum {string}
  */
 ROTV.toolIds = {
-  alchemist: "SztwZhbhZeCqyAes",
-  bagpipes: "yxHi57T5mmVt0oDr",
-  brewer: "Y9S75go1hLMXUD48",
-  calligrapher: "jhjo20QoiD5exf09",
-  card: "YwlHI3BVJapz4a3E",
-  carpenter: "8NS6MSOdXtUqD7Ib",
-  cartographer: "fC0lFK8P4RuhpfaU",
-  chess: "23y8FvWKf9YLcnBL",
-  cobbler: "hM84pZnpCqKfi8XH",
-  cook: "Gflnp29aEv5Lc1ZM",
-  dice: "iBuTM09KD9IoM5L8",
-  disg: "IBhDAr7WkhWPYLVn",
-  drum: "69Dpr25pf4BjkHKb",
-  dulcimer: "NtdDkjmpdIMiX7I2",
-  flute: "eJOrPcAz9EcquyRQ",
-  forg: "cG3m4YlHfbQlLEOx",
-  glassblower: "rTbVrNcwApnuTz5E",
-  herb: "i89okN7GFTWHsvPy",
-  horn: "aa9KuBy4dst7WIW9",
-  jeweler: "YfBwELTgPFHmQdHh",
-  leatherworker: "PUMfwyVUbtyxgYbD",
-  lute: "qBydtUUIkv520DT7",
-  lyre: "EwG1EtmbgR3bM68U",
-  mason: "skUih6tBvcBbORzA",
-  navg: "YHCmjsiXxZ9UdUhU",
-  painter: "ccm5xlWhx74d6lsK",
-  panflute: "G5m5gYIx9VAUWC3J",
-  pois: "il2GNi8C0DvGLL9P",
-  potter: "hJS8yEVkqgJjwfWa",
-  shawm: "G3cqbejJpfB91VhP",
-  smith: "KndVe2insuctjIaj",
-  thief: "woWZ1sO5IUVGzo58",
-  tinker: "0d08g1i5WXnNrCNA",
-  viol: "baoe3U5BfMMMxhCU",
-  weaver: "ap9prThUB2y9lDyj",
-  woodcarver: "xKErqkLo4ASYr5EP"
 };
 
 /* -------------------------------------------- */
@@ -481,6 +422,7 @@ preLocalize("armorTypes");
 ROTV.miscEquipmentTypes = {
   clothing: "ROTV.EquipmentClothing",
   trinket: "ROTV.EquipmentTrinket",
+  attachment: "ROTV.EquipmentAttachment",
   vehicle: "ROTV.EquipmentVehicle"
 };
 preLocalize("miscEquipmentTypes", { sort: true });
@@ -545,18 +487,6 @@ ROTV.armorProficienciesMap = {
  * @enum {string}
  */
 ROTV.armorIds = {
-  breastplate: "SK2HATQ4abKUlV8i",
-  chainmail: "rLMflzmxpe8JGTOA",
-  chainshirt: "p2zChy24ZJdVqMSH",
-  halfplate: "vsgmACFYINloIdPm",
-  hide: "n1V07puo0RQxPGuF",
-  leather: "WwdpHLXGX5r8uZu5",
-  padded: "GtKV1b5uqFQqpEni",
-  plate: "OjkIqlW2UpgFcjZa",
-  ringmail: "nsXZejlmgalj4he9",
-  scalemail: "XmnlF5fgIO3tg6TG",
-  splint: "cKpJmsJmU8YaiuqG",
-  studded: "TIV3B1vbrVHIhQAm"
 };
 
 /**
@@ -615,11 +545,8 @@ preLocalize("armorClasses", { key: "label" });
 ROTV.consumableTypes = {
   ammo: "ROTV.ConsumableAmmo",
   potion: "ROTV.ConsumablePotion",
-  poison: "ROTV.ConsumablePoison",
   food: "ROTV.ConsumableFood",
-  scroll: "ROTV.ConsumableScroll",
   wand: "ROTV.ConsumableWand",
-  rod: "ROTV.ConsumableRod",
   trinket: "ROTV.ConsumableTrinket"
 };
 preLocalize("consumableTypes", { sort: true });
@@ -690,31 +617,7 @@ preLocalize("featureTypes.class.subtypes", { sort: true });
  * @enum {CurrencyConfiguration}
  */
 ROTV.currencies = {
-  pp: {
-    label: "ROTV.CurrencyPP",
-    abbreviation: "ROTV.CurrencyAbbrPP",
-    conversion: 0.1
-  },
-  gp: {
-    label: "ROTV.CurrencyGP",
-    abbreviation: "ROTV.CurrencyAbbrGP",
-    conversion: 1
-  },
-  ep: {
-    label: "ROTV.CurrencyEP",
-    abbreviation: "ROTV.CurrencyAbbrEP",
-    conversion: 2
-  },
-  sp: {
-    label: "ROTV.CurrencySP",
-    abbreviation: "ROTV.CurrencyAbbrSP",
-    conversion: 10
-  },
-  cp: {
-    label: "ROTV.CurrencyCP",
-    abbreviation: "ROTV.CurrencyAbbrCP",
-    conversion: 100
-  }
+  cr: "ROTV.CurrencyCR"
 };
 preLocalize("currencies", { keys: ["label", "abbreviation"] });
 
@@ -727,9 +630,7 @@ preLocalize("currencies", { keys: ["label", "abbreviation"] });
  * @enum {string}
  */
 ROTV.physicalDamageTypes = {
-  bludgeoning: "ROTV.DamageBludgeoning",
-  piercing: "ROTV.DamagePiercing",
-  slashing: "ROTV.DamageSlashing"
+  normal: "ROTV.DamageNormal",
 };
 preLocalize("physicalDamageTypes", { sort: true });
 
@@ -741,16 +642,10 @@ preLocalize("physicalDamageTypes", { sort: true });
  */
 ROTV.damageTypes = {
   ...ROTV.physicalDamageTypes,
-  acid: "ROTV.DamageAcid",
-  cold: "ROTV.DamageCold",
   fire: "ROTV.DamageFire",
-  force: "ROTV.DamageForce",
-  lightning: "ROTV.DamageLightning",
-  necrotic: "ROTV.DamageNecrotic",
-  poison: "ROTV.DamagePoison",
-  psychic: "ROTV.DamagePsychic",
-  radiant: "ROTV.DamageRadiant",
-  thunder: "ROTV.DamageThunder"
+  toxic: "ROTV.DamageToxic",
+  falling: "ROTV.DamageFalling",
+  psychic: "ROTV.DamagePsychic"
 };
 preLocalize("damageTypes", { sort: true });
 
@@ -762,8 +657,7 @@ preLocalize("damageTypes", { sort: true });
  * @deprecated
  */
 ROTV.damageResistanceTypes = {
-  ...ROTV.damageTypes,
-  physical: "ROTV.DamagePhysical"
+  ...ROTV.damageTypes
 };
 preLocalize("damageResistanceTypes", { sort: true });
 
@@ -849,12 +743,12 @@ preLocalize("distanceUnits");
  */
 ROTV.encumbrance = {
   currencyPerWeight: {
-    imperial: 50,
-    metric: 110
+    imperial: 10000,
+    metric: 10000
   },
   strMultiplier: {
-    imperial: 15,
-    metric: 6.8
+    imperial: 1,
+    metric: 1
   },
   vehicleWeightMultiplier: {
     imperial: 2000, // 2000 lbs in an imperial ton
@@ -1186,16 +1080,6 @@ preLocalize("spellSchools", { sort: true });
  * @enum {string}
  */
 ROTV.spellScrollIds = {
-  0: "rQ6sO7HDWzqMhSI3",
-  1: "9GSfMg0VOA2b4uFN",
-  2: "XdDp6CKh9qEvPTuS",
-  3: "hqVKZie7x9w3Kqds",
-  4: "DM7hzgL836ZyUFB1",
-  5: "wa1VF8TXHmkrrR35",
-  6: "tI3rWx4bxefNCexS",
-  7: "mtyw4NS1s7j2EJaD",
-  8: "aOrinPg7yuDZEuWr",
-  9: "O4YbkJkLlnsgUszZ"
 };
 
 /* -------------------------------------------- */
@@ -1208,12 +1092,21 @@ ROTV.spellScrollIds = {
  */
 ROTV.weaponTypes = {
   simpleM: "ROTV.WeaponSimpleM",
-  simpleR: "ROTV.WeaponSimpleR",
   martialM: "ROTV.WeaponMartialM",
-  martialR: "ROTV.WeaponMartialR",
   natural: "ROTV.WeaponNatural",
   improv: "ROTV.WeaponImprov",
-  siege: "ROTV.WeaponSiege"
+  assault: "ROTV.WeaponAssault",
+  pistol: "ROTV.WeaponPistol",
+  shotgun: "ROTV.WeaponShotgun",
+  smg: "ROTV.WeaponSMG",
+  lmg: "ROTV.WeaponLMG",
+  sniper: "ROTV.WeaponSniper",
+  grenade: "ROTV.WeaponGrenade",
+  grenadeL: "ROTV.WeaponGrenadeLauncher",
+  rocketL: "ROTV.WeaponRocketLauncher",
+  flamethrower: "ROTV.WeaponFlamethrower",
+  shield: "ROTV.WeaponShield",
+  lightC: "ROTV.WeaponCannon"
 };
 preLocalize("weaponTypes");
 
@@ -1225,9 +1118,6 @@ preLocalize("weaponTypes");
  * @enum {string}
  */
 ROTV.physicalWeaponProperties = {
-  ada: "ROTV.WeaponPropertiesAda",
-  mgc: "ROTV.WeaponPropertiesMgc",
-  sil: "ROTV.WeaponPropertiesSil"
 };
 preLocalize("physicalWeaponProperties", { sort: true });
 
@@ -1239,23 +1129,52 @@ preLocalize("physicalWeaponProperties", { sort: true });
  */
 ROTV.weaponProperties = {
   ...ROTV.physicalWeaponProperties,
-  amm: "ROTV.WeaponPropertiesAmm",
-  fin: "ROTV.WeaponPropertiesFin",
-  fir: "ROTV.WeaponPropertiesFir",
-  foc: "ROTV.WeaponPropertiesFoc",
-  hvy: "ROTV.WeaponPropertiesHvy",
-  lgt: "ROTV.WeaponPropertiesLgt",
-  lod: "ROTV.WeaponPropertiesLod",
-  rch: "ROTV.WeaponPropertiesRch",
-  rel: "ROTV.WeaponPropertiesRel",
-  ret: "ROTV.WeaponPropertiesRet",
-  spc: "ROTV.WeaponPropertiesSpc",
-  thr: "ROTV.WeaponPropertiesThr",
-  two: "ROTV.WeaponPropertiesTwo",
-  ver: "ROTV.WeaponPropertiesVer"
+    asa: "ROTV.WeaponPropertiesAreaSup",
+    arp: "ROTV.WeaponPropertiesAP",
+    aut: "ROTV.WeaponPropertiesAuto",
+    bla: "ROTV.WeaponPropertiesBlast",
+    bob: "ROTV.WeaponPropertiesBothB",
+    buc: "ROTV.WeaponPropertiesBuckshot",
+    bon: "ROTV.WeaponPropertiesBuckshotOnly",
+    bur: "ROTV.WeaponPropertiesBursting",
+    dam: "ROTV.WeaponPropertiesDamaged",
+    ded: "ROTV.WeaponPropertiesDestroyed",
+    des: "ROTV.WeaponPropertiesDestructive",
+    dis: "ROTV.WeaponPropertiesDisorienting",
+    emp: "ROTV.WeaponPropertiesEMP",
+    fin: "ROTV.WeaponPropertiesFin",
+    fla: "ROTV.WeaponPropertiesFlame",
+    ina: "ROTV.WeaponPropertiesInacc",
+    oha: "ROTV.WeaponPropertiesOne",
+    ovc: "ROTV.WeaponPropertiesOvercharge",
+    pen: "ROTV.WeaponPropertiesPenetration",
+    rpd: "ROTV.WeaponPropertiesRapid",
+    rch: "ROTV.WeaponPropertiesRch",
+    shd: "ROTV.WeaponPropertiesShield",
+    shc: "ROTV.WeaponPropertiesShocking",
+    shm: "ROTV.WeaponPropertiesShockMode",
+    smk: "ROTV.WeaponPropertiesSmoke",
+    sda: "ROTV.WeaponPropertiesSidearm",
+    spc: "ROTV.WeaponPropertiesSpc",
+    spr: "ROTV.WeaponPropertiesSpray",
+    stc: "ROTV.WeaponPropertiesSticky",
+    sup: "ROTV.WeaponPropertiesSuppressive",
+    unr: "ROTV.WeaponPropertiesUnreliable",
+    unw: "ROTV.WeaponPropertiesUnwieldy"
 };
 preLocalize("weaponProperties", { sort: true });
 
+
+
+/* -------------------------------------------- */
+
+/**
+ * Compendium packs used for localized items.
+ * @enum {string}
+ */
+ROTV.sourcePacks = {
+  ITEMS: "rotv.items"
+};
 
 /* -------------------------------------------- */
 
@@ -1398,10 +1317,9 @@ ROTV.conditionTypes = {
   charmed: "ROTV.ConCharmed",
   deafened: "ROTV.ConDeafened",
   diseased: "ROTV.ConDiseased",
-  exhaustion: "ROTV.ConExhaustion",
+  engaged: "ROTV.ConEngaged",
   frightened: "ROTV.ConFrightened",
   grappled: "ROTV.ConGrappled",
-  incapacitated: "ROTV.ConIncapacitated",
   invisible: "ROTV.ConInvisible",
   paralyzed: "ROTV.ConParalyzed",
   petrified: "ROTV.ConPetrified",
@@ -1418,31 +1336,7 @@ preLocalize("conditionTypes", { sort: true });
  * @enum {string}
  */
 ROTV.languages = {
-  common: "ROTV.LanguagesCommon",
-  aarakocra: "ROTV.LanguagesAarakocra",
-  abyssal: "ROTV.LanguagesAbyssal",
-  aquan: "ROTV.LanguagesAquan",
-  auran: "ROTV.LanguagesAuran",
-  celestial: "ROTV.LanguagesCelestial",
-  deep: "ROTV.LanguagesDeepSpeech",
-  draconic: "ROTV.LanguagesDraconic",
-  druidic: "ROTV.LanguagesDruidic",
-  dwarvish: "ROTV.LanguagesDwarvish",
-  elvish: "ROTV.LanguagesElvish",
-  giant: "ROTV.LanguagesGiant",
-  gith: "ROTV.LanguagesGith",
-  gnomish: "ROTV.LanguagesGnomish",
-  goblin: "ROTV.LanguagesGoblin",
-  gnoll: "ROTV.LanguagesGnoll",
-  halfling: "ROTV.LanguagesHalfling",
-  ignan: "ROTV.LanguagesIgnan",
-  infernal: "ROTV.LanguagesInfernal",
-  orc: "ROTV.LanguagesOrc",
-  primordial: "ROTV.LanguagesPrimordial",
-  sylvan: "ROTV.LanguagesSylvan",
-  terran: "ROTV.LanguagesTerran",
-  cant: "ROTV.LanguagesThievesCant",
-  undercommon: "ROTV.LanguagesUndercommon"
+  common: "ROTV.LanguagesCommon"
 };
 preLocalize("languages", { sort: true });
 
@@ -1563,89 +1457,11 @@ preLocalize("traits", { key: "label" });
  * @enum {CharacterFlagConfig}
  */
 ROTV.characterFlags = {
-  diamondSoul: {
-    name: "ROTV.FlagsDiamondSoul",
-    hint: "ROTV.FlagsDiamondSoulHint",
-    section: "ROTV.Feats",
-    type: Boolean
-  },
-  elvenAccuracy: {
-    name: "ROTV.FlagsElvenAccuracy",
-    hint: "ROTV.FlagsElvenAccuracyHint",
-    section: "ROTV.RacialTraits",
-    abilities: ["dex", "int", "wis", "cha"],
-    type: Boolean
-  },
-  halflingLucky: {
-    name: "ROTV.FlagsHalflingLucky",
-    hint: "ROTV.FlagsHalflingLuckyHint",
-    section: "ROTV.RacialTraits",
-    type: Boolean
-  },
-  initiativeAdv: {
-    name: "ROTV.FlagsInitiativeAdv",
-    hint: "ROTV.FlagsInitiativeAdvHint",
-    section: "ROTV.Feats",
-    type: Boolean
-  },
   initiativeAlert: {
     name: "ROTV.FlagsAlert",
     hint: "ROTV.FlagsAlertHint",
     section: "ROTV.Feats",
     type: Boolean
-  },
-  jackOfAllTrades: {
-    name: "ROTV.FlagsJOAT",
-    hint: "ROTV.FlagsJOATHint",
-    section: "ROTV.Feats",
-    type: Boolean
-  },
-  observantFeat: {
-    name: "ROTV.FlagsObservant",
-    hint: "ROTV.FlagsObservantHint",
-    skills: ["prc", "inv"],
-    section: "ROTV.Feats",
-    type: Boolean
-  },
-  powerfulBuild: {
-    name: "ROTV.FlagsPowerfulBuild",
-    hint: "ROTV.FlagsPowerfulBuildHint",
-    section: "ROTV.RacialTraits",
-    type: Boolean
-  },
-  reliableTalent: {
-    name: "ROTV.FlagsReliableTalent",
-    hint: "ROTV.FlagsReliableTalentHint",
-    section: "ROTV.Feats",
-    type: Boolean
-  },
-  remarkableAthlete: {
-    name: "ROTV.FlagsRemarkableAthlete",
-    hint: "ROTV.FlagsRemarkableAthleteHint",
-    abilities: ["str", "dex", "con"],
-    section: "ROTV.Feats",
-    type: Boolean
-  },
-  weaponCriticalThreshold: {
-    name: "ROTV.FlagsWeaponCritThreshold",
-    hint: "ROTV.FlagsWeaponCritThresholdHint",
-    section: "ROTV.Feats",
-    type: Number,
-    placeholder: 20
-  },
-  spellCriticalThreshold: {
-    name: "ROTV.FlagsSpellCritThreshold",
-    hint: "ROTV.FlagsSpellCritThresholdHint",
-    section: "ROTV.Feats",
-    type: Number,
-    placeholder: 20
-  },
-  meleeCriticalDamageDice: {
-    name: "ROTV.FlagsMeleeCriticalDice",
-    hint: "ROTV.FlagsMeleeCriticalDiceHint",
-    section: "ROTV.Feats",
-    type: Number,
-    placeholder: 0
   }
 };
 preLocalize("characterFlags", { keys: ["name", "hint", "section"] });

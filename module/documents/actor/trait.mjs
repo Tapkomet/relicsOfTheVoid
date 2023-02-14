@@ -125,6 +125,7 @@ export async function choices(trait, chosen=new Set()) {
  *                                       otherwise else a simple object containing the minimal index data.
  */
 export function getBaseItem(identifier, { indexOnly=false, fullItem=false }={}) {
+
   let pack = CONFIG.ROTV.sourcePacks.ITEMS;
   let [scope, collection, id] = identifier.split(".");
   if ( scope && collection ) pack = `${scope}.${collection}`;

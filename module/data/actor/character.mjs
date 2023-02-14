@@ -86,8 +86,7 @@ export default class CharacterData extends CreatureTemplate {
         }, {label: "ROTV.DeathSave"}),
         exhaustion: new foundry.data.fields.NumberField({
           required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Exhaustion"
-        }),
-        inspiration: new foundry.data.fields.BooleanField({required: true, label: "ROTV.Inspiration"})
+        })
       }, {label: "ROTV.Attributes"}),
       details: new foundry.data.fields.SchemaField({
         ...DetailsFields.common,

@@ -158,8 +158,8 @@
     }
   ],
   "socket": true,
-  "gridDistance": 5,
-  "gridUnits": "ft",
+  "gridDistance": 1,
+  "gridUnits": "",
   "primaryTokenAttribute": "attributes.hp",
   "flags": {
     "needsMigrationVersion": "2.1.2",

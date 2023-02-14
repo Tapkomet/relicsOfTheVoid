@@ -645,7 +645,7 @@ export default class Actor5e extends Actor {
     const initBonus = simplifyBonus(init.bonus, bonusData);
     const abilityBonus = simplifyBonus(ability.bonuses?.check, bonusData);
     init.total = init.mod + initBonus + abilityBonus + globalCheckBonus
-      + (flags.initiativeAlert ? 5 : 0)
+      + (flags.initiativeAlert ? 3 : 0)
       + (Number.isNumeric(init.prof.term) ? init.prof.flat : 0);
   }
 

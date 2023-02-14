@@ -74,8 +74,8 @@
             "climb": 0,
             "fly": 0,
             "swim": 0,
-            "walk": 30,
-            "units": "ft",
+            "walk": 8,
+            "units": "",
             "hover": false
           }
         },
@@ -125,7 +125,7 @@
             "blindsight": 0,
             "tremorsense": 0,
             "truesight": 0,
-            "units": "ft",
+            "units": "",
             "special": ""
           },
           "spellcasting": "int"
