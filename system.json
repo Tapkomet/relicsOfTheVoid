@@ -1,18 +1,18 @@
 {
   "id": "rotv",
-  "title": "RotV - Fifth Edition System",
-  "description": "A system for playing the fifth edition of the worlds most popular role-playing game in the Foundry Virtual Tabletop environment.",
-  "version": "2.1.4",
+  "title": "Relics of the Void",
+  "description": "A system for playing in SPACE.",
+  "version": "0.2",
   "compatibility": {
     "minimum": "10.291",
     "verified": "10"
   },
-  "url": "https://github.com/foundryvtt/rotv/",
-  "manifest": "https://raw.githubusercontent.com/foundryvtt/rotv/master/system.json",
-  "download": "https://github.com/foundryvtt/rotv/releases/download/release-2.1.4/rotv-release-2.1.4.zip",
+  "url": "https://github.com/Tapkomet/relicsOfTheVoid",
+  "manifest": "https://raw.githubusercontent.com/Tapkomet/relicsOfTheVoid/main/system.json",
+  "download": "https://github.com/Tapkomet/relicsOfTheVoid/archive/refs/heads/main.zip",
   "authors": [
     {
-      "name": "Atropos",
+      "name": "Tapkomet",
       "url": "https://foundryvtt.com",
       "flags": {}
     }
@@ -22,125 +22,6 @@
   ],
   "styles": [
     "rotv.css"
-  ],
-  "packs": [
-    {
-      "name": "heroes",
-      "label": "Starter Heroes",
-      "system": "rotv",
-      "path": "packs/heroes.db",
-      "type": "Actor",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "monsters",
-      "label": "Monsters (SRD)",
-      "system": "rotv",
-      "path": "packs/monsters.db",
-      "type": "Actor",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "items",
-      "label": "Items (SRD)",
-      "system": "rotv",
-      "path": "packs/items.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "tradegoods",
-      "label": "Trade Goods (SRD)",
-      "system": "rotv",
-      "path": "packs/tradegoods.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "spells",
-      "label": "Spells (SRD)",
-      "system": "rotv",
-      "path": "packs/spells.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "backgrounds",
-      "label": "Backgrounds (SRD)",
-      "system": "rotv",
-      "path": "packs/backgrounds.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "classes",
-      "label": "Classes (SRD)",
-      "system": "rotv",
-      "path": "packs/classes.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "subclasses",
-      "label": "Subclasses (SRD)",
-      "system": "rotv",
-      "path": "packs/subclasses.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "classfeatures",
-      "label": "Class Features (SRD)",
-      "system": "rotv",
-      "path": "packs/classfeatures.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "races",
-      "label": "Racial Features (SRD)",
-      "system": "rotv",
-      "path": "packs/races.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "monsterfeatures",
-      "label": "Monster Features (SRD)",
-      "system": "rotv",
-      "path": "packs/monsterfeatures.db",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "rules",
-      "label": "Rules (SRD)",
-      "system": "rotv",
-      "path": "packs/rules.db",
-      "type": "JournalEntry",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "tables",
-      "label": "Tables (SRD)",
-      "system": "rotv",
-      "path": "packs/tables.db",
-      "type": "RollTable",
-      "private": false,
-      "flags": {}
-    }
   ],
   "languages": [
     {
@@ -162,7 +43,7 @@
   "gridUnits": "",
   "primaryTokenAttribute": "attributes.hp",
   "flags": {
-    "needsMigrationVersion": "2.1.2",
-    "compatibleMigrationVersion": "0.8"
+    "needsMigrationVersion": "0.2",
+    "compatibleMigrationVersion": "0.2"
   }
 }
