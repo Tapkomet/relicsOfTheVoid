@@ -4,7 +4,7 @@ import Advancement from "../../documents/advancement/advancement.mjs";
  * Presents a list of advancement types to create when clicking the new advancement button.
  * Once a type is selected, this hands the process over to the advancement's individual editing interface.
  *
- * @param {Item5e} item             Item to which this advancement will be added.
+ * @param {ItemRelics} item             Item to which this advancement will be added.
  * @param {object} [dialogData={}]  An object of dialog data which configures how the modal window is rendered.
  * @param {object} [options={}]     Dialog rendering options.
  */
@@ -14,7 +14,7 @@ export default class AdvancementSelection extends Dialog {
 
     /**
      * Store a reference to the Item to which this Advancement is being added.
-     * @type {Item5e}
+     * @type {ItemRelics}
      */
     this.item = item;
   }
@@ -79,11 +79,11 @@ export default class AdvancementSelection extends Dialog {
   /**
    * A helper constructor function which displays the selection dialog and returns a Promise once its workflow has
    * been resolved.
-   * @param {Item5e} item                         Item to which the advancement should be added.
+   * @param {ItemRelics} item                         Item to which the advancement should be added.
    * @param {object} [config={}]
    * @param {boolean} [config.rejectClose=false]  Trigger a rejection if the window was closed without a choice.
    * @param {object} [config.options={}]          Additional rendering options passed to the Dialog.
-   * @returns {Promise<AdvancementConfig|null>}   Result of `Item5e#createAdvancement`.
+   * @returns {Promise<AdvancementConfig|null>}   Result of `ItemRelics#createAdvancement`.
    */
   static async createDialog(item, { rejectClose=false, options={} }={}) {
     return new Promise((resolve, reject) => {

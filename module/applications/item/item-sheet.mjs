@@ -1,13 +1,13 @@
 import AdvancementManager from "../advancement/advancement-manager.mjs";
 import AdvancementMigrationDialog from "../advancement/advancement-migration-dialog.mjs";
 import TraitSelector from "../trait-selector.mjs";
-import ActiveEffect5e from "../../documents/active-effect.mjs";
+import ActiveEffectRelics from "../../documents/active-effect.mjs";
 import * as Trait from "../../documents/actor/trait.mjs";
 
 /**
  * Override and extend the core ItemSheet implementation to handle specific item types.
  */
-export default class ItemSheet5e extends ItemSheet {
+export default class ItemSheetRelics extends ItemSheet {
   constructor(...args) {
     super(...args);
 
@@ -103,14 +103,14 @@ export default class ItemSheet5e extends ItemSheet {
       advancement: this._getItemAdvancement(item),
 
       // Prepare Active Effects
-      effects: ActiveEffect5e.prepareActiveEffectCategories(item.effects)
+      effects: ActiveEffectRelics.prepareActiveEffectCategories(item.effects)
     });
     context.abilityConsumptionTargets = this._getItemConsumptionTargets();
 
     /** @deprecated */
     Object.defineProperty(context, "data", {
       get() {
-        const msg = `You are accessing the "data" attribute within the rendering context provided by the ItemSheet5e
+        const msg = `You are accessing the "data" attribute within the rendering context provided by the ItemSheetRelics
         class. This attribute has been deprecated in favor of "system" and will be removed in a future release`;
         foundry.utils.logCompatibilityWarning(msg, { since: "RotV 2.0", until: "RotV 2.2" });
         return context.system;
@@ -145,7 +145,7 @@ export default class ItemSheet5e extends ItemSheet {
 
   /**
    * Get the display object used to show the advancement tab.
-   * @param {Item5e} item  The item for which the advancement is being prepared.
+   * @param {ItemRelics} item  The item for which the advancement is being prepared.
    * @returns {object}     Object with advancement data grouped by levels.
    */
   _getItemAdvancement(item) {
@@ -452,7 +452,7 @@ export default class ItemSheet5e extends ItemSheet {
       html.find(".trait-selector").click(this._onConfigureTraits.bind(this));
       html.find(".effect-control").click(ev => {
         if ( this.item.isOwned ) return ui.notifications.warn("Managing Active Effects within an Owned Item is not currently supported and will be added in a subsequent update.");
-        ActiveEffect5e.onManageActiveEffect(ev, this.item);
+        ActiveEffectRelics.onManageActiveEffect(ev, this.item);
       });
       html.find(".advancement .item-control").click(event => {
         const t = event.currentTarget;
@@ -513,7 +513,7 @@ export default class ItemSheet5e extends ItemSheet {
   /**
    * Add or remove a damage part from the damage formula.
    * @param {Event} event             The original click event.
-   * @returns {Promise<Item5e>|null}  Item with updates applied.
+   * @returns {Promise<ItemRelics>|null}  Item with updates applied.
    * @private
    */
   async _onDamageControl(event) {
@@ -568,11 +568,11 @@ export default class ItemSheet5e extends ItemSheet {
     const item = this.item;
 
     /**
-     * A hook event that fires when some useful data is dropped onto an ItemSheet5e.
+     * A hook event that fires when some useful data is dropped onto an ItemSheetRelics.
      * @function rotv.dropItemSheetData
      * @memberof hookEvents
-     * @param {Item5e} item                  The Item5e
-     * @param {ItemSheet5e} sheet            The ItemSheet5e application
+     * @param {ItemRelics} item                  The ItemRelics
+     * @param {ItemSheetRelics} sheet            The ItemSheetRelics application
      * @param {object} data                  The data that has been dropped onto the sheet
      * @returns {boolean}                    Explicitly return `false` to prevent normal drop handling.
      */

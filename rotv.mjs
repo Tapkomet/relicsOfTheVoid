@@ -1,11 +1,6 @@
 /**
  * The RotV game system for Foundry Virtual Tabletop
- * A system for playing the fifth edition of the world's most popular role-playing game.
- * Author: Atropos
- * Software License: MIT
- * Content License: https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf
- * Repository: https://github.com/foundryvtt/rotv
- * Issue Tracker: https://github.com/foundryvtt/rotv/issues
+ * Author: Tapkomet
  */
 
 // Import Configuration
@@ -83,16 +78,16 @@ Hooks.once("init", function() {
 
   // Record Configuration Values
   CONFIG.ROTV = ROTV;
-  CONFIG.ActiveEffect.documentClass = documents.ActiveEffect5e;
-  CONFIG.Actor.documentClass = documents.Actor5e;
-  CONFIG.Item.documentClass = documents.Item5e;
-  CONFIG.Token.documentClass = documents.TokenDocument5e;
-  CONFIG.Token.objectClass = canvas.Token5e;
+  CONFIG.ActiveEffect.documentClass = documents.ActiveEffectRelics;
+  CONFIG.Actor.documentClass = documents.ActorRelics;
+  CONFIG.Item.documentClass = documents.ItemRelics;
+  CONFIG.Token.documentClass = documents.TokenDocumentRelics;
+  CONFIG.Token.objectClass = canvas.TokenRelics;
   CONFIG.time.roundTime = 6;
   CONFIG.Dice.DamageRoll = dice.DamageRoll;
   CONFIG.Dice.D20Roll = dice.D20Roll;
-  CONFIG.MeasuredTemplate.defaults.angle = 53.13; // 5e cone RAW should be 53.13 degrees
-  CONFIG.ui.combat = applications.combat.CombatTracker5e;
+  CONFIG.MeasuredTemplate.defaults.angle = 53.13; // Relics cone RAW should be 53.13 degrees
+  CONFIG.ui.combat = applications.combat.CombatTrackerRelics;
 
   // Register System Settings
   registerSystemSettings();
@@ -127,17 +122,17 @@ Hooks.once("init", function() {
 
   // Register sheet application classes
   Actors.unregisterSheet("core", ActorSheet);
-  Actors.registerSheet("rotv", applications.actor.ActorSheet5eCharacter, {
+  Actors.registerSheet("rotv", applications.actor.ActorSheetRelicsCharacter, {
     types: ["character"],
     makeDefault: true,
     label: "ROTV.SheetClassCharacter"
   });
-  Actors.registerSheet("rotv", applications.actor.ActorSheet5eNPC, {
+  Actors.registerSheet("rotv", applications.actor.ActorSheetRelicsNPC, {
     types: ["npc"],
     makeDefault: true,
     label: "ROTV.SheetClassNPC"
   });
-  Actors.registerSheet("rotv", applications.actor.ActorSheet5eVehicle, {
+  Actors.registerSheet("rotv", applications.actor.ActorSheetRelicsVehicle, {
     types: ["vehicle"],
     makeDefault: true,
     label: "ROTV.SheetClassVehicle"
@@ -149,7 +144,7 @@ Hooks.once("init", function() {
   });
 
   Items.unregisterSheet("core", ItemSheet);
-  Items.registerSheet("rotv", applications.item.ItemSheet5e, {
+  Items.registerSheet("rotv", applications.item.ItemSheetRelics, {
     makeDefault: true,
     label: "ROTV.SheetClassItem"
   });
@@ -238,7 +233,7 @@ Hooks.once("ready", function() {
   // Wait to register hotbar drop hook on ready so that modules could register earlier if they want to
   Hooks.on("hotbarDrop", (bar, data, slot) => {
     if ( ["Item", "ActiveEffect"].includes(data.type) ) {
-      documents.macro.create5eMacro(data, slot);
+      documents.macro.createRelicsMacro(data, slot);
       return false;
     }
   });
@@ -252,7 +247,7 @@ Hooks.once("ready", function() {
 
   // Perform the migration
   if ( cv && isNewerVersion(game.system.flags.compatibleMigrationVersion, cv) ) {
-    ui.notifications.error(game.i18n.localize("MIGRATION.5eVersionTooOldWarning"), {permanent: true});
+    ui.notifications.error(game.i18n.localize("MIGRATION.RelicsVersionTooOldWarning"), {permanent: true});
   }
   migrations.migrateWorld();
 });
@@ -273,9 +268,9 @@ Hooks.on("canvasInit", gameCanvas => {
 Hooks.on("renderChatMessage", documents.chat.onRenderChatMessage);
 Hooks.on("getChatLogEntryContext", documents.chat.addChatMessageContextOptions);
 
-Hooks.on("renderChatLog", (app, html, data) => documents.Item5e.chatListeners(html));
-Hooks.on("renderChatPopout", (app, html, data) => documents.Item5e.chatListeners(html));
-Hooks.on("getActorDirectoryEntryContext", documents.Actor5e.addDirectoryContextOptions);
+Hooks.on("renderChatLog", (app, html, data) => documents.ItemRelics.chatListeners(html));
+Hooks.on("renderChatPopout", (app, html, data) => documents.ItemRelics.chatListeners(html));
+Hooks.on("getActorDirectoryEntryContext", documents.ActorRelics.addDirectoryContextOptions);
 
 /* -------------------------------------------- */
 /*  Bundled Module Exports                      */

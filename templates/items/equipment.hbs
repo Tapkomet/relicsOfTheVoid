@@ -83,6 +83,17 @@
             </div>
             {{/unless}}
 
+
+            {{!-- Equipment Properties --}}
+            <div class="form-group stacked weapon-properties">
+                <label>{{ localize "ROTV.ItemEquipmentProperties" }}</label>
+                {{#each config.equipmentProperties as |name prop|}}
+                    <label class="checkbox">
+                        <input type="checkbox" name="data.properties.{{prop}}" {{checked (lookup ../data.properties prop)}}/> {{ name }}
+                    </label>
+                {{/each}}
+            </div>
+
             {{!-- Armor Class --}}
             {{#if hasAC}}
             <div class="form-group">

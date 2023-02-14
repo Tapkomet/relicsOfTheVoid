@@ -7,11 +7,11 @@ import Proficiency from "./actor/proficiency.mjs";
 /**
  * Override and extend the basic Item implementation.
  */
-export default class Item5e extends Item {
+export default class ItemRelics extends Item {
 
   /**
    * Caches an item linked to this one, such as a subclass associated with a class.
-   * @type {Item5e}
+   * @type {ItemRelics}
    * @private
    */
   _classLink;
@@ -140,7 +140,7 @@ export default class Item5e extends Item {
 
   /**
    * Class associated with this subclass. Always returns null on non-subclass or non-embedded items.
-   * @type {Item5e|null}
+   * @type {ItemRelics|null}
    */
   get class() {
     if ( !this.isEmbedded || (this.type !== "subclass") ) return null;
@@ -152,7 +152,7 @@ export default class Item5e extends Item {
 
   /**
    * Subclass associated with this class. Always returns null on non-class or non-embedded items.
-   * @type {Item5e|null}
+   * @type {ItemRelics|null}
    */
   get subclass() {
     if ( !this.isEmbedded || (this.type !== "class") ) return null;
@@ -467,7 +467,7 @@ export default class Item5e extends Item {
   /**
    * Compute item attributes which might depend on prepared actor data. If this item is embedded this method will
    * be called after the actor's data is prepared.
-   * Otherwise, it will be called at the end of `Item5e#prepareDerivedData`.
+   * Otherwise, it will be called at the end of `ItemRelics#prepareDerivedData`.
    */
   prepareFinalAttributes() {
 
@@ -507,7 +507,7 @@ export default class Item5e extends Item {
 
   /**
    * Populate a label with the compiled and simplified damage formula based on owned item
-   * actor data. This is only used for display purposes and is not related to `Item5e#rollDamage`.
+   * actor data. This is only used for display purposes and is not related to `ItemRelics#rollDamage`.
    * @returns {{damageType: string, formula: string, label: string}[]}
    */
   getDerivedDamageLabel() {
@@ -760,11 +760,11 @@ export default class Item5e extends Item {
    * @param {ItemUseOptions} [options]           Options used for configuring item usage.
    * @returns {Promise<ChatMessage|object|void>} Chat message if options.createMessage is true, message data if it is
    *                                             false, and nothing if the roll wasn't performed.
-   * @deprecated since 2.0 in favor of `Item5e#use`, targeted for removal in 2.4
+   * @deprecated since 2.0 in favor of `ItemRelics#use`, targeted for removal in 2.4
    */
   async roll(options={}) {
     foundry.utils.logCompatibilityWarning(
-      "Item5e#roll has been renamed Item5e#use. Support for the old name will be removed in future versions.",
+      "ItemRelics#roll has been renamed ItemRelics#use. Support for the old name will be removed in future versions.",
       { since: "RotV 2.0", until: "RotV 2.4" }
     );
     return this.use(undefined, options);
@@ -813,7 +813,7 @@ export default class Item5e extends Item {
      * A hook event that fires before an item usage is configured.
      * @function rotv.preUseItem
      * @memberof hookEvents
-     * @param {Item5e} item                  Item being used.
+     * @param {ItemRelics} item                  Item being used.
      * @param {ItemUseConfiguration} config  Configuration data for the item usage being prepared.
      * @param {ItemUseOptions} options       Additional options used for configuring item usage.
      * @returns {boolean}                    Explicitly return `false` to prevent item from being used.
@@ -843,7 +843,7 @@ export default class Item5e extends Item {
      * A hook event that fires before an item's resource consumption has been calculated.
      * @function rotv.preItemUsageConsumption
      * @memberof hookEvents
-     * @param {Item5e} item                  Item being used.
+     * @param {ItemRelics} item                  Item being used.
      * @param {ItemUseConfiguration} config  Configuration data for the item usage being prepared.
      * @param {ItemUseOptions} options       Additional options used for configuring item usage.
      * @returns {boolean}                    Explicitly return `false` to prevent item from being used.
@@ -859,7 +859,7 @@ export default class Item5e extends Item {
      * changes have been made.
      * @function rotv.itemUsageConsumption
      * @memberof hookEvents
-     * @param {Item5e} item                     Item being used.
+     * @param {ItemRelics} item                     Item being used.
      * @param {ItemUseConfiguration} config     Configuration data for the item usage being prepared.
      * @param {ItemUseOptions} options          Additional options used for configuring item usage.
      * @param {object} usage
@@ -892,7 +892,7 @@ export default class Item5e extends Item {
      * A hook event that fires when an item is used, after the measured template has been created if one is needed.
      * @function rotv.useItem
      * @memberof hookEvents
-     * @param {Item5e} item                                Item being used.
+     * @param {ItemRelics} item                                Item being used.
      * @param {ItemUseConfiguration} config                Configuration data for the roll.
      * @param {ItemUseOptions} options                     Additional options for configuring item usage.
      * @param {MeasuredTemplateDocument[]|null} templates  The measured templates if they were created.
@@ -1134,7 +1134,7 @@ export default class Item5e extends Item {
      * A hook event that fires before an item chat card is created.
      * @function rotv.preDisplayCard
      * @memberof hookEvents
-     * @param {Item5e} item             Item for which the chat card is being displayed.
+     * @param {ItemRelics} item             Item for which the chat card is being displayed.
      * @param {object} chatData         Data used to create the chat message.
      * @param {ItemUseOptions} options  Options which configure the display of the item chat card.
      */
@@ -1150,7 +1150,7 @@ export default class Item5e extends Item {
      * A hook event that fires after an item chat card is created.
      * @function rotv.displayCard
      * @memberof hookEvents
-     * @param {Item5e} item              Item for which the chat card is being displayed.
+     * @param {ItemRelics} item              Item for which the chat card is being displayed.
      * @param {ChatMessage|object} card  The created ChatMessage instance or ChatMessageData depending on whether
      *                                   options.createMessage was set to `true`.
      */
@@ -1407,7 +1407,7 @@ export default class Item5e extends Item {
      * A hook event that fires before an attack is rolled for an Item.
      * @function rotv.preRollAttack
      * @memberof hookEvents
-     * @param {Item5e} item                  Item for which the roll is being performed.
+     * @param {ItemRelics} item                  Item for which the roll is being performed.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                    Explicitly return false to prevent the roll from being performed.
      */
@@ -1420,7 +1420,7 @@ export default class Item5e extends Item {
      * A hook event that fires after an attack has been rolled for an Item.
      * @function rotv.rollAttack
      * @memberof hookEvents
-     * @param {Item5e} item          Item for which the roll was performed.
+     * @param {ItemRelics} item          Item for which the roll was performed.
      * @param {D20Roll} roll         The resulting roll.
      * @param {object[]} ammoUpdate  Updates that will be applied to ammo Items as a result of this attack.
      */
@@ -1526,7 +1526,7 @@ export default class Item5e extends Item {
      * A hook event that fires before a damage is rolled for an Item.
      * @function rotv.preRollDamage
      * @memberof hookEvents
-     * @param {Item5e} item                     Item for which the roll is being performed.
+     * @param {ItemRelics} item                     Item for which the roll is being performed.
      * @param {DamageRollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                       Explicitly return false to prevent the roll from being performed.
      */
@@ -1538,7 +1538,7 @@ export default class Item5e extends Item {
      * A hook event that fires after a damage has been rolled for an Item.
      * @function rotv.rollDamage
      * @memberof hookEvents
-     * @param {Item5e} item      Item for which the roll was performed.
+     * @param {ItemRelics} item      Item for which the roll was performed.
      * @param {DamageRoll} roll  The resulting roll.
      */
     if ( roll ) Hooks.callAll("rotv.rollDamage", this, roll);
@@ -1638,7 +1638,7 @@ export default class Item5e extends Item {
      * A hook event that fires before a formula is rolled for an Item.
      * @function rotv.preRollFormula
      * @memberof hookEvents
-     * @param {Item5e} item                 Item for which the roll is being performed.
+     * @param {ItemRelics} item                 Item for which the roll is being performed.
      * @param {object} config               Configuration data for the pending roll.
      * @param {string} config.formula       Formula that will be rolled.
      * @param {object} config.data          Data used when evaluating the roll.
@@ -1662,7 +1662,7 @@ export default class Item5e extends Item {
      * A hook event that fires after a formula has been rolled for an Item.
      * @function rotv.rollFormula
      * @memberof hookEvents
-     * @param {Item5e} item  Item for which the roll was performed.
+     * @param {ItemRelics} item  Item for which the roll was performed.
      * @param {Roll} roll    The resulting roll.
      */
     Hooks.callAll("rotv.rollFormula", this, roll);
@@ -1691,7 +1691,7 @@ export default class Item5e extends Item {
      * A hook event that fires before the Item is rolled to recharge.
      * @function rotv.preRollRecharge
      * @memberof hookEvents
-     * @param {Item5e} item                 Item for which the roll is being performed.
+     * @param {ItemRelics} item                 Item for which the roll is being performed.
      * @param {object} config               Configuration data for the pending roll.
      * @param {string} config.formula       Formula that will be used to roll the recharge.
      * @param {object} config.data          Data used when evaluating the roll.
@@ -1716,7 +1716,7 @@ export default class Item5e extends Item {
      * A hook event that fires after the Item has rolled to recharge, but before any changes have been performed.
      * @function rotv.rollRecharge
      * @memberof hookEvents
-     * @param {Item5e} item  Item for which the roll was performed.
+     * @param {ItemRelics} item  Item for which the roll was performed.
      * @param {Roll} roll    The resulting roll.
      * @returns {boolean}    Explicitly return false to prevent the item from being recharged.
      */
@@ -1792,7 +1792,7 @@ export default class Item5e extends Item {
      * A hook event that fires before a tool check is rolled for an Item.
      * @function rotv.preRollToolCheck
      * @memberof hookEvents
-     * @param {Item5e} item                  Item for which the roll is being performed.
+     * @param {ItemRelics} item                  Item for which the roll is being performed.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                    Explicitly return false to prevent the roll from being performed.
      */
@@ -1804,7 +1804,7 @@ export default class Item5e extends Item {
      * A hook event that fires after a tool check has been rolled for an Item.
      * @function rotv.rollToolCheck
      * @memberof hookEvents
-     * @param {Item5e} item   Item for which the roll was performed.
+     * @param {ItemRelics} item   Item for which the roll was performed.
      * @param {D20Roll} roll  The resulting roll.
      */
     if ( roll ) Hooks.callAll("rotv.rollToolCheck", this, roll);
@@ -1998,7 +1998,7 @@ export default class Item5e extends Item {
    * @param {object} [options]
    * @param {boolean} [options.showConfig=true]    Should the new advancement's configuration application be shown?
    * @param {boolean} [options.source=false]       Should a source-only update be performed?
-   * @returns {Promise<AdvancementConfig>|Item5e}  Promise for advancement config for new advancement if local
+   * @returns {Promise<AdvancementConfig>|ItemRelics}  Promise for advancement config for new advancement if local
    *                                               is `false`, or item with newly added advancement.
    */
   createAdvancement(type, data={}, { showConfig=true, source=false }={}) {
@@ -2030,7 +2030,7 @@ export default class Item5e extends Item {
    * @param {object} updates                  Updates to apply to this advancement.
    * @param {object} [options={}]
    * @param {boolean} [options.source=false]  Should a source-only update be performed?
-   * @returns {Promise<Item5e>|Item5e}        This item with the changes applied, promised if source is `false`.
+   * @returns {Promise<ItemRelics>|ItemRelics}        This item with the changes applied, promised if source is `false`.
    */
   updateAdvancement(id, updates, { source=false }={}) {
     if ( !this.system.advancement ) return this;
@@ -2059,7 +2059,7 @@ export default class Item5e extends Item {
    * @param {string} id                       ID of the advancement to remove.
    * @param {object} [options={}]
    * @param {boolean} [options.source=false]  Should a source-only update be performed?
-   * @returns {Promise<Item5e>|Item5e}        This item with the changes applied.
+   * @returns {Promise<ItemRelics>|ItemRelics}        This item with the changes applied.
    */
   deleteAdvancement(id, { source=false }={}) {
     if ( !this.system.advancement ) return this;
@@ -2077,7 +2077,7 @@ export default class Item5e extends Item {
    * @param {object} [options]
    * @param {boolean} [options.showConfig=true]     Should the new advancement's configuration application be shown?
    * @param {boolean} [options.source=false]        Should a source-only update be performed?
-   * @returns {Promise<AdvancementConfig>|Item5e}   Promise for advancement config for duplicate advancement if source
+   * @returns {Promise<AdvancementConfig>|ItemRelics}   Promise for advancement config for duplicate advancement if source
    *                                                is `false`, or item with newly duplicated advancement.
    */
   duplicateAdvancement(id, options) {
@@ -2300,13 +2300,13 @@ export default class Item5e extends Item {
 
   /**
    * Create a consumable spell scroll Item from a spell Item.
-   * @param {Item5e} spell      The spell to be made into a scroll
-   * @returns {Item5e}          The created scroll consumable item
+   * @param {ItemRelics} spell      The spell to be made into a scroll
+   * @returns {ItemRelics}          The created scroll consumable item
    */
   static async createScrollFromSpell(spell) {
 
     // Get spell data
-    const itemData = (spell instanceof Item5e) ? spell.toObject() : spell;
+    const itemData = (spell instanceof ItemRelics) ? spell.toObject() : spell;
     let {
       actionType, description, source, activation, duration, target, range, damage, formula, save, level, attackBonus
     } = itemData.system;

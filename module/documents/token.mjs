@@ -3,7 +3,7 @@ import { MappingField } from "../data/fields.mjs";
 /**
  * Extend the base TokenDocument class to implement system-specific HP bar logic.
  */
-export default class TokenDocument5e extends TokenDocument {
+export default class TokenDocumentRelics extends TokenDocument {
 
   /** @inheritdoc */
   getBarAttribute(...args) {

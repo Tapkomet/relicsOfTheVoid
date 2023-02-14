@@ -41,7 +41,7 @@
  */
 
 /**
- * A standardized helper function for managing core 5e d20 rolls.
+ * A standardized helper function for managing core Relics d20 rolls.
  * Holding SHIFT, ALT, or CTRL when the attack is rolled will "fast-forward".
  * This chooses the default options of a normal attack with no bonus, Advantage, or Disadvantage respectively
  *
@@ -138,7 +138,7 @@ export async function d20Roll({
  */
 
 /**
- * A standardized helper function for managing core 5e damage rolls.
+ * A standardized helper function for managing core Relics damage rolls.
  * Holding SHIFT, ALT, or CTRL when the attack is rolled will "fast-forward".
  * This chooses the default options of a normal attack with no bonus, Critical, or no bonus respectively
  *

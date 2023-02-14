@@ -1,6 +1,6 @@
-import ActiveEffect5e from "../../documents/active-effect.mjs";
+import ActiveEffectRelics from "../../documents/active-effect.mjs";
 import * as Trait from "../../documents/actor/trait.mjs";
-import Item5e from "../../documents/item.mjs";
+import ItemRelics from "../../documents/item.mjs";
 
 import ActorAbilityConfig from "./ability-config.mjs";
 import ActorArmorConfig from "./armor-config.mjs";
@@ -23,7 +23,7 @@ import TraitSelector from "./trait-selector.mjs";
  * Extend the basic ActorSheet class to suppose system-specific logic and functionality.
  * @abstract
  */
-export default class ActorSheet5e extends ActorSheet {
+export default class ActorSheetRelics extends ActorSheet {
 
   /**
    * Track the set of item filters which are applied
@@ -104,7 +104,7 @@ export default class ActorSheet5e extends ActorSheet {
       labels: this._getLabels(),
       movement: this._getMovementSpeed(this.actor.system),
       senses: this._getSenses(this.actor.system),
-      effects: ActiveEffect5e.prepareActiveEffectCategories(this.actor.effects),
+      effects: ActiveEffectRelics.prepareActiveEffectCategories(this.actor.effects),
       warnings: foundry.utils.deepClone(this.actor._preparationWarnings),
       filters: this._filters,
       owner: this.actor.isOwner,
@@ -123,7 +123,7 @@ export default class ActorSheet5e extends ActorSheet {
     /** @deprecated */
     Object.defineProperty(context, "data", {
       get() {
-        const msg = `You are accessing the "data" attribute within the rendering context provided by the ActorSheet5e 
+        const msg = `You are accessing the "data" attribute within the rendering context provided by the ActorSheetRelics
         class. This attribute has been deprecated in favor of "system" and will be removed in a future release`;
         foundry.utils.logCompatibilityWarning(msg, { since: "RotV 2.0", until: "RotV 2.2" });
         return context.system;
@@ -303,7 +303,7 @@ export default class ActorSheet5e extends ActorSheet {
 
   /**
    * Produce a list of armor class attribution objects.
-   * @param {object} rollData             Data provided by Actor5e#getRollData
+   * @param {object} rollData             Data provided by ActorRelics#getRollData
    * @returns {AttributionDescription[]}  List of attribution descriptions.
    * @protected
    */
@@ -644,7 +644,7 @@ export default class ActorSheet5e extends ActorSheet {
       html.find(".slot-max-override").click(this._onSpellSlotOverride.bind(this));
 
       // Active Effect management
-      html.find(".effect-control").click(ev => ActiveEffect5e.onManageActiveEffect(ev, this.actor));
+      html.find(".effect-control").click(ev => ActiveEffectRelics.onManageActiveEffect(ev, this.actor));
       this._disableOverriddenFields(html);
     }
 
@@ -740,7 +740,7 @@ export default class ActorSheet5e extends ActorSheet {
 
   /**
    * Prepare an array of context menu options which are available for owned ActiveEffect documents.
-   * @param {ActiveEffect5e} effect         The ActiveEffect for which the context menu is activated
+   * @param {ActiveEffectRelics} effect         The ActiveEffect for which the context menu is activated
    * @returns {ContextMenuEntry[]}          An array of context menu options offered for the ActiveEffect
    * @protected
    */
@@ -773,7 +773,7 @@ export default class ActorSheet5e extends ActorSheet {
 
   /**
    * Prepare an array of context menu options which are available for owned Item documents.
-   * @param {Item5e} item                   The Item for which the context menu is activated
+   * @param {ItemRelics} item                   The Item for which the context menu is activated
    * @returns {ContextMenuEntry[]}          An array of context menu options offered for the Item
    * @protected
    */
@@ -1057,7 +1057,7 @@ export default class ActorSheet5e extends ActorSheet {
     // Create a Consumable spell scroll on the Inventory tab
     if ( (itemData.type === "spell")
       && (this._tabs[0].active === "inventory" || this.actor.type === "vehicle") ) {
-      const scroll = await Item5e.createScrollFromSpell(itemData);
+      const scroll = await ItemRelics.createScrollFromSpell(itemData);
       return scroll.toObject();
     }
 
@@ -1098,7 +1098,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Stack identical consumables when a new one is dropped rather than creating a duplicate item.
    * @param {object} itemData         The item data requested for creation.
-   * @returns {Promise<Item5e>|null}  If a duplicate was found, returns the adjusted item stack.
+   * @returns {Promise<ItemRelics>|null}  If a duplicate was found, returns the adjusted item stack.
    */
   _onDropStackConsumables(itemData) {
     const droppedSourceId = itemData.flags.core?.sourceId;
@@ -1142,7 +1142,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Change the uses amount of an Owned Item within the Actor.
    * @param {Event} event        The triggering click event.
-   * @returns {Promise<Item5e>}  Updated item.
+   * @returns {Promise<ItemRelics>}  Updated item.
    * @private
    */
   async _onUsesChange(event) {
@@ -1216,7 +1216,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Handle creating a new Owned Item for the actor using initial data defined in the HTML dataset.
    * @param {Event} event          The originating click event.
-   * @returns {Promise<Item5e[]>}  The newly created item.
+   * @returns {Promise<ItemRelics[]>}  The newly created item.
    * @private
    */
   _onItemCreate(event) {
@@ -1244,7 +1244,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Handle editing an existing Owned Item for the Actor.
    * @param {Event} event    The originating click event.
-   * @returns {ItemSheet5e}  The rendered item sheet.
+   * @returns {ItemSheetRelics}  The rendered item sheet.
    * @private
    */
   _onItemEdit(event) {
@@ -1259,7 +1259,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Handle deleting an existing Owned Item for the Actor.
    * @param {Event} event  The originating click event.
-   * @returns {Promise<Item5e|AdvancementManager>|undefined}  The deleted item if something was deleted or the
+   * @returns {Promise<ItemRelics|AdvancementManager>|undefined}  The deleted item if something was deleted or the
    *                                                          advancement manager if advancements need removing.
    * @private
    */
@@ -1352,7 +1352,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Handle toggling Ability score proficiency level.
    * @param {Event} event         The originating click event.
-   * @returns {Promise<Actor5e>}  Updated actor instance.
+   * @returns {Promise<ActorRelics>}  Updated actor instance.
    * @private
    */
   _onToggleAbilityProficiency(event) {
@@ -1367,7 +1367,7 @@ export default class ActorSheet5e extends ActorSheet {
   /**
    * Handle toggling of filters to display a different set of owned items.
    * @param {Event} event     The click event which triggered the toggle.
-   * @returns {ActorSheet5e}  This actor sheet with toggled filters.
+   * @returns {ActorSheetRelics}  This actor sheet with toggled filters.
    * @private
    */
   _onToggleFilter(event) {

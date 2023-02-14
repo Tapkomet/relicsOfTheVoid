@@ -58,7 +58,7 @@ export default class ProficiencySelector extends TraitSelector {
    *                                       Promise).
    * @param {boolean} [options.fullItem]   If set to true, the full item will be returned as long as `indexOnly` is
    *                                       false.
-   * @returns {Promise<Item5e>|object}     Promise for a `Document` if `indexOnly` is false & `fullItem` is true,
+   * @returns {Promise<ItemRelics>|object}     Promise for a `Document` if `indexOnly` is false & `fullItem` is true,
    *                                       otherwise else a simple object containing the minimal index data.
    * @deprecated since rotv 2.1, targeted for removal in 2.3
    */

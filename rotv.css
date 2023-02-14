@@ -174,7 +174,7 @@ h5 {
   text-align: left;
 }
 .rotv .form-header {
-  margin: 0 0 0.25em 0;
+  margin: 0 0 0.2Relicsm 0;
   padding: 2px 0;
   border-top: 2px groove #eeede0;
   border-bottom: 2px groove #eeede0;
@@ -553,7 +553,7 @@ h5 {
   padding: 0;
 }
 .trait-selector .trait-list li ol.trait-list {
-  margin-left: 1.5em;
+  margin-left: 1.Relicsm;
 }
 .trait-selector input[type="text"] {
   height: 24px;
@@ -575,7 +575,7 @@ h5 {
   font-size: var(--font-size-14);
 }
 #tooltip.property-attribution table caption {
-  padding-block: 0.25em 0.5em;
+  padding-block: 0.2Relicsm 0.Relicsm;
   font-size: var(--font-size-16);
 }
 #tooltip.property-attribution table tr {
@@ -658,7 +658,7 @@ h5 {
   margin-bottom: 1em;
 }
 .rotv.select-items-prompt .items-list {
-  margin-top: 0.5em;
+  margin-top: 0.Relicsm;
 }
 .rotv.select-items-prompt .item-name > label,
 .rotv.select-items-prompt .item-image,
@@ -1187,7 +1187,7 @@ h5 {
   flex: 0 0 100%;
   font-size: 12px;
   line-height: 16px;
-  padding: 0.25em 0.5em;
+  padding: 0.2Relicsm 0.Relicsm;
   color: #191813;
   border-top: 1px solid #c9c7b8;
 }
@@ -1363,12 +1363,12 @@ h5 {
   /* Solves the borders being cut off */
 }
 .rotv.advancement .items-list li.item {
-  padding-top: 0.25em;
+  padding-top: 0.2Relicsm;
 }
 .rotv.advancement .items-list .item-hint {
   flex: 0 1 100%;
   margin-left: 35px;
-  margin-bottom: 0.5em;
+  margin-bottom: 0.Relicsm;
 }
 .rotv.advancement .items-list .content-link {
   display: inline-block;
@@ -1452,7 +1452,7 @@ h5 {
   font-size: 0.9rem;
 }
 .rotv.advancement.flow form:not(:last-of-type) {
-  margin-block-end: 0.5em;
+  margin-block-end: 0.Relicsm;
   border-block-end: 2px groove var(--color-border-light-1);
   padding-block-end: 1em;
 }
@@ -1474,7 +1474,7 @@ h5 {
 }
 .rotv.advancement.flow form[data-type="HitPoints"] .rolls .rollButton {
   height: calc(var(--form-field-height) + 5px);
-  line-height: 1.5em;
+  line-height: 1.Relicsm;
 }
 .rotv.advancement.flow input.error {
   outline: 2px solid red;
@@ -1537,7 +1537,7 @@ h5 {
 }
 .rotv.sheet.item .sheet-header .summary .class-level {
   flex: 0 0 4em;
-  padding: 0 0.25em;
+  padding: 0 0.2Relicsm;
   text-align: right;
 }
 .rotv.sheet.item .sheet-navigation {
@@ -1585,7 +1585,7 @@ h5 {
 .rotv.sheet.item .sheet-body .item-properties .properties-header {
   font-weight: bold;
   color: #4b4a44;
-  margin: 0.5em 0 0 0;
+  margin: 0.Relicsm 0 0 0;
   font-size: 1em;
 }
 .rotv.sheet.item .sheet-body .item-properties [name="system.price.denomination"] {
@@ -1628,7 +1628,7 @@ h5 {
 }
 .rotv.sheet.item .details .spell-materials {
   flex: 0 0 100%;
-  margin: 0.25em 0;
+  margin: 0.2Relicsm 0;
   justify-content: flex-end;
 }
 .rotv.sheet.item .details .spell-materials label {
@@ -1703,7 +1703,7 @@ h5 {
 }
 .rotv .advancement .items-list .main-controls .configuration-mode-control {
   flex: 1 0;
-  margin-inline-start: 0.5em;
+  margin-inline-start: 0.Relicsm;
 }
 .rotv .advancement .items-list .main-controls .configuration-mode-control a {
   text-align: start;
@@ -1732,7 +1732,7 @@ h5 {
   flex: 0 0 100%;
   font-size: 12px;
   line-height: 16px;
-  padding: 0 0.5em 0.5em 34px;
+  padding: 0 0.Relicsm 0.Relicsm 34px;
   margin-top: -4px;
   color: #191813;
 }
@@ -1741,7 +1741,7 @@ h5 {
 }
 .rotv .advancement .items-list .tag {
   font-size: 0.7rem;
-  padding: 0.1em 0.5em;
+  padding: 0.1em 0.Relicsm;
 }
 /* ----------------------------------------- */
 /*  SRD Compendium                           */
@@ -1811,7 +1811,7 @@ h5 {
 }
 .journal-entry-page.class table th[scope="col"],
 .class-journal table th[scope="col"] {
-  padding-inline: 0.25em;
+  padding-inline: 0.2Relicsm;
 }
 .journal-entry-page.class table td:is(.level, .prof, .scale, .spell-slots),
 .class-journal table td:is(.level, .prof, .scale, .spell-slots) {
@@ -1828,7 +1828,7 @@ h5 {
 .journal-entry-page.class form .items-list .item,
 .class-journal form .items-list .item {
   align-items: center;
-  padding-block: 0.35em 0;
+  padding-block: 0.3Relicsm 0;
   padding-inline: 2px;
 }
 .journal-entry-page.class form .items-list .item .item-controls,

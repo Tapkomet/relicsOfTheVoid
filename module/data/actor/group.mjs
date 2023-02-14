@@ -16,7 +16,7 @@ import CurrencyTemplate from "../shared/currency.mjs";
  * @property {number} attributes.movement.air    Base movement speed through the air.
  *
  * @example Create a new Group
- * const g = new rotv.documents.Actor5e({
+ * const g = new rotv.documents.ActorRelics({
  *  type: "group",
  *  name: "Test Group",
  *  system: {
@@ -88,8 +88,8 @@ export default class GroupActor extends SystemDataModel.mixin(CurrencyTemplate) 
 
   /**
    * Add a new member to the group.
-   * @param {Actor5e} actor           A non-group Actor to add to the group
-   * @returns {Promise<Actor5e>}      The updated group Actor
+   * @param {ActorRelics} actor           A non-group Actor to add to the group
+   * @returns {Promise<ActorRelics>}      The updated group Actor
    */
   async addMember(actor) {
     if ( actor.type === "group" ) throw new Error("You may not add a group within a group.");
@@ -107,8 +107,8 @@ export default class GroupActor extends SystemDataModel.mixin(CurrencyTemplate) 
 
   /**
    * Remove a member from the group.
-   * @param {Actor5e|string} actor    An Actor or ID to remove from this group
-   * @returns {Promise<Actor5e>}      The updated group Actor
+   * @param {ActorRelics|string} actor    An Actor or ID to remove from this group
+   * @returns {Promise<ActorRelics>}      The updated group Actor
    */
   async removeMember(actor) {
     const memberIds = foundry.utils.deepClone(this._source.members);

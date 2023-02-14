@@ -876,7 +876,7 @@
       "actor": "systems/rotv/tokens/construct/RugOfSmothering.webp",
       "token": "systems/rotv/tokens/construct/RugOfSmothering.webp"
     },
-    "z85EsGS2GVWj46qE": {
+    "z8RelicssGS2GVWj46qE": {
       "actor": "systems/rotv/tokens/construct/ShieldGuardian.webp",
       "token": "systems/rotv/tokens/construct/ShieldGuardian.webp"
     },
@@ -1018,7 +1018,7 @@
         }
       }
     },
-    "u1UQfHutP5eEKkjM": {
+    "u1UQfHutPRelicsEKkjM": {
       "actor": "systems/rotv/tokens/dragon/YoungWhiteDragon.webp",
       "token": {
         "texture": {

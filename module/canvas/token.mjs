@@ -1,7 +1,7 @@
 /**
  * Extend the base Token class to implement additional system-specific logic.
  */
-export default class Token5e extends Token {
+export default class TokenRelics extends Token {
 
   /** @inheritdoc */
   _drawBar(number, bar, data) {
@@ -32,7 +32,7 @@ export default class Token5e extends Token {
     // Allocate percentages of the total
     const tempPct = Math.clamped(temp, 0, displayMax) / displayMax;
     const colorPct = Math.clamped(value, 0, effectiveMax) / displayMax;
-    const hpColor = rotv.documents.Actor5e.getHPColor(value, effectiveMax);
+    const hpColor = rotv.documents.ActorRelics.getHPColor(value, effectiveMax);
 
     // Determine colors to use
     const blk = 0x000000;

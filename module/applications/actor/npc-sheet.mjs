@@ -1,9 +1,9 @@
-import ActorSheet5e from "./base-sheet.mjs";
+import ActorSheetRelics from "./base-sheet.mjs";
 
 /**
  * An Actor sheet for NPC type characters.
  */
-export default class ActorSheet5eNPC extends ActorSheet5e {
+export default class ActorSheetRelicsNPC extends ActorSheetRelics {
 
   /** @inheritDoc */
   static get defaultOptions() {

@@ -1,4 +1,4 @@
-import Actor5e from "../../documents/actor/actor.mjs";
+import ActorRelics from "../../documents/actor/actor.mjs";
 import Proficiency from "../../documents/actor/proficiency.mjs";
 import JournalEditor from "./journal-editor.mjs";
 
@@ -64,7 +64,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
 
   /**
    * Prepare features granted by various advancement types.
-   * @param {Item5e} item  Class item belonging to this journal.
+   * @param {ItemRelics} item  Class item belonging to this journal.
    * @returns {object}     Prepared advancement section.
    */
   _getAdvancement(item) {
@@ -107,7 +107,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
 
   /**
    * Prepare table based on non-optional GrantItem advancement & ScaleValue advancement.
-   * @param {Item5e} item              Class item belonging to this journal.
+   * @param {ItemRelics} item              Class item belonging to this journal.
    * @param {number} [initialLevel=1]  Level at which the table begins.
    * @returns {object}                 Prepared table.
    */
@@ -171,7 +171,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
 
   /**
    * Build out the spell progression data.
-   * @param {Item5e} item  Class item belonging to this journal.
+   * @param {ItemRelics} item  Class item belonging to this journal.
    * @returns {object}     Prepared spell progression table.
    */
   async _getSpellProgression(item) {
@@ -189,8 +189,8 @@ export default class JournalClassPageSheet extends JournalPageSheet {
       for ( const level of Array.fromRange(CONFIG.ROTV.maxLevel, 1).reverse() ) {
         const progression = { slot: 0 };
         spellcasting.levels = level;
-        Actor5e.computeClassProgression(progression, item, { spellcasting });
-        Actor5e.prepareSpellcastingSlots(spells, "leveled", progression);
+        ActorRelics.computeClassProgression(progression, item, { spellcasting });
+        ActorRelics.prepareSpellcastingSlots(spells, "leveled", progression);
 
         if ( !largestSlot ) largestSlot = Object.entries(spells).reduce((slot, [key, data]) => {
           if ( !data.max ) return slot;
@@ -226,8 +226,8 @@ export default class JournalClassPageSheet extends JournalPageSheet {
       for ( const level of Array.fromRange(CONFIG.ROTV.maxLevel, 1) ) {
         const progression = { pact: 0 };
         spellcasting.levels = level;
-        Actor5e.computeClassProgression(progression, item, { spellcasting });
-        Actor5e.prepareSpellcastingSlots(spells, "pact", progression);
+        ActorRelics.computeClassProgression(progression, item, { spellcasting });
+        ActorRelics.prepareSpellcastingSlots(spells, "pact", progression);
         table.rows.push([
           { class: "spell-slots", content: `${spells.pact.max}` },
           { class: "slot-level", content: spells.pact.level.ordinalString() }
@@ -240,7 +240,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
        * A hook event that fires to generate the table for custom spellcasting types.
        * The actual hook names include the spellcasting type (e.g. `rotv.buildPsionicSpellcastingTable`).
        * @param {object} table                          Table definition being built. *Will be mutated.*
-       * @param {Item5e} item                           Class for which the spellcasting table is being built.
+       * @param {ItemRelics} item                           Class for which the spellcasting table is being built.
        * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
        * @function rotv.buildSpellcastingTable
        * @memberof hookEvents
@@ -257,7 +257,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
 
   /**
    * Prepare options table based on optional GrantItem advancement.
-   * @param {Item5e} item    Class item belonging to this journal.
+   * @param {ItemRelics} item    Class item belonging to this journal.
    * @returns {object|null}  Prepared optional features table.
    */
   async _getOptionalTable(item) {
@@ -302,7 +302,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
 
   /**
    * Fetch data for each class feature listed.
-   * @param {Item5e} item               Class or subclass item belonging to this journal.
+   * @param {ItemRelics} item               Class or subclass item belonging to this journal.
    * @param {boolean} [optional=false]  Should optional features be fetched rather than required features?
    * @returns {object[]}   Prepared features.
    */
@@ -348,7 +348,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
 
   /**
    * Prepare data for the provided subclass.
-   * @param {Item5e} item  Subclass item being prepared.
+   * @param {ItemRelics} item  Subclass item being prepared.
    * @returns {object}     Presentation data for this subclass.
    */
   async _getSubclass(item) {
@@ -395,7 +395,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
   /**
    * Handle deleting a dropped item.
    * @param {Event} event  The triggering click event.
-   * @returns {JournalClassSummary5ePageSheet}
+   * @returns {JournalClassSummaryRelicsPageSheet}
    */
   async _onDeleteItem(event) {
     event.preventDefault();

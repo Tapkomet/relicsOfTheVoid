@@ -167,7 +167,7 @@ function itemContext(context, options) {
 /* -------------------------------------------- */
 
 /**
- * Register custom Handlebars helpers used by 5e.
+ * Register custom Handlebars helpers used by Relics.
  */
 export function registerHandlebarsHelpers() {
   Handlebars.registerHelper({
@@ -295,8 +295,8 @@ export async function synchronizeActorSpells(actorPack, spellsPack) {
 
 /**
  * A helper function to synchronize spell data for a specific Actor.
- * @param {Actor5e} actor
- * @param {Object<string,Item5e>} spellsMap
+ * @param {ActorRelics} actor
+ * @param {Object<string,ItemRelics>} spellsMap
  * @returns {{toDelete: string[], toCreate: object[]}}
  * @private
  */

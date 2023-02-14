@@ -1,7 +1,7 @@
 /**
  * A helper Dialog subclass for rolling Hit Dice on short rest.
  *
- * @param {Actor5e} actor           Actor that is taking the short rest.
+ * @param {ActorRelics} actor           Actor that is taking the short rest.
  * @param {object} [dialogData={}]  An object of dialog data which configures how the modal window is rendered.
  * @param {object} [options={}]     Dialog rendering options.
  */
@@ -89,7 +89,7 @@ export default class ShortRestDialog extends Dialog {
    * A helper constructor function which displays the Short Rest dialog and returns a Promise once it's workflow has
    * been resolved.
    * @param {object} [options={}]
-   * @param {Actor5e} [options.actor]  Actor that is taking the short rest.
+   * @param {ActorRelics} [options.actor]  Actor that is taking the short rest.
    * @returns {Promise}                Promise that resolves when the rest is completed or rejects when canceled.
    */
   static async shortRestDialog({ actor }={}) {

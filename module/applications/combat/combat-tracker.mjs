@@ -1,8 +1,8 @@
 /**
- * An extension of the base CombatTracker class to provide some 5e-specific functionality.
+ * An extension of the base CombatTracker class to provide some Relics-specific functionality.
  * @extends {CombatTracker}
  */
-export default class CombatTracker5e extends CombatTracker {
+export default class CombatTrackerRelics extends CombatTracker {
   /** @inheritdoc */
   async _onCombatantControl(event) {
     const btn = event.currentTarget;

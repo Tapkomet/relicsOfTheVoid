@@ -121,7 +121,7 @@ export async function choices(trait, chosen=new Set()) {
  *                                       Promise).
  * @param {boolean} [options.fullItem]   If set to true, the full item will be returned as long as `indexOnly` is
  *                                       false.
- * @returns {Promise<Item5e>|object}     Promise for a `Document` if `indexOnly` is false & `fullItem` is true,
+ * @returns {Promise<ItemRelics>|object}     Promise for a `Document` if `indexOnly` is false & `fullItem` is true,
  *                                       otherwise else a simple object containing the minimal index data.
  */
 export function getBaseItem(identifier, { indexOnly=false, fullItem=false }={}) {
@@ -133,7 +133,7 @@ export function getBaseItem(identifier, { indexOnly=false, fullItem=false }={}) 
 
   const packObject = game.packs.get(pack);
 
-  // Full Item5e document required, always async.
+  // Full ItemRelics document required, always async.
   if ( fullItem && !indexOnly ) return packObject?.getDocument(id);
 
   const cache = _cachedIndices[pack];

@@ -1,5 +1,5 @@
 /**
- * A type of Roll specific to a d20-based check, save, or attack roll in the 5e system.
+ * A type of Roll specific to a d20-based check, save, or attack roll in the Relics system.
  * @param {string} formula                       The string formula to parse
  * @param {object} data                          The data object against which to parse attributes within the formula
  * @param {object} [options={}]                  Extra optional arguments which describe or modify the D20Roll
@@ -55,7 +55,7 @@ export default class D20Roll extends Roll {
   /* -------------------------------------------- */
 
   /**
-   * Advantage mode of a 5e d20 roll
+   * Advantage mode of a Relics d20 roll
    * @enum {number}
    */
   static ADV_MODE = {

@@ -36,7 +36,7 @@ export default class ActorSensesConfig extends BaseConfigSheet {
       const v = Number(source[name]);
       data.senses[name] = {
         label: game.i18n.localize(label),
-        value: Number.isNumeric(v) ? v.toNearest(0.1) : 0
+        value: Number.isNumeric(v) ? v.toNearest(0.01) : 0
       };
     }
     return data;

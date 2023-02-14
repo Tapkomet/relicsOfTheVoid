@@ -9,7 +9,7 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
 
     /**
      * Cloned copy of the actor for previewing changes.
-     * @type {Actor5e}
+     * @type {ActorRelics}
      */
     this.clone = this.object.clone();
   }

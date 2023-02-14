@@ -174,7 +174,7 @@ ROTV.weaponProficienciesMap = {
 };
 
 /**
- * The basic weapon types in 5e. This enables specific weapon proficiencies or
+ * The basic weapon types in Relics. This enables specific weapon proficiencies or
  * starting equipment provided by classes and backgrounds.
  * @enum {string}
  */
@@ -207,7 +207,7 @@ ROTV.toolProficiencies = {
 preLocalize("toolProficiencies", { sort: true });
 
 /**
- * The basic tool types in 5e. This enables specific tool proficiencies or
+ * The basic tool types in Relics. This enables specific tool proficiencies or
  * starting equipment provided by classes and backgrounds.
  * @enum {string}
  */
@@ -417,6 +417,7 @@ preLocalize("armorTypes");
 ROTV.miscEquipmentTypes = {
   clothing: "ROTV.EquipmentClothing",
   trinket: "ROTV.EquipmentTrinket",
+  utilityGear: "ROTV.UtilityGear",
   attachment: "ROTV.EquipmentAttachment",
   vehicle: "ROTV.EquipmentVehicle"
 };
@@ -477,7 +478,7 @@ ROTV.armorProficienciesMap = {
 };
 
 /**
- * The basic armor types in 5e. This enables specific armor proficiencies,
+ * The basic armor types in Relics. This enables specific armor proficiencies,
  * automated AC calculation in NPCs, and starting equipment.
  * @enum {string}
  */
@@ -485,7 +486,7 @@ ROTV.armorIds = {
 };
 
 /**
- * The basic shield in 5e.
+ * The basic shield in Relics.
  * @enum {string}
  */
 ROTV.shieldIds = {
@@ -1144,7 +1145,6 @@ ROTV.weaponProperties = {
     ovc: "ROTV.WeaponPropertiesOvercharge",
     pen: "ROTV.WeaponPropertiesPenetration",
     rpd: "ROTV.WeaponPropertiesRapid",
-    rch: "ROTV.WeaponPropertiesRch",
     shd: "ROTV.WeaponPropertiesShield",
     shc: "ROTV.WeaponPropertiesShocking",
     shm: "ROTV.WeaponPropertiesShockMode",
@@ -1155,9 +1155,33 @@ ROTV.weaponProperties = {
     stc: "ROTV.WeaponPropertiesSticky",
     sup: "ROTV.WeaponPropertiesSuppressive",
     unr: "ROTV.WeaponPropertiesUnreliable",
-    unw: "ROTV.WeaponPropertiesUnwieldy"
+    unw: "ROTV.WeaponPropertiesUnwieldy",
+    cha: "ROTV.WeaponPropertiesChain",
+    grs: "ROTV.WeaponPropertiesGyroStab",
+    lsg: "ROTV.WeaponPropertiesLasgun",
+    mlt: "ROTV.WeaponPropertiesMelta"
 };
 preLocalize("weaponProperties", { sort: true });
+
+
+
+/* -------------------------------------------- */
+
+/**
+ * The set of weapon property flags which can exist on a weapon.
+ * @enum {string}
+ */
+ROTV.equipmentProperties = {
+  blk: "ROTV.EquipmentPropertiesBulky",
+  csh: "ROTV.EquipmentPropertiesCushioned",
+  dam: "ROTV.EquipmentPropertiesDamaged",
+  ded: "ROTV.EquipmentPropertiesDestroyed",
+  frq: "ROTV.EquipmentPropertiesFitnessRequirement",
+  pow: "ROTV.EquipmentPropertiesPonderous",
+  sld: "ROTV.EquipmentPropertiesSealed",
+  spc: "ROTV.EquipmentPropertiesSpc"
+};
+preLocalize("equipmentProperties", { sort: true });
 
 
 

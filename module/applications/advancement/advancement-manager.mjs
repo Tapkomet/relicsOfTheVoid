@@ -6,9 +6,9 @@ import Advancement from "../../documents/advancement/advancement.mjs";
  * @typedef {object} AdvancementStep
  * @property {string} type                Step type from "forward", "reverse", "restore", or "delete".
  * @property {AdvancementFlow} [flow]     Flow object for the advancement being applied by this step.
- * @property {Item5e} [item]              For "delete" steps only, the item to be removed.
+ * @property {ItemRelics} [item]              For "delete" steps only, the item to be removed.
  * @property {object} [class]             Contains data on class if step was triggered by class level change.
- * @property {Item5e} [class.item]        Class item that caused this advancement step.
+ * @property {ItemRelics} [class.item]        Class item that caused this advancement step.
  * @property {number} [class.level]       Level the class should be during this step.
  * @property {boolean} [automatic=false]  Should the manager attempt to apply this step without user interaction?
  */
@@ -16,7 +16,7 @@ import Advancement from "../../documents/advancement/advancement.mjs";
 /**
  * Application for controlling the advancement workflow and displaying the interface.
  *
- * @param {Actor5e} actor        Actor on which this advancement is being performed.
+ * @param {ActorRelics} actor        Actor on which this advancement is being performed.
  * @param {object} [options={}]  Additional application options.
  */
 export default class AdvancementManager extends Application {
@@ -25,13 +25,13 @@ export default class AdvancementManager extends Application {
 
     /**
      * The original actor to which changes will be applied when the process is complete.
-     * @type {Actor5e}
+     * @type {ActorRelics}
      */
     this.actor = actor;
 
     /**
      * A clone of the original actor to which the changes can be applied during the advancement process.
-     * @type {Actor5e}
+     * @type {ActorRelics}
      */
     this.clone = actor.clone();
 
@@ -125,7 +125,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for a newly added advancement from drag-drop.
-   * @param {Actor5e} actor               Actor from which the advancement should be updated.
+   * @param {ActorRelics} actor               Actor from which the advancement should be updated.
    * @param {string} itemId               ID of the item to which the advancements are being dropped.
    * @param {Advancement[]} advancements  Dropped advancements to add.
    * @param {object} options              Rendering options passed to the application.
@@ -173,7 +173,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for a newly added item.
-   * @param {Actor5e} actor         Actor to which the item is being added.
+   * @param {ActorRelics} actor         Actor to which the item is being added.
    * @param {object} itemData       Data for the item being added.
    * @param {object} options        Rendering options passed to the application.
    * @returns {AdvancementManager}  Prepared manager. Steps count can be used to determine if advancements are needed.
@@ -214,7 +214,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for modifying choices on an item at a specific level.
-   * @param {Actor5e} actor         Actor from which the choices should be modified.
+   * @param {ActorRelics} actor         Actor from which the choices should be modified.
    * @param {object} itemId         ID of the item whose choices are to be changed.
    * @param {number} level          Level at which the choices are being changed.
    * @param {object} options        Rendering options passed to the application.
@@ -244,7 +244,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for an advancement that needs to be deleted.
-   * @param {Actor5e} actor         Actor from which the advancement should be unapplied.
+   * @param {ActorRelics} actor         Actor from which the advancement should be unapplied.
    * @param {string} itemId         ID of the item from which the advancement should be deleted.
    * @param {string} advancementId  ID of the advancement to delete.
    * @param {object} options        Rendering options passed to the application.
@@ -277,7 +277,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for an item that needs to be deleted.
-   * @param {Actor5e} actor         Actor from which the item should be deleted.
+   * @param {ActorRelics} actor         Actor from which the item should be deleted.
    * @param {string} itemId         ID of the item to be deleted.
    * @param {object} options        Rendering options passed to the application.
    * @returns {AdvancementManager}  Prepared manager. Steps count can be used to determine if advancements are needed.
@@ -307,7 +307,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for a change in a class's levels.
-   * @param {Actor5e} actor         Actor whose level has changed.
+   * @param {ActorRelics} actor         Actor whose level has changed.
    * @param {string} classId        ID of the class being changed.
    * @param {number} levelDelta     Levels by which to increase or decrease the class.
    * @param {object} options        Rendering options passed to the application.
@@ -370,7 +370,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Creates advancement flows for all advancements at a specific level.
-   * @param {Item5e} item          Item that has advancement.
+   * @param {ItemRelics} item          Item that has advancement.
    * @param {number} level         Level in question.
    * @returns {AdvancementFlow[]}  Created flow applications.
    * @protected
@@ -385,8 +385,8 @@ export default class AdvancementManager extends Application {
 
   /**
    * Determine the proper working level either from the provided item or from the cloned actor.
-   * @param {Item5e} item    Item being advanced. If class or subclass, its level will be used.
-   * @param {Actor5e} actor  Actor being advanced.
+   * @param {ItemRelics} item    Item being advanced. If class or subclass, its level will be used.
+   * @param {ActorRelics} actor  Actor being advanced.
    * @returns {number}       Working level.
    */
   static currentLevel(item, actor) {

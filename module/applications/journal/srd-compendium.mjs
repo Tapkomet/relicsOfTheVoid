@@ -20,7 +20,7 @@ export default class SRDCompendium extends Compendium {
   static _SPECIAL_PAGES = {
     disclaimer: "xxt7YT2t76JxNTel",
     magicItemList: "sfJtvPjEs50Ruzi4",
-    spellList: "plCB5ei1JbVtBseb"
+    spellList: "plCBRelicsi1JbVtBseb"
   };
 
   /* -------------------------------------------- */

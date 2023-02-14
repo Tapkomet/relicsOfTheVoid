@@ -1,9 +1,9 @@
 // Document Classes
-export {default as ActiveEffect5e} from "./active-effect.mjs";
-export {default as Actor5e} from "./actor/actor.mjs";
+export {default as ActiveEffectRelics} from "./active-effect.mjs";
+export {default as ActorRelics} from "./actor/actor.mjs";
 export * as advancement from "./advancement/_module.mjs";
-export {default as Item5e} from "./item.mjs";
-export {default as TokenDocument5e} from "./token.mjs";
+export {default as ItemRelics} from "./item.mjs";
+export {default as TokenDocumentRelics} from "./token.mjs";
 
 // Helper Methods
 export {default as Proficiency} from "./actor/proficiency.mjs";

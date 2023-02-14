@@ -1,11 +1,11 @@
 import ActorMovementConfig from "./movement-config.mjs";
-import ActorSheet5e from "./base-sheet.mjs";
-import Item5e from "../../documents/item.mjs";
+import ActorSheetRelics from "./base-sheet.mjs";
+import ItemRelics from "../../documents/item.mjs";
 
 /**
  * A character sheet for group-type Actors.
  * The functionality of this sheet is sufficiently different from other Actor types that we extend the base
- * Foundry VTT ActorSheet instead of the ActorSheet5e abstraction used for character, npc, and vehicle types.
+ * Foundry VTT ActorSheet instead of the ActorSheetRelics abstraction used for character, npc, and vehicle types.
  */
 export default class GroupActorSheet extends ActorSheet {
 
@@ -122,7 +122,7 @@ export default class GroupActorSheet extends ActorSheet {
       m.hp.current = hp.value + (hp.temp || 0);
       m.hp.max = hp.max + (hp.tempmax || 0);
       m.hp.pct = Math.clamped((m.hp.current / m.hp.max) * 100, 0, 100).toFixed(2);
-      m.hp.color = rotv.documents.Actor5e.getHPColor(m.hp.current, m.hp.max).css;
+      m.hp.color = rotv.documents.ActorRelics.getHPColor(m.hp.current, m.hp.max).css;
       stats.currentHP += m.hp.current;
       stats.maxHP += m.hp.max;
 
@@ -286,7 +286,7 @@ export default class GroupActorSheet extends ActorSheet {
   /**
    * Handle workflows to create a new Item directly within the Group Actor sheet.
    * @param {HTMLElement} button      The clicked create button
-   * @returns {Item5e}                The created embedded Item
+   * @returns {ItemRelics}                The created embedded Item
    * @protected
    */
   _createItem(button) {
@@ -303,14 +303,14 @@ export default class GroupActorSheet extends ActorSheet {
   /**
    * Handle activation of a context menu for an embedded Item document.
    * Dynamically populate the array of context menu options.
-   * Reuse the item context options provided by the base ActorSheet5e class.
+   * Reuse the item context options provided by the base ActorSheetRelics class.
    * @param {HTMLElement} element       The HTML element for which the context menu is activated
    * @protected
    */
   _onItemContext(element) {
     const item = this.actor.items.get(element.dataset.itemId);
     if ( !item ) return;
-    ui.context.menuItems = ActorSheet5e.prototype._getItemContextOptions.call(this, item);
+    ui.context.menuItems = ActorSheetRelics.prototype._getItemContextOptions.call(this, item);
     Hooks.call("rotv.getItemContextOptions", item, ui.context.menuItems);
   }
 
@@ -336,7 +336,7 @@ export default class GroupActorSheet extends ActorSheet {
    * @protected
    */
   _onClickItemName(event) {
-    game.system.applications.actor.ActorSheet5e.prototype._onItemSummary.call(this, event);
+    game.system.applications.actor.ActorSheetRelics.prototype._onItemSummary.call(this, event);
   }
 
   /* -------------------------------------------- */
@@ -388,7 +388,7 @@ export default class GroupActorSheet extends ActorSheet {
 
     // Create a Consumable spell scroll on the Inventory tab
     if ( itemData.type === "spell" ) {
-      const scroll = await Item5e.createScrollFromSpell(itemData);
+      const scroll = await ItemRelics.createScrollFromSpell(itemData);
       return scroll.toObject();
     }
 

@@ -32,7 +32,7 @@ export default class ActorMovementConfig extends BaseConfigSheet {
     const movement = source.system.attributes?.movement || {};
     for ( let [k, v] of Object.entries(movement) ) {
       if ( ["units", "hover"].includes(k) ) continue;
-      movement[k] = Number.isNumeric(v) ? v.toNearest(0.1) : 0;
+      movement[k] = Number.isNumeric(v) ? v.toNearest(0.01) : 0;
     }
 
     // Allowed speeds

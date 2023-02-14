@@ -1,7 +1,7 @@
-export {default as ActorSheet5e} from "./base-sheet.mjs";
-export {default as ActorSheet5eCharacter} from "./character-sheet.mjs";
-export {default as ActorSheet5eNPC} from "./npc-sheet.mjs";
-export {default as ActorSheet5eVehicle} from "./vehicle-sheet.mjs";
+export {default as ActorSheetRelics} from "./base-sheet.mjs";
+export {default as ActorSheetRelicsCharacter} from "./character-sheet.mjs";
+export {default as ActorSheetRelicsNPC} from "./npc-sheet.mjs";
+export {default as ActorSheetRelicsVehicle} from "./vehicle-sheet.mjs";
 export {default as GroupActorSheet} from "./group-sheet.mjs";
 
 export {default as BaseConfigSheet} from "./base-sheet.mjs";

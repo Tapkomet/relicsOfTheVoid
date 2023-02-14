@@ -14,7 +14,7 @@ class AdvancementError extends Error {
 
 /**
  * Abstract base class which various advancement types can subclass.
- * @param {Item5e} item          Item to which this advancement belongs.
+ * @param {ItemRelics} item          Item to which this advancement belongs.
  * @param {object} [data={}]     Raw data stored in the advancement object.
  * @param {object} [options={}]  Options which affect DataModel construction.
  * @abstract
@@ -115,7 +115,7 @@ export default class Advancement extends BaseAdvancement {
 
   /**
    * Item to which this advancement belongs.
-   * @type {Item5e}
+   * @type {ItemRelics}
    */
   get item() {
     return this.parent.parent;
@@ -125,7 +125,7 @@ export default class Advancement extends BaseAdvancement {
 
   /**
    * Actor to which this advancement's item belongs, if the item is embedded.
-   * @type {Actor5e|null}
+   * @type {ActorRelics|null}
    */
   get actor() {
     return this.item.parent ?? null;
@@ -266,7 +266,7 @@ export default class Advancement extends BaseAdvancement {
 
   /**
    * Can an advancement of this type be added to the provided item?
-   * @param {Item5e} item  Item to check against.
+   * @param {ItemRelics} item  Item to check against.
    * @returns {boolean}    Should this be enabled as an option on the `AdvancementSelection` dialog?
    */
   static availableForItem(item) {

@@ -85,7 +85,7 @@ export default class AttributesFields {
         truesight: new foundry.data.fields.NumberField({
           required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SenseTruesight"
         }),
-        units: new foundry.data.fields.StringField({required: true, initial: "ft", label: "ROTV.SenseUnits"}),
+        units: new foundry.data.fields.StringField({required: true, initial: "", label: "ROTV.SenseUnits"}),
         special: new foundry.data.fields.StringField({required: true, label: "ROTV.SenseSpecial"})
       }, {label: "ROTV.Senses"}),
       spellcasting: new foundry.data.fields.StringField({

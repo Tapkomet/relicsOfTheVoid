@@ -7,11 +7,11 @@ import LongRestDialog from "../../applications/actor/long-rest.mjs";
 /**
  * Extend the base Actor class to implement additional system-specific logic.
  */
-export default class Actor5e extends Actor {
+export default class ActorRelics extends Actor {
 
   /**
-   * The data source for Actor5e.classes allowing it to be lazily computed.
-   * @type {Object<Item5e>}
+   * The data source for ActorRelics.classes allowing it to be lazily computed.
+   * @type {Object<ItemRelics>}
    * @private
    */
   _classes;
@@ -22,7 +22,7 @@ export default class Actor5e extends Actor {
 
   /**
    * A mapping of classes belonging to this Actor.
-   * @type {Object<Item5e>}
+   * @type {Object<ItemRelics>}
    */
   get classes() {
     if ( this._classes !== undefined ) return this._classes;
@@ -47,7 +47,7 @@ export default class Actor5e extends Actor {
 
   /**
    * The Actor's currently equipped armor, if any.
-   * @type {Item5e|null}
+   * @type {ItemRelics|null}
    */
   get armor() {
     return this.system.attributes.ac.equippedArmor ?? null;
@@ -57,7 +57,7 @@ export default class Actor5e extends Actor {
 
   /**
    * The Actor's currently equipped shield, if any.
-   * @type {Item5e|null}
+   * @type {ItemRelics|null}
    */
   get shield() {
     return this.system.attributes.ac.equippedShield ?? null;
@@ -393,7 +393,7 @@ export default class Actor5e extends Actor {
     const saveBonus = simplifyBonus(globalBonuses.save, bonusData);
     for ( const [id, abl] of Object.entries(this.system.abilities) ) {
       if ( flags.diamondSoul ) abl.proficient = 1;  // Diamond Soul is proficient in all saves
-      abl.mod = Math.floor((abl.value - 10) / 2);
+      abl.mod = abl.value;
 
       const isRA = this._isRemarkableAthlete(id);
       abl.checkProf = new Proficiency(this.system.attributes.prof, (isRA || flags.jackOfAllTrades) ? 0.5 : 0, !isRA);
@@ -589,8 +589,8 @@ export default class Actor5e extends Actor {
       : CONFIG.ROTV.encumbrance.strMultiplier.imperial;
 
     // Populate final Encumbrance values
-    encumbrance.value = weight.toNearest(0.1);
-    encumbrance.max = ((this.system.abilities.str?.value ?? 10) * strengthMultiplier * mod).toNearest(0.1);
+    encumbrance.value = weight.toNearest(0.01);
+    encumbrance.max = ((this.system.abilities.str?.value ?? 10) * strengthMultiplier * mod).toNearest(0.01);
     encumbrance.pct = Math.clamped((encumbrance.value * 100) / encumbrance.max, 0, 100);
     encumbrance.encumbered = encumbrance.pct > (200 / 3);
   }
@@ -701,9 +701,9 @@ export default class Actor5e extends Actor {
   /**
    * Contribute to the actor's spellcasting progression.
    * @param {object} progression                             Spellcasting progression data. *Will be mutated.*
-   * @param {Item5e} cls                                     Class for whom this progression is being computed.
+   * @param {ItemRelics} cls                                     Class for whom this progression is being computed.
    * @param {object} [config={}]
-   * @param {Actor5e|null} [config.actor]                    Actor for whom the data is being prepared.
+   * @param {ActorRelics|null} [config.actor]                    Actor for whom the data is being prepared.
    * @param {SpellcastingDescription} [config.spellcasting]  Spellcasting descriptive object.
    * @param {number} [config.count=1]                        Number of classes with this type of spellcasting.
    */
@@ -715,8 +715,8 @@ export default class Actor5e extends Actor {
      * A hook event that fires while computing the spellcasting progression for each class on each actor.
      * The actual hook names include the spellcasting type (e.g. `rotv.computeLeveledProgression`).
      * @param {object} progression                    Spellcasting progression data. *Will be mutated.*
-     * @param {Actor5e|null} [actor]                  Actor for whom the data is being prepared.
-     * @param {Item5e} cls                            Class for whom this progression is being computed.
+     * @param {ActorRelics|null} [actor]                  Actor for whom the data is being prepared.
+     * @param {ItemRelics} cls                            Class for whom this progression is being computed.
      * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
      * @param {number} count                          Number of classes with this type of spellcasting.
      * @returns {boolean}  Explicitly return false to prevent default progression from being calculated.
@@ -739,8 +739,8 @@ export default class Actor5e extends Actor {
   /**
    * Contribute to the actor's spellcasting progression for a class with leveled spellcasting.
    * @param {object} progression                    Spellcasting progression data. *Will be mutated.*
-   * @param {Actor5e} actor                         Actor for whom the data is being prepared.
-   * @param {Item5e} cls                            Class for whom this progression is being computed.
+   * @param {ActorRelics} actor                         Actor for whom the data is being prepared.
+   * @param {ItemRelics} cls                            Class for whom this progression is being computed.
    * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
    * @param {number} count                          Number of classes with this type of spellcasting.
    */
@@ -760,8 +760,8 @@ export default class Actor5e extends Actor {
   /**
    * Contribute to the actor's spellcasting progression for a class with pact spellcasting.
    * @param {object} progression                    Spellcasting progression data. *Will be mutated.*
-   * @param {Actor5e} actor                         Actor for whom the data is being prepared.
-   * @param {Item5e} cls                            Class for whom this progression is being computed.
+   * @param {ActorRelics} actor                         Actor for whom the data is being prepared.
+   * @param {ItemRelics} cls                            Class for whom this progression is being computed.
    * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
    * @param {number} count                          Number of classes with this type of spellcasting.
    */
@@ -777,14 +777,14 @@ export default class Actor5e extends Actor {
    * @param {string} type             Type of spellcasting slots being prepared.
    * @param {object} progression      Spellcasting progression data.
    * @param {object} [config]
-   * @param {Actor5e} [config.actor]  Actor for whom the data is being prepared.
+   * @param {ActorRelics} [config.actor]  Actor for whom the data is being prepared.
    */
   static prepareSpellcastingSlots(spells, type, progression, {actor}={}) {
     /**
      * A hook event that fires to convert the provided spellcasting progression into spell slots.
      * The actual hook names include the spellcasting type (e.g. `rotv.prepareLeveledSlots`).
      * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
-     * @param {Actor5e} actor        Actor for whom the data is being prepared.
+     * @param {ActorRelics} actor        Actor for whom the data is being prepared.
      * @param {object} progression   Spellcasting progression data.
      * @returns {boolean}            Explicitly return false to prevent default preparation from being performed.
      * @function rotv.prepareSpellcastingSlots
@@ -801,7 +801,7 @@ export default class Actor5e extends Actor {
   /**
    * Prepare leveled spell slots using progression data.
    * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
-   * @param {Actor5e} actor        Actor for whom the data is being prepared.
+   * @param {ActorRelics} actor        Actor for whom the data is being prepared.
    * @param {object} progression   Spellcasting progression data.
    */
   static prepareLeveledSlots(spells, actor, progression) {
@@ -820,7 +820,7 @@ export default class Actor5e extends Actor {
   /**
    * Prepare pact spell slots using progression data.
    * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
-   * @param {Actor5e} actor        Actor for whom the data is being prepared.
+   * @param {ActorRelics} actor        Actor for whom the data is being prepared.
    * @param {object} progression   Spellcasting progression data.
    */
   static preparePactSlots(spells, actor, progression) {
@@ -910,7 +910,7 @@ export default class Actor5e extends Actor {
 
   /**
    * Assign a class item as the original class for the Actor based on which class has the most levels.
-   * @returns {Promise<Actor5e>}  Instance of the updated actor.
+   * @returns {Promise<ActorRelics>}  Instance of the updated actor.
    * @protected
    */
   _assignPrimaryClass() {
@@ -939,7 +939,7 @@ export default class Actor5e extends Actor {
    * Apply a certain amount of damage or healing to the health pool for Actor
    * @param {number} amount       An amount of damage (positive) or healing (negative) to sustain
    * @param {number} multiplier   A multiplier which allows for resistance, vulnerability, or healing
-   * @returns {Promise<Actor5e>}  A Promise which resolves once the damage has been applied
+   * @returns {Promise<ActorRelics>}  A Promise which resolves once the damage has been applied
    */
   async applyDamage(amount=0, multiplier=1) {
     amount = Math.floor(parseInt(amount) * multiplier);
@@ -976,7 +976,7 @@ export default class Actor5e extends Actor {
   /**
    * Apply a certain amount of temporary hit point, but only if it's more than the actor currently has.
    * @param {number} amount       An amount of temporary hit points to set
-   * @returns {Promise<Actor5e>}  A Promise which resolves once the temp HP has been applied
+   * @returns {Promise<ActorRelics>}  A Promise which resolves once the temp HP has been applied
    */
   async applyTempHP(amount=0) {
     amount = parseInt(amount);
@@ -1087,7 +1087,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before a skill check is rolled for an Actor.
      * @function rotv.preRollSkill
      * @memberof hookEvents
-     * @param {Actor5e} actor                Actor for which the skill check is being rolled.
+     * @param {ActorRelics} actor                Actor for which the skill check is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @param {string} skillId               ID of the skill being rolled as defined in `ROTV.skills`.
      * @returns {boolean}                    Explicitly return `false` to prevent skill check from being rolled.
@@ -1100,7 +1100,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after a skill check has been rolled for an Actor.
      * @function rotv.rollSkill
      * @memberof hookEvents
-     * @param {Actor5e} actor   Actor for which the skill check has been rolled.
+     * @param {ActorRelics} actor   Actor for which the skill check has been rolled.
      * @param {D20Roll} roll    The resulting roll.
      * @param {string} skillId  ID of the skill that was rolled as defined in `ROTV.skills`.
      */
@@ -1192,7 +1192,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before an ability test is rolled for an Actor.
      * @function rotv.preRollAbilityTest
      * @memberof hookEvents
-     * @param {Actor5e} actor                Actor for which the ability test is being rolled.
+     * @param {ActorRelics} actor                Actor for which the ability test is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @param {string} abilityId             ID of the ability being rolled as defined in `ROTV.abilities`.
      * @returns {boolean}                    Explicitly return `false` to prevent ability test from being rolled.
@@ -1205,7 +1205,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after an ability test has been rolled for an Actor.
      * @function rotv.rollAbilityTest
      * @memberof hookEvents
-     * @param {Actor5e} actor     Actor for which the ability test has been rolled.
+     * @param {ActorRelics} actor     Actor for which the ability test has been rolled.
      * @param {D20Roll} roll      The resulting roll.
      * @param {string} abilityId  ID of the ability that was rolled as defined in `ROTV.abilities`.
      */
@@ -1271,7 +1271,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before an ability save is rolled for an Actor.
      * @function rotv.preRollAbilitySave
      * @memberof hookEvents
-     * @param {Actor5e} actor                Actor for which the ability save is being rolled.
+     * @param {ActorRelics} actor                Actor for which the ability save is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @param {string} abilityId             ID of the ability being rolled as defined in `ROTV.abilities`.
      * @returns {boolean}                    Explicitly return `false` to prevent ability save from being rolled.
@@ -1284,7 +1284,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after an ability save has been rolled for an Actor.
      * @function rotv.rollAbilitySave
      * @memberof hookEvents
-     * @param {Actor5e} actor     Actor for which the ability save has been rolled.
+     * @param {ActorRelics} actor     Actor for which the ability save has been rolled.
      * @param {D20Roll} roll      The resulting roll.
      * @param {string} abilityId  ID of the ability that was rolled as defined in `ROTV.abilities`.
      */
@@ -1346,7 +1346,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before a death saving throw is rolled for an Actor.
      * @function rotv.preRollDeathSave
      * @memberof hookEvents
-     * @param {Actor5e} actor                Actor for which the death saving throw is being rolled.
+     * @param {ActorRelics} actor                Actor for which the death saving throw is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                    Explicitly return `false` to prevent death saving throw from being rolled.
      */
@@ -1399,7 +1399,7 @@ export default class Actor5e extends Actor {
      * updates have been performed.
      * @function rotv.rollDeathSave
      * @memberof hookEvents
-     * @param {Actor5e} actor              Actor for which the death saving throw has been rolled.
+     * @param {ActorRelics} actor              Actor for which the death saving throw has been rolled.
      * @param {D20Roll} roll               The resulting roll.
      * @param {object} details
      * @param {object} details.updates     Updates that will be applied to the actor as a result of this save.
@@ -1534,7 +1534,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before initiative is rolled for an Actor.
      * @function rotv.preRollInitiative
      * @memberof hookEvents
-     * @param {Actor5e} actor  The Actor that is rolling initiative.
+     * @param {ActorRelics} actor  The Actor that is rolling initiative.
      * @param {D20Roll} roll   The initiative roll.
      */
     if ( Hooks.call("rotv.preRollInitiative", this, this._cachedInitiativeRoll) === false ) return;
@@ -1550,7 +1550,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after an Actor has rolled for initiative.
      * @function rotv.rollInitiative
      * @memberof hookEvents
-     * @param {Actor5e} actor           The Actor that rolled initiative.
+     * @param {ActorRelics} actor           The Actor that rolled initiative.
      * @param {Combatant[]} combatants  The associated Combatants in the Combat.
      */
     Hooks.callAll("rotv.rollInitiative", this, combatants);
@@ -1605,7 +1605,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before a hit die is rolled for an Actor.
      * @function rotv.preRollHitDie
      * @memberof hookEvents
-     * @param {Actor5e} actor               Actor for which the hit die is to be rolled.
+     * @param {ActorRelics} actor               Actor for which the hit die is to be rolled.
      * @param {object} config               Configuration data for the pending roll.
      * @param {string} config.formula       Formula that will be rolled.
      * @param {object} config.data          Data used when evaluating the roll.
@@ -1630,7 +1630,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after a hit die has been rolled for an Actor, but before updates have been performed.
      * @function rotv.rollHitDie
      * @memberof hookEvents
-     * @param {Actor5e} actor         Actor for which the hit die has been rolled.
+     * @param {ActorRelics} actor         Actor for which the hit die has been rolled.
      * @param {Roll} roll             The resulting roll.
      * @param {object} updates
      * @param {object} updates.actor  Updates that will be applied to the actor.
@@ -1653,7 +1653,7 @@ export default class Actor5e extends Actor {
 
   /**
    * Roll hit points for a specific class as part of a level-up workflow.
-   * @param {Item5e} item                         The class item whose hit dice to roll.
+   * @param {ItemRelics} item                         The class item whose hit dice to roll.
    * @param {object} options
    * @param {boolean} [options.chatMessage=true]  Display the chat message for this roll.
    * @returns {Promise<Roll>}                     The completed roll.
@@ -1678,8 +1678,8 @@ export default class Actor5e extends Actor {
      * A hook event that fires before hit points are rolled for a character's class.
      * @function rotv.preRollClassHitPoints
      * @memberof hookEvents
-     * @param {Actor5e} actor            Actor for which the hit points are being rolled.
-     * @param {Item5e} item              The class item whose hit dice will be rolled.
+     * @param {ActorRelics} actor            Actor for which the hit points are being rolled.
+     * @param {ItemRelics} item              The class item whose hit dice will be rolled.
      * @param {object} rollData
      * @param {string} rollData.formula  The string formula to parse.
      * @param {object} rollData.data     The data object against which to parse attributes within the formula.
@@ -1694,7 +1694,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after hit points haven been rolled for a character's class.
      * @function rotv.rollClassHitPoints
      * @memberof hookEvents
-     * @param {Actor5e} actor  Actor for which the hit points have been rolled.
+     * @param {ActorRelics} actor  Actor for which the hit points have been rolled.
      * @param {Roll} roll      The resulting roll.
      */
     Hooks.callAll("rotv.rollClassHitPoints", this, roll);
@@ -1731,7 +1731,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before hit points are rolled for an NPC.
      * @function rotv.preRollNPCHitPoints
      * @memberof hookEvents
-     * @param {Actor5e} actor            Actor for which the hit points are being rolled.
+     * @param {ActorRelics} actor            Actor for which the hit points are being rolled.
      * @param {object} rollData
      * @param {string} rollData.formula  The string formula to parse.
      * @param {object} rollData.data     The data object against which to parse attributes within the formula.
@@ -1746,7 +1746,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after hit points are rolled for an NPC.
      * @function rotv.rollNPCHitPoints
      * @memberof hookEvents
-     * @param {Actor5e} actor  Actor for which the hit points have been rolled.
+     * @param {ActorRelics} actor  Actor for which the hit points have been rolled.
      * @param {Roll} roll      The resulting roll.
      */
     Hooks.callAll("rotv.rollNPCHitPoints", this, roll);
@@ -1801,7 +1801,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before a short rest is started.
      * @function rotv.preShortRest
      * @memberof hookEvents
-     * @param {Actor5e} actor             The actor that is being rested.
+     * @param {ActorRelics} actor             The actor that is being rested.
      * @param {RestConfiguration} config  Configuration options for the rest.
      * @returns {boolean}                 Explicitly return `false` to prevent the rest from being started.
      */
@@ -1842,7 +1842,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires before a long rest is started.
      * @function rotv.preLongRest
      * @memberof hookEvents
-     * @param {Actor5e} actor             The actor that is being rested.
+     * @param {ActorRelics} actor             The actor that is being rested.
      * @param {RestConfiguration} config  Configuration options for the rest.
      * @returns {boolean}                 Explicitly return `false` to prevent the rest from being started.
      */
@@ -1904,7 +1904,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires after rest result is calculated, but before any updates are performed.
      * @function rotv.preRestCompleted
      * @memberof hookEvents
-     * @param {Actor5e} actor      The actor that is being rested.
+     * @param {ActorRelics} actor      The actor that is being rested.
      * @param {RestResult} result  Details on the rest to be completed.
      * @returns {boolean}          Explicitly return `false` to prevent the rest updates from being performed.
      */
@@ -1921,7 +1921,7 @@ export default class Actor5e extends Actor {
      * A hook event that fires when the rest process is completed for an actor.
      * @function rotv.restCompleted
      * @memberof hookEvents
-     * @param {Actor5e} actor      The actor that just completed resting.
+     * @param {ActorRelics} actor      The actor that just completed resting.
      * @param {RestResult} result  Details on the rest completed.
      */
     Hooks.callAll("rotv.restCompleted", this, result);
@@ -2172,7 +2172,7 @@ export default class Actor5e extends Actor {
   /**
    * Convert all carried currency to the highest possible denomination using configured conversion rates.
    * See CONFIG.ROTV.currencies for configuration.
-   * @returns {Promise<Actor5e>}
+   * @returns {Promise<ActorRelics>}
    */
   convertCurrency() {
     const currency = foundry.utils.deepClone(this.system.currency);
@@ -2231,7 +2231,7 @@ export default class Actor5e extends Actor {
   /**
    * Transform this Actor into another one.
    *
-   * @param {Actor5e} target                      The target Actor.
+   * @param {ActorRelics} target                      The target Actor.
    * @param {TransformationOptions} [options={}]  Options that determine how the transformation is performed.
    * @param {boolean} [options.renderSheet=true]  Render the sheet of the transformed actor after the polymorph
    * @returns {Promise<Array<Token>>|null}        Updated token if the transformation was performed.
@@ -2400,8 +2400,8 @@ export default class Actor5e extends Actor {
      * A hook event that fires just before the actor is transformed.
      * @function rotv.transformActor
      * @memberof hookEvents
-     * @param {Actor5e} actor                  The original actor before transformation.
-     * @param {Actor5e} target                 The target actor into which to transform.
+     * @param {ActorRelics} actor                  The original actor before transformation.
+     * @param {ActorRelics} target                 The target actor into which to transform.
      * @param {object} data                    The data that will be used to create the new transformed actor.
      * @param {TransformationOptions} options  Options that determine how the transformation is performed.
      * @param {object} [options]
@@ -2636,7 +2636,7 @@ export default class Actor5e extends Actor {
    */
   _computeArmorClass() {
     foundry.utils.logCompatibilityWarning(
-      "Actor5e#_computeArmorClass has been renamed Actor5e#_prepareArmorClass.",
+      "ActorRelics#_computeArmorClass has been renamed ActorRelics#_prepareArmorClass.",
       { since: "RotV 2.0", until: "RotV 2.2" }
     );
     this._prepareArmorClass();
@@ -2653,7 +2653,7 @@ export default class Actor5e extends Actor {
    */
   _computeEncumbrance() {
     foundry.utils.logCompatibilityWarning(
-      "Actor5e#_computeEncumbrance has been renamed Actor5e#_prepareEncumbrance.",
+      "ActorRelics#_computeEncumbrance has been renamed ActorRelics#_prepareEncumbrance.",
       { since: "RotV 2.0", until: "RotV 2.2" }
     );
     this._prepareEncumbrance();
@@ -2669,7 +2669,7 @@ export default class Actor5e extends Actor {
    */
   _computeInitiativeModifier() {
     foundry.utils.logCompatibilityWarning(
-      "Actor5e#_computeInitiativeModifier has been renamed Actor5e#_prepareInitiative.",
+      "ActorRelics#_computeInitiativeModifier has been renamed ActorRelics#_prepareInitiative.",
       { since: "RotV 2.0", until: "RotV 2.2" }
     );
     this._prepareInitiative();
@@ -2685,7 +2685,7 @@ export default class Actor5e extends Actor {
    */
   _computeSpellcastingProgression() {
     foundry.utils.logCompatibilityWarning(
-      "Actor5e#_computeSpellcastingProgression has been renamed Actor5e#_prepareSpellcasting.",
+      "ActorRelics#_computeSpellcastingProgression has been renamed ActorRelics#_prepareSpellcasting.",
       { since: "RotV 2.0", until: "RotV 2.2" }
     );
     this._prepareSpellcasting();

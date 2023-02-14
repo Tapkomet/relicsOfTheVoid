@@ -4,7 +4,7 @@
  */
 export const migrateWorld = async function() {
   const version = game.system.version;
-  ui.notifications.info(game.i18n.format("MIGRATION.5eBegin", {version}), {permanent: true});
+  ui.notifications.info(game.i18n.format("MIGRATION.RelicsBegin", {version}), {permanent: true});
 
   const migrationData = await getMigrationData();
 
@@ -82,7 +82,7 @@ export const migrateWorld = async function() {
 
   // Set the migration as complete
   game.settings.set("rotv", "systemMigrationVersion", game.system.version);
-  ui.notifications.info(game.i18n.format("MIGRATION.5eComplete", {version}), {permanent: true});
+  ui.notifications.info(game.i18n.format("MIGRATION.RelicsComplete", {version}), {permanent: true});
 };
 
 /* -------------------------------------------- */
@@ -540,8 +540,8 @@ function _migrateMacroCommands(macro, updateData) {
  */
 export async function purgeFlags(pack) {
   const cleanFlags = flags => {
-    const flags5e = flags.rotv || null;
-    return flags5e ? {rotv: flags5e} : {};
+    const flagsRelics = flags.rotv || null;
+    return flagsRelics ? {rotv: flagsRelics} : {};
   };
   await pack.configure({locked: false});
   const content = await pack.getDocuments();

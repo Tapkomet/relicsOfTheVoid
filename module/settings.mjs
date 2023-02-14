@@ -15,53 +15,53 @@ export default function registerSystemSettings() {
 
   // Rest Recovery Rules
   game.settings.register("rotv", "restVariant", {
-    name: "SETTINGS.5eRestN",
-    hint: "SETTINGS.5eRestL",
+    name: "SETTINGS.RelicsRestN",
+    hint: "SETTINGS.RelicsRestL",
     scope: "world",
     config: true,
     default: "normal",
     type: String,
     choices: {
-      normal: "SETTINGS.5eRestPHB",
-      gritty: "SETTINGS.5eRestGritty",
-      epic: "SETTINGS.5eRestEpic"
+      normal: "SETTINGS.RelicsRestPHB",
+      gritty: "SETTINGS.RelicsRestGritty",
+      epic: "SETTINGS.RelicsRestEpic"
     }
   });
 
   // Diagonal Movement Rule
   game.settings.register("rotv", "diagonalMovement", {
-    name: "SETTINGS.5eDiagN",
-    hint: "SETTINGS.5eDiagL",
+    name: "SETTINGS.RelicsDiagN",
+    hint: "SETTINGS.RelicsDiagL",
     scope: "world",
     config: true,
     default: "555",
     type: String,
     choices: {
-      555: "SETTINGS.5eDiagPHB",
-      5105: "SETTINGS.5eDiagDMG",
-      EUCL: "SETTINGS.5eDiagEuclidean"
+      555: "SETTINGS.RelicsDiagPHB",
+      5105: "SETTINGS.RelicsDiagDMG",
+      EUCL: "SETTINGS.RelicsDiagEuclidean"
     },
     onChange: rule => canvas.grid.diagonalRule = rule
   });
 
   // Proficiency modifier type
   game.settings.register("rotv", "proficiencyModifier", {
-    name: "SETTINGS.5eProfN",
-    hint: "SETTINGS.5eProfL",
+    name: "SETTINGS.RelicsProfN",
+    hint: "SETTINGS.RelicsProfL",
     scope: "world",
     config: true,
     default: "bonus",
     type: String,
     choices: {
-      bonus: "SETTINGS.5eProfBonus",
-      dice: "SETTINGS.5eProfDice"
+      bonus: "SETTINGS.RelicsProfBonus",
+      dice: "SETTINGS.RelicsProfDice"
     }
   });
 
   // Use Honor ability score
   game.settings.register("rotv", "honorScore", {
-    name: "SETTINGS.5eHonorN",
-    hint: "SETTINGS.5eHonorL",
+    name: "SETTINGS.RelicsHonorN",
+    hint: "SETTINGS.RelicsHonorL",
     scope: "world",
     config: true,
     default: false,
@@ -71,8 +71,8 @@ export default function registerSystemSettings() {
 
   // Use Sanity ability score
   game.settings.register("rotv", "sanityScore", {
-    name: "SETTINGS.5eSanityN",
-    hint: "SETTINGS.5eSanityL",
+    name: "SETTINGS.RelicsSanityN",
+    hint: "SETTINGS.RelicsSanityL",
     scope: "world",
     config: true,
     default: false,
@@ -82,8 +82,8 @@ export default function registerSystemSettings() {
 
   // Apply Dexterity as Initiative Tiebreaker
   game.settings.register("rotv", "initiativeDexTiebreaker", {
-    name: "SETTINGS.5eInitTBN",
-    hint: "SETTINGS.5eInitTBL",
+    name: "SETTINGS.RelicsInitTBN",
+    hint: "SETTINGS.RelicsInitTBL",
     scope: "world",
     config: true,
     default: false,
@@ -92,8 +92,8 @@ export default function registerSystemSettings() {
 
   // Record Currency Weight
   game.settings.register("rotv", "currencyWeight", {
-    name: "SETTINGS.5eCurWtN",
-    hint: "SETTINGS.5eCurWtL",
+    name: "SETTINGS.RelicsCurWtN",
+    hint: "SETTINGS.RelicsCurWtL",
     scope: "world",
     config: true,
     default: true,
@@ -102,8 +102,8 @@ export default function registerSystemSettings() {
 
   // Disable Experience Tracking
   game.settings.register("rotv", "disableExperienceTracking", {
-    name: "SETTINGS.5eNoExpN",
-    hint: "SETTINGS.5eNoExpL",
+    name: "SETTINGS.RelicsNoExpN",
+    hint: "SETTINGS.RelicsNoExpL",
     scope: "world",
     config: true,
     default: false,
@@ -112,8 +112,8 @@ export default function registerSystemSettings() {
 
   // Disable Advancements
   game.settings.register("rotv", "disableAdvancements", {
-    name: "SETTINGS.5eNoAdvancementsN",
-    hint: "SETTINGS.5eNoAdvancementsL",
+    name: "SETTINGS.RelicsNoAdvancementsN",
+    hint: "SETTINGS.RelicsNoAdvancementsL",
     scope: "world",
     config: true,
     default: false,
@@ -122,8 +122,8 @@ export default function registerSystemSettings() {
 
   // Collapse Item Cards (by default)
   game.settings.register("rotv", "autoCollapseItemCards", {
-    name: "SETTINGS.5eAutoCollapseCardN",
-    hint: "SETTINGS.5eAutoCollapseCardL",
+    name: "SETTINGS.RelicsAutoCollapseCardN",
+    hint: "SETTINGS.RelicsAutoCollapseCardL",
     scope: "client",
     config: true,
     default: false,
@@ -135,8 +135,8 @@ export default function registerSystemSettings() {
 
   // Allow Polymorphing
   game.settings.register("rotv", "allowPolymorphing", {
-    name: "SETTINGS.5eAllowPolymorphingN",
-    hint: "SETTINGS.5eAllowPolymorphingL",
+    name: "SETTINGS.RelicsAllowPolymorphingN",
+    hint: "SETTINGS.RelicsAllowPolymorphingL",
     scope: "world",
     config: true,
     default: false,
@@ -174,8 +174,8 @@ export default function registerSystemSettings() {
 
   // Metric Unit Weights
   game.settings.register("rotv", "metricWeightUnits", {
-    name: "SETTINGS.5eMetricN",
-    hint: "SETTINGS.5eMetricL",
+    name: "SETTINGS.RelicsMetricN",
+    hint: "SETTINGS.RelicsMetricL",
     scope: "world",
     config: true,
     type: Boolean,
@@ -184,8 +184,8 @@ export default function registerSystemSettings() {
 
   // Critical Damage Modifiers
   game.settings.register("rotv", "criticalDamageModifiers", {
-    name: "SETTINGS.5eCriticalModifiersN",
-    hint: "SETTINGS.5eCriticalModifiersL",
+    name: "SETTINGS.RelicsCriticalModifiersN",
+    hint: "SETTINGS.RelicsCriticalModifiersL",
     scope: "world",
     config: true,
     type: Boolean,
@@ -194,8 +194,8 @@ export default function registerSystemSettings() {
 
   // Critical Damage Maximize
   game.settings.register("rotv", "criticalDamageMaxDice", {
-    name: "SETTINGS.5eCriticalMaxDiceN",
-    hint: "SETTINGS.5eCriticalMaxDiceL",
+    name: "SETTINGS.RelicsCriticalMaxDiceN",
+    hint: "SETTINGS.RelicsCriticalMaxDiceL",
     scope: "world",
     config: true,
     type: Boolean,

@@ -26,7 +26,7 @@ export default class AdvancementConfig extends FormApplication {
 
   /**
    * Parent item to which this advancement belongs.
-   * @type {Item5e}
+   * @type {ItemRelics}
    */
   item;
 
@@ -176,7 +176,7 @@ export default class AdvancementConfig extends FormApplication {
   /**
    * Handle deleting an existing Item entry from the Advancement.
    * @param {Event} event        The originating click event.
-   * @returns {Promise<Item5e>}  The updated parent Item after the application re-renders.
+   * @returns {Promise<ItemRelics>}  The updated parent Item after the application re-renders.
    * @protected
    */
   async _onItemDelete(event) {
@@ -239,7 +239,7 @@ export default class AdvancementConfig extends FormApplication {
    * Called when an item is dropped to validate the Item before it is saved. An error should be thrown
    * if the item is invalid.
    * @param {Event} event  Triggering drop event.
-   * @param {Item5e} item  The materialized Item that was dropped.
+   * @param {ItemRelics} item  The materialized Item that was dropped.
    * @throws An error if the item is invalid.
    * @protected
    */

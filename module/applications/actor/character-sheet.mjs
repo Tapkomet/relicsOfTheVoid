@@ -1,11 +1,11 @@
-import ActorSheet5e from "./base-sheet.mjs";
+import ActorSheetRelics from "./base-sheet.mjs";
 import AdvancementConfirmationDialog from "../advancement/advancement-confirmation-dialog.mjs";
 import AdvancementManager from "../advancement/advancement-manager.mjs";
 
 /**
  * An Actor sheet for player character type actors.
  */
-export default class ActorSheet5eCharacter extends ActorSheet5e {
+export default class ActorSheetRelicsCharacter extends ActorSheetRelics {
 
   /** @inheritDoc */
   static get defaultOptions() {
@@ -108,7 +108,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
     // Organize items
     for ( let i of items ) {
       const ctx = context.itemContext[i.id] ??= {};
-      ctx.totalWeight = (i.system.quantity * i.system.weight).toNearest(0.1);
+      ctx.totalWeight = (i.system.quantity * i.system.weight).toNearest(0.01);
       inventory[i.type].items.push(i);
     }
 
@@ -175,7 +175,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
 
   /**
    * A helper method to establish the displayed preparation state for an item.
-   * @param {Item5e} item     Item being prepared for display.
+   * @param {ItemRelics} item     Item being prepared for display.
    * @param {object} context  Context data for display.
    * @protected
    */
@@ -243,7 +243,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
   /**
    * Respond to a new level being selected from the level selector.
    * @param {Event} event                           The originating change.
-   * @returns {Promise<AdvancementManager|Item5e>}  Manager if advancements needed, otherwise updated class item.
+   * @returns {Promise<AdvancementManager|ItemRelics>}  Manager if advancements needed, otherwise updated class item.
    * @private
    */
   async _onLevelChange(event) {
@@ -273,7 +273,7 @@ export default class ActorSheet5eCharacter extends ActorSheet5e {
   /**
    * Handle toggling the state of an Owned Item within the Actor.
    * @param {Event} event        The triggering click event.
-   * @returns {Promise<Item5e>}  Item with the updates applied.
+   * @returns {Promise<ItemRelics>}  Item with the updates applied.
    * @private
    */
   _onToggleItem(event) {
