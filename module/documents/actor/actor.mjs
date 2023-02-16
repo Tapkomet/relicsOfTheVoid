@@ -590,7 +590,7 @@ export default class ActorRelics extends Actor {
 
     // Populate final Encumbrance values
     encumbrance.value = weight.toNearest(0.01);
-    encumbrance.max = ((this.system.abilities.str?.value ?? 10) * strengthMultiplier * mod).toNearest(0.01);
+    encumbrance.max = ((this.system.abilities.str?.value ?? 10) * strengthMultiplier * mod).toNearest(0.01) + 10;
     encumbrance.pct = Math.clamped((encumbrance.value * 100) / encumbrance.max, 0, 100);
     encumbrance.encumbered = encumbrance.pct > (200 / 3);
   }

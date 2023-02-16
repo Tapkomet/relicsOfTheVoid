@@ -26,40 +26,6 @@ export default class ItemRelics extends Item {
    */
   get abilityMod() {
 
-    // Case 1 - defined directly by the item
-    if ( this.system.ability ) return this.system.ability;
-
-    // Case 2 - inferred from a parent actor
-    if ( this.actor && ("abilities" in this.actor.system) ) {
-      const abilities = this.actor.system.abilities;
-      const spellcasting = this.actor.system.attributes.spellcasting;
-
-      // Special rules per item type
-      switch ( this.type ) {
-        case "consumable":
-          if ( this.system.consumableType === "scroll" ) return spellcasting || "int";
-          break;
-        case "spell":
-          return spellcasting || "int";
-        case "tool":
-          return "int";
-        case "weapon":
-          // Finesse weapons - Str or Dex (PHB pg. 147)
-          if ( this.system.properties.fin === true ) {
-            return abilities.dex.mod >= abilities.str.mod ? "dex" : "str";
-          }
-          // Ranged weapons - Dex (PH p.194)
-          if ( ["simpleR", "martialR"].includes(this.system.weaponType) ) return "dex";
-          break;
-      }
-
-      // If a specific attack type is defined
-      if ( this.hasAttack ) return {
-        mwak: "con",
-        rwak: "con"
-      }[this.system.actionType];
-    }
-
     // Case 3 - unknown
     return "con";
   }
