@@ -1308,7 +1308,7 @@ preLocalize("cover");
  * @type {string[]}
  */
 ROTV.trackableAttributes = [
-  "attributes.ac.value", "attributes.init.bonus", "attributes.movement", "attributes.senses", "attributes.spelldc",
+  "attributes.ac.value","attributes.damRed", "attributes.init.bonus", "attributes.movement", "attributes.senses", "attributes.spelldc",
   "attributes.spellLevel", "details.cr", "details.spellLevel", "details.xp.value", "skills.*.passive",
   "abilities.*.value"
 ];
@@ -1321,7 +1321,7 @@ ROTV.trackableAttributes = [
  */
 ROTV.consumableResources = [
   "item.quantity", "item.weight", "item.duration.value", "currency", "details.xp.value", "abilities.*.value",
-  "attributes.senses", "attributes.movement", "attributes.ac.flat", "item.armor.value", "item.target", "item.range",
+  "attributes.senses", "attributes.movement", "attributes.ac.flat", "item.armor.value","item.damRed", "item.target", "item.range",
   "item.save.dc"
 ];
 

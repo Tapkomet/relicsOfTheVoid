@@ -9,6 +9,7 @@ import TraitsFields from "./templates/traits.mjs";
  *
  * @property {object} attributes
  * @property {object} attributes.ac
+ * @property {number} attributes.damRed
  * @property {number} attributes.ac.flat         Flat value used for flat or natural armor calculation.
  * @property {string} attributes.ac.calc         Name of one of the built-in formulas to use.
  * @property {string} attributes.ac.formula      Custom formula to use.
@@ -52,6 +53,8 @@ export default class NPCData extends CreatureTemplate {
       attributes: new foundry.data.fields.SchemaField({
         ...AttributesFields.common,
         ...AttributesFields.creature,
+        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        }),
         ac: new foundry.data.fields.SchemaField({
           flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.ArmorClassFlat"}),
           calc: new foundry.data.fields.StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),

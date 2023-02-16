@@ -3,6 +3,7 @@
  *
  * @property {object} armor          Equipment's armor class.
  * @property {number} armor.value    Armor class value for equipment.
+ * @property {number} damRed
  * @property {object} hp             Equipment's hit points.
  * @property {number} hp.value       Current hit point value.
  * @property {number} hp.max         Max hit points.

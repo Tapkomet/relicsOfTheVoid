@@ -18,6 +18,7 @@ import MountableTemplate from "./templates/mountable.mjs";
  * @property {object} armor             Armor details and equipment type information.
  * @property {string} armor.type        Equipment type as defined in `ROTV.equipmentTypes`.
  * @property {number} armor.value       Base armor class or shield bonus.
+ * @property {number} damRed
  * @property {number} armor.dex         Maximum dex bonus added to armor class.
  * @property {string} baseItem          Base armor as defined in `ROTV.armorIds` for determining proficiency.
  * @property {object} speed             Speed granted by a piece of vehicle equipment.
@@ -25,6 +26,7 @@ import MountableTemplate from "./templates/mountable.mjs";
  *                                      depending on system setting.
  * @property {string} speed.conditions  Conditions that may affect item's speed.
  * @property {number} strength          Minimum strength required to use a piece of armor.
+ * @property {number} damRed
  * @property {boolean} stealth          Does this equipment grant disadvantage on stealth checks when used?
  * @property {boolean} proficient       Does the owner have proficiency in this piece of equipment?
  */
@@ -49,6 +51,9 @@ export default class EquipmentData extends SystemDataModel.mixin(
       }, {label: "ROTV.Speed"}),
       strength: new foundry.data.fields.NumberField({
         required: true, integer: true, min: 0, label: "ROTV.ItemRequiredStr"
+      }),
+      damRed: new foundry.data.fields.NumberField({
+        required: true, integer: true, min: 0, label: "ROTV.DR"
       }),
       stealth: new foundry.data.fields.BooleanField({required: true, label: "ROTV.ItemEquipmentStealthDisav"}),
       proficient: new foundry.data.fields.BooleanField({required: true, initial: true, label: "ROTV.Proficient"})

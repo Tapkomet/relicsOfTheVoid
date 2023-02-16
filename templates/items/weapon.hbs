@@ -99,7 +99,20 @@
                 </div>
             </div>
 
+
             {{> "rotv.item-mountable"}}
+            {{/if}}
+
+            {{#if isMountable}}
+                <div class="form-group">
+                    <label>{{localize 'ROTV.DR'}}</label>
+                    <div class="form-fields">
+                        {{numberInput system.damRed name="system.damRed"}}
+                    </div>
+                </div>
+
+
+                {{> "rotv.item-mountable"}}
             {{/if}}
 
             <h3 class="form-header">{{ localize "ROTV.ItemWeaponUsage" }}</h3>

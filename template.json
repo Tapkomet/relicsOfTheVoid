@@ -59,6 +59,7 @@
             "calc": "default",
             "formula": ""
           },
+          "damRed": 0,
           "hp": {
             "value": 10,
             "max": null,
@@ -363,7 +364,9 @@
           "success": 0,
           "failure": 0
         },
-        "exhaustion": 0
+        "exhaustion": 0,
+        "stress": 0,
+        "maxStress": 0
       },
       "details": {
         "background": "",
@@ -668,6 +671,7 @@
         "value": null,
         "dex": null
       },
+      "damRed": 0,
       "baseItem": "",
       "speed": {
         "value": null,

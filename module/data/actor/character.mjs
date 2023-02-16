@@ -9,6 +9,7 @@ import TraitsFields from "./templates/traits.mjs";
  *
  * @property {object} attributes
  * @property {object} attributes.ac
+ * @property {number} attributes.damRed
  * @property {number} attributes.ac.flat                  Flat value used for flat or natural armor calculation.
  * @property {string} attributes.ac.calc                  Name of one of the built-in formulas to use.
  * @property {string} attributes.ac.formula               Custom formula to use.
@@ -24,6 +25,8 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {number} attributes.death.success            Number of successful death saves.
  * @property {number} attributes.death.failure            Number of failed death saves.
  * @property {number} attributes.exhaustion               Number of levels of exhaustion.
+ * @property {number} attributes.stress                   Current stress.
+ * @property {number} attributes.maxStress                Max stress.
  * @property {object} details
  * @property {string} details.background                  Name of character's background.
  * @property {string} details.originalClass               ID of first class taken by character.
@@ -56,6 +59,8 @@ export default class CharacterData extends CreatureTemplate {
       attributes: new foundry.data.fields.SchemaField({
         ...AttributesFields.common,
         ...AttributesFields.creature,
+        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        }),
         ac: new foundry.data.fields.SchemaField({
           flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.ArmorClassFlat"}),
           calc: new foundry.data.fields.StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
@@ -83,9 +88,12 @@ export default class CharacterData extends CreatureTemplate {
             required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DeathSaveFailures"
           })
         }, {label: "ROTV.DeathSave"}),
-        exhaustion: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Exhaustion"
-        })
+        stress: new foundry.data.fields.NumberField({
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Current"
+        }),
+        maxStress: new foundry.data.fields.NumberField({
+          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Max"
+        }),
       }, {label: "ROTV.Attributes"}),
       details: new foundry.data.fields.SchemaField({
         ...DetailsFields.common,

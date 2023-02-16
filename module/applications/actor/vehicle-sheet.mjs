@@ -116,6 +116,10 @@ export default class ActorSheetRelicsVehicle extends ActorSheetRelics {
       css: "item-ac",
       property: "system.armor.value"
     }, {
+      label: game.i18n.localize("ROTV.DR"),
+      css: "item-ac",
+      property: "system.damRed"
+    }, {
       label: game.i18n.localize("ROTV.HP"),
       css: "item-hp",
       property: "system.hp.value",

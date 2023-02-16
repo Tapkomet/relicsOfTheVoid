@@ -104,6 +104,16 @@
             </div>
             {{/if}}
 
+            {{!-- Damage Reduction --}}
+            {{#if hasDR}}
+                <div class="form-group">
+                    <label>{{ localize "ROTV.DR" }}</label>
+                    <div class="form-fields">
+                        {{numberInput system.damRed name="system.damRed"}}
+                    </div>
+                </div>
+            {{/if}}
+
             {{#if hasDexModifier}}
             {{!-- Dexterity Modifier --}}
             <div class="form-group">

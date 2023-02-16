@@ -10,6 +10,7 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {string} vehicleType                      Type of vehicle as defined in `ROTV.vehicleTypes`.
  * @property {object} attributes
  * @property {object} attributes.ac
+ * @property {number} attributes.damRed
  * @property {number} attributes.ac.flat               Flat value used for flat or natural armor calculation.
  * @property {string} attributes.ac.calc               Name of one of the built-in formulas to use.
  * @property {string} attributes.ac.formula            Custom formula to use.
@@ -51,6 +52,8 @@ export default class VehicleData extends CommonTemplate {
       vehicleType: new foundry.data.fields.StringField({required: true, initial: "water", label: "ROTV.VehicleType"}),
       attributes: new foundry.data.fields.SchemaField({
         ...AttributesFields.common,
+        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        }),
         ac: new foundry.data.fields.SchemaField({
           flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.ArmorClassFlat"}),
           calc: new foundry.data.fields.StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),

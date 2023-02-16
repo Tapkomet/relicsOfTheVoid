@@ -99,6 +99,10 @@ export default class ItemSheetRelics extends ItemSheet {
       hasAC: item.isArmor || isMountable,
       hasDexModifier: item.isArmor && (item.system.armor?.type !== "shield"),
 
+      // Damage Reduction
+      hasDR: item.isArmor || isMountable,
+
+
       // Advancement
       advancement: this._getItemAdvancement(item),
 
