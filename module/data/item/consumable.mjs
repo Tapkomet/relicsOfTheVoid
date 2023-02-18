@@ -18,6 +18,7 @@ import PhysicalItemTemplate from "./templates/physical-item.mjs";
  * @property {object} uses
  * @property {object} properties   Mapping of various weapon property booleans.
  * @property {boolean} uses.autoDestroy  Should this item be destroyed when it runs out of uses.
+ * @property {boolean} proficient  Does the weapon's owner have proficiency?
  */
 export default class ConsumableData extends SystemDataModel.mixin(
   ItemDescriptionTemplate, PhysicalItemTemplate, EquippableItemTemplate, ActivatedEffectTemplate, ActionTemplate
@@ -33,7 +34,8 @@ export default class ConsumableData extends SystemDataModel.mixin(
       }),
       uses: new ActivatedEffectTemplate.ItemUsesField({
         autoDestroy: new foundry.data.fields.BooleanField({required: true, label: "ROTV.ItemDestroyEmpty"})
-      }, {label: "ROTV.LimitedUses"})
+      }, {label: "ROTV.LimitedUses"}),
+      proficient: new foundry.data.fields.BooleanField({required: true, initial: true, label: "ROTV.Proficient"})
     });
   }
 }
