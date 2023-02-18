@@ -141,23 +141,24 @@ export default class D20Roll extends Roll {
     d20.modifiers = [];
 
     // Halfling Lucky
-    if ( this.options.halflingLucky ) d20.modifiers.push("r1=1");
+    //if ( this.options.halflingLucky ) d20.modifiers.push("r1=1");
 
     // Reliable Talent
-    if ( this.options.reliableTalent ) d20.modifiers.push("min10");
+    //if ( this.options.reliableTalent ) d20.modifiers.push("min10");
 
     // Handle Advantage or Disadvantage
-    if ( this.hasAdvantage ) {
-      d20.number = this.options.elvenAccuracy ? 3 : 2;
-      d20.modifiers.push("kh");
-      d20.options.advantage = true;
-    }
-    else if ( this.hasDisadvantage ) {
-      d20.number = 2;
-      d20.modifiers.push("kl");
-      d20.options.disadvantage = true;
-    }
-    else d20.number = 1;
+    //if ( this.hasAdvantage ) {
+    //  d20.number = this.options.elvenAccuracy ? 3 : 2;
+     // d20.modifiers.push("kh");
+     // d20.options.advantage = true;
+    //}
+    //else if ( this.hasDisadvantage ) {
+    //  d20.number = 2;
+    //  d20.modifiers.push("kl");
+    //  d20.options.disadvantage = true;
+    //}
+    //else
+    d20.number = 1;
 
     // Assign critical and fumble thresholds
     if ( this.options.critical ) d20.options.critical = this.options.critical;
@@ -275,6 +276,19 @@ export default class D20Roll extends Roll {
       const bonus = new Roll(form.bonus.value, this.data);
       if ( !(bonus.terms[0] instanceof OperatorTerm) ) this.terms.push(new OperatorTerm({operator: "+"}));
       this.terms = this.terms.concat(bonus.terms);
+    }
+
+
+
+    if (advantageMode == D20Roll.ADV_MODE.ADVANTAGE) {
+        this.terms.push(new OperatorTerm({operator: "-"}));
+        this.terms.push(new NumericTerm({number: "9"}));
+    }
+
+
+    if (advantageMode == D20Roll.ADV_MODE.DISADVANTAGE) {
+        this.terms.push(new OperatorTerm({operator: "-"}));
+        this.terms.push(new NumericTerm({number: "6"}));
     }
 
     // Customize the modifier
