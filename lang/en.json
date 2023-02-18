@@ -1162,6 +1162,7 @@
 "ROTV.TargetTypeIndividual": "Individual",
 "ROTV.TargetUnits": "Area of Effect Units",
 "ROTV.TargetValue": "Target Length or Count",
+"ROTV.ToHit": "Accuracy",
 "ROTV.TraitArmorPlural.one": "Armor Proficiency",
 "ROTV.TraitArmorPlural.other": "Armor Proficiencies",
 "ROTV.TraitCIPlural.one": "Condition Immunity",

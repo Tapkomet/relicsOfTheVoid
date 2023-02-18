@@ -15,6 +15,7 @@ import MountableTemplate from "./templates/mountable.mjs";
  * @mixes ActionTemplate
  * @mixes MountableTemplate
  *
+ * @property {object} properties   Mapping of various equipment property booleans.
  * @property {object} armor             Armor details and equipment type information.
  * @property {string} armor.type        Equipment type as defined in `ROTV.equipmentTypes`.
  * @property {number} armor.value       Base armor class or shield bonus.
@@ -45,6 +46,9 @@ export default class EquipmentData extends SystemDataModel.mixin(
         dex: new foundry.data.fields.NumberField({required: true, integer: true, label: "ROTV.ItemEquipmentDexMod"})
       }, {label: ""}),
       baseItem: new foundry.data.fields.StringField({required: true, label: "ROTV.ItemEquipmentBase"}),
+      properties: new MappingField(new foundry.data.fields.BooleanField(), {
+        required: true, initialKeys: CONFIG.ROTV.equipmentProperties, label: "ROTV.ItemEquipmentProperties"
+      }),
       speed: new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.NumberField({required: true, min: 0, label: "ROTV.Speed"}),
         conditions: new foundry.data.fields.StringField({required: true, label: "ROTV.SpeedConditions"})
