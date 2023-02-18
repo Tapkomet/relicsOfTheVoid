@@ -1,4 +1,5 @@
 import SystemDataModel from "../abstract.mjs";
+import { MappingField } from "../fields.mjs";
 import ActionTemplate from "./templates/action.mjs";
 import ActivatedEffectTemplate from "./templates/activated-effect.mjs";
 import EquippableItemTemplate from "./templates/equippable-item.mjs";
@@ -71,6 +72,19 @@ export default class EquipmentData extends SystemDataModel.mixin(
     super.migrateData(source);
     EquipmentData.#migrateArmor(source);
     EquipmentData.#migrateStrength(source);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Migrate the item's properties object to remove any old, non-boolean values.
+   * @param {object} source  The candidate source data from which the model will be constructed.
+   */
+  static #migratePropertiesData(source) {
+    if ( !source.properties ) return;
+    for ( const [key, value] of Object.entries(source.properties) ) {
+      if ( typeof value !== "boolean" ) delete source.properties[key];
+    }
   }
 
   /* -------------------------------------------- */
