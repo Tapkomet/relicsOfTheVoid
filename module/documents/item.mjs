@@ -549,6 +549,9 @@ export default class ItemRelics extends Item {
     // Ability score modifier
     parts.push("@mod");
 
+    // modifier for damage
+    parts.push("@dmgMod");
+
     // Add proficiency bonus if an explicit proficiency flag is present or for non-item features
     if ( !["weapon", "consumable"].includes(this.type) || this.system.proficient ) {
       parts.push("@prof");
@@ -1802,6 +1805,8 @@ export default class ItemRelics extends Item {
         console.warn(`Item ${this.name} in Actor ${this.actor.name} has an invalid item ability modifier of ${abl} defined`);
       }
       rollData.mod = ability?.mod ?? 0;
+
+      rollData.dmgMod = Math.floor((ability?.mod ?? 0)*0.5);
     }
     return rollData;
   }

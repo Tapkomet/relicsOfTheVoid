@@ -394,6 +394,7 @@ export default class ActorRelics extends Actor {
     for ( const [id, abl] of Object.entries(this.system.abilities) ) {
       if ( flags.diamondSoul ) abl.proficient = 1;  // Diamond Soul is proficient in all saves
       abl.mod = abl.value;
+      abl.dmgMod = Math.floor(abl.value*0.5);
 
       const isRA = this._isRemarkableAthlete(id);
       abl.checkProf = new Proficiency(this.system.attributes.prof, (isRA || flags.jackOfAllTrades) ? 0.5 : 0, !isRA);
@@ -590,7 +591,14 @@ export default class ActorRelics extends Actor {
 
     // Populate final Encumbrance values
     encumbrance.value = weight.toNearest(0.01);
-    encumbrance.max = ((this.system.abilities.str?.value ?? 10) * strengthMultiplier * mod).toNearest(0.01) + 10;
+    encumbrance.max = ((this.system.abilities.str?.value ?? 0) * strengthMultiplier * mod).toNearest(0.01) + 10;
+
+    if (this.system.abilities.str.value > 3 && this.system.abilities.str.value < 8) {
+    let remainder = this.system.abilities.str.value - 3;
+        encumbrance.max = 13 + remainder * 0.5;
+    }
+    if (this.system.abilities.str.value >= 8) {encumbrance.max = 15;}
+
     encumbrance.pct = Math.clamped((encumbrance.value * 100) / encumbrance.max, 0, 100);
     encumbrance.encumbered = encumbrance.pct > (200 / 3);
   }

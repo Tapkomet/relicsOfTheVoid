@@ -296,6 +296,7 @@ export default class D20Roll extends Roll {
       const abl = this.data.abilities[form.ability.value];
       this.terms = this.terms.flatMap(t => {
         if ( t.term === "@mod" ) return new NumericTerm({number: abl.mod});
+        if ( t.term === "@dmgMod" ) return new NumericTerm({number: abl.dmgMod});
         if ( t.term === "@abilityCheckBonus" ) {
           const bonus = abl.bonuses?.check;
           if ( bonus ) return new Roll(bonus, this.data).terms;
