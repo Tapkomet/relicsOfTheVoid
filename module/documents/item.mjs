@@ -2307,7 +2307,7 @@ export default class ItemRelics extends Item {
       name: `${game.i18n.localize("ROTV.SpellScroll")}: ${itemData.name}`,
       img: itemData.img,
       system: {
-        "description.value": desc.trim(), source, actionType, activation, duration, target, range, damage, formula,
+        description: {value: desc.trim()}, source, actionType, activation, duration, target, range, damage, formula,
         save, level, attackBonus
       }
     });
