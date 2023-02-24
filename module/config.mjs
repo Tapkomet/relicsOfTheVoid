@@ -1159,7 +1159,9 @@ ROTV.weaponProperties = {
     cha: "ROTV.WeaponPropertiesChain",
     grs: "ROTV.WeaponPropertiesGyroStab",
     lsg: "ROTV.WeaponPropertiesLasgun",
-    mlt: "ROTV.WeaponPropertiesMelta"
+    mlt: "ROTV.WeaponPropertiesMelta",
+    thr: "DND5E.WeaponPropertiesThr",
+    ver: "DND5E.WeaponPropertiesVer"
 };
 preLocalize("weaponProperties", { sort: true });
 
