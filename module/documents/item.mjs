@@ -549,8 +549,6 @@ export default class ItemRelics extends Item {
     // Ability score modifier
     parts.push("@mod");
 
-    // modifier for damage
-    parts.push("@dmgMod");
 
     // Add proficiency bonus if an explicit proficiency flag is present or for non-item features
     if ( !["weapon", "consumable"].includes(this.type) || this.system.proficient ) {
