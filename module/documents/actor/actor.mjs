@@ -593,9 +593,12 @@ export default class ActorRelics extends Actor {
     encumbrance.value = weight.toNearest(0.01);
     encumbrance.max = ((this.system.abilities.str?.value ?? 0) * strengthMultiplier * mod).toNearest(0.01) + 10;
 
-    if (this.system.abilities.str.value > 3 && this.system.abilities.str.value < 8) {
+    if (this.system.abilities.str.value == -2) encumbrance.max = 8.5;
+    if (this.system.abilities.str.value == -1) encumbrance.max = 9.5;
+
+    if (this.system.abilities.str.value > 4 && this.system.abilities.str.value < 8) {
     let remainder = this.system.abilities.str.value - 3;
-        encumbrance.max = 13 + remainder * 0.5;
+        encumbrance.max = 14 + remainder * 0.5;
     }
     if (this.system.abilities.str.value >= 8) {encumbrance.max = 15;}
 
