@@ -306,7 +306,7 @@ export class ScaleValueTypeDistance extends ScaleValueTypeNumber {
 
   /** @inheritdoc */
   get display() {
-    return `${this.value} ${CONFIG.ROTV.movementUnits[this.parent.configuration.distance?.units ?? "ft"]}`;
+    return `${this.value} ${CONFIG.ROTV.movementUnits[this.parent.configuration.distance?.units ?? "sq"]}`;
   }
 }
 

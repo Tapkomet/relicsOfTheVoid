@@ -40,9 +40,9 @@ export default class AttributesFields {
           nullable: false, min: 0, step: 0.1, initial: 0, label: "ROTV.MovementSwim"
         }),
         walk: new foundry.data.fields.NumberField({
-          nullable: false, min: 0, step: 0.1, initial: 30, label: "ROTV.MovementWalk"
+          nullable: false, min: 0, step: 0.1, initial: 8, label: "ROTV.MovementWalk"
         }),
-        units: new foundry.data.fields.StringField({initial: "ft", label: "ROTV.MovementUnits"}),
+        units: new foundry.data.fields.StringField({initial: "sq", label: "ROTV.MovementUnits"}),
         hover: new foundry.data.fields.BooleanField({label: "ROTV.MovementHover"})
       }, {label: "ROTV.Movement"})
     };

@@ -26,9 +26,6 @@ export default class TraitsField {
    *
    * @type {object}
    * @property {string} size         Actor's size.
-   * @property {DamageTraitData} di  Damage immunities.
-   * @property {DamageTraitData} dr  Damage resistances.
-   * @property {DamageTraitData} dv  Damage vulnerabilities.
    * @property {SimpleTraitData} ci  Condition immunities.
    */
   static get common() {

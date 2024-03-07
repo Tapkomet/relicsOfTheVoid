@@ -24,7 +24,7 @@ export default class CommonTemplate extends SystemDataModel.mixin(CurrencyTempla
     return this.mergeSchema(super.defineSchema(), {
       abilities: new MappingField(new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: -10, initial: 10, label: "ROTV.AbilityScore"
+          required: true, nullable: false, integer: true, min: -10, initial: 0, label: "ROTV.AbilityScore"
         }),
         proficient: new foundry.data.fields.NumberField({required: true, initial: 0, label: "ROTV.ProficiencyLevel"}),
         bonuses: new foundry.data.fields.SchemaField({

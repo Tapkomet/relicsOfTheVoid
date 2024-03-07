@@ -1930,8 +1930,8 @@ h5 {
 /*  Basic Structure                          */
 /* ----------------------------------------- */
 .rotv.sheet.actor.character {
-  min-width: 720px;
-  min-height: 680px;
+  min-width: 700px;
+  min-height: 657px;
   /* ----------------------------------------- */
   /*  Sheet Header                             */
   /* ----------------------------------------- */
@@ -2085,7 +2085,7 @@ h5 {
 /* ----------------------------------------- */
 .rotv.sheet.actor.npc {
   min-width: 600px;
-  min-height: 680px;
+  min-height: 657px;
 }
 .rotv.sheet.actor.npc .header-exp {
   flex: 0 0 80px;
@@ -2135,8 +2135,8 @@ h5 {
   display: block;
 }
 .rotv.sheet.actor.vehicle {
-  min-width: 720px;
-  min-height: 680px;
+  min-width: 700px;
+  min-height: 657px;
 }
 .rotv.sheet.actor.vehicle .features .item-controls {
   flex: 0 0 68px;

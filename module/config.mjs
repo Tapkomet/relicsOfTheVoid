@@ -697,7 +697,7 @@ preLocalize("movementTypes", { sort: true });
  * @enum {string}
  */
 ROTV.movementUnits = {
-  ft: "ROTV.DistFt",
+  sq: "ROTV.DistFt",
   mi: "ROTV.DistMi",
   m: "ROTV.DistM",
   km: "ROTV.DistKm"
