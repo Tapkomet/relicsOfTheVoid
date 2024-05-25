@@ -1140,6 +1140,7 @@ ROTV.weaponProperties = {
     emp: "ROTV.WeaponPropertiesEMP",
     fin: "ROTV.WeaponPropertiesFin",
     fla: "ROTV.WeaponPropertiesFlame",
+    fsf: "ROTV.WeaponPropertiesFireSurface",
     ina: "ROTV.WeaponPropertiesInacc",
     oha: "ROTV.WeaponPropertiesOne",
     ovc: "ROTV.WeaponPropertiesOvercharge",

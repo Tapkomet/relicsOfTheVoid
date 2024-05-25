@@ -37,6 +37,7 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {string} details.ideal                       Character's ideals.
  * @property {string} details.bond                        Character's bonds.
  * @property {string} details.flaw                        Character's flaws.
+ * @property {string} details.passion                        Character's passions.
  * @property {object} traits
  * @property {SimpleTraitData} traits.weaponProf          Character's weapon proficiencies.
  * @property {SimpleTraitData} traits.armorProf           Character's armor proficiencies.
@@ -109,7 +110,8 @@ export default class CharacterData extends CreatureTemplate {
         trait: new foundry.data.fields.StringField({required: true, label: "ROTV.PersonalityTraits"}),
         ideal: new foundry.data.fields.StringField({required: true, label: "ROTV.Ideals"}),
         bond: new foundry.data.fields.StringField({required: true, label: "ROTV.Bonds"}),
-        flaw: new foundry.data.fields.StringField({required: true, label: "ROTV.Flaws"})
+        flaw: new foundry.data.fields.StringField({required: true, label: "ROTV.Flaws"}),
+        passion: new foundry.data.fields.StringField({required: true, label: "ROTV.Passion"})
       }, {label: "ROTV.Details"}),
       traits: new foundry.data.fields.SchemaField({
         ...TraitsFields.common,
