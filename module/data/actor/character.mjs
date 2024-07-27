@@ -90,7 +90,7 @@ export default class CharacterData extends CreatureTemplate {
           })
         }, {label: "ROTV.DeathSave"}),
         stress: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Current"
+          required: true, nullable: false, integer: true, min: -100, initial: 0, label: "ROTV.Current"
         }),
         maxStress: new foundry.data.fields.NumberField({
           required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.Max"
