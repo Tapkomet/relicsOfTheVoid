@@ -2962,7 +2962,6 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     // Specific additional adjustments
     d.system.details.alignment = o.system.details.alignment; // Don't change alignment
     d.system.attributes.exhaustion = o.system.attributes.exhaustion; // Keep your prior exhaustion level
-    d.system.attributes.inspiration = o.system.attributes.inspiration; // Keep inspiration
     d.system.spells = o.system.spells; // Keep spell slots
     d.system.attributes.ac.flat = target.system.attributes.ac.value; // Override AC
 
