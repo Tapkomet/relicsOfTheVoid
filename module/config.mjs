@@ -1373,7 +1373,22 @@ preLocalize("itemProperties", { key: "label", sort: true });
  */
 ROTV.validProperties = {
   consumable: new Set([
-    "spc"
+    "arp",
+    "bla",
+    "npr",
+    "dam",
+    "des",
+    "dis",
+    "emp",
+    "fla",
+    "fsf",
+    "ina",
+    "pun",
+    "shc",
+    "smk",
+    "spc",
+    "stc",
+    "unr"
   ]),
   container: new Set([
     "spc"

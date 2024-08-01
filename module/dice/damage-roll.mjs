@@ -290,7 +290,6 @@ export default class DamageRoll extends Roll {
         title,
         content,
         buttons: {
-          critical: {
           normal: {
             label: game.i18n.localize(allowCritical ? "ROTV.Normal" : "ROTV.Roll"),
             callback: html => resolve(rolls.map((r, i) => r._onDialogSubmit(html, false, i === 0)))

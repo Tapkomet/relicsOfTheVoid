@@ -28,6 +28,7 @@ const { BooleanField, NumberField, SetField, StringField } = foundry.data.fields
  * @property {Set<string>} properties    Ammunition properties.
  * @property {object} uses
  * @property {boolean} uses.autoDestroy  Should this item be destroyed when it runs out of uses.
+ * @property {number} proficient          Does the owner have proficiency in this piece of equipment?
  */
 export default class ConsumableData extends ItemDataModel.mixin(
   ItemDescriptionTemplate, IdentifiableTemplate, ItemTypeTemplate, PhysicalItemTemplate, EquippableItemTemplate,
@@ -41,6 +42,9 @@ export default class ConsumableData extends ItemDataModel.mixin(
       properties: new SetField(new StringField(), { label: "ROTV.ItemAmmoProperties" }),
       uses: new UsesField({
         autoDestroy: new BooleanField({required: true, label: "ROTV.ItemDestroyEmpty"})
+      }),
+      proficient: new NumberField({
+        required: true, min: 0, max: 1, integer: true, initial: true, label: "ROTV.ProficiencyLevel"
       })
     });
   }
