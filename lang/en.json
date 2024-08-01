@@ -963,6 +963,10 @@
 "ROTV.EquipmentArtifact": "Artifact",
 "ROTV.EquipmentBonus": "Magical Bonus",
 "ROTV.EquipmentClothing": "Clothing",
+
+"ROTV.EquipmentAttachment": "Attachment",
+"ROTV.Utility Gear": "Utility Item",
+
 "ROTV.EquipmentHeavy": "Heavy Armor",
 "ROTV.EquipmentLight": "Light Armor",
 "ROTV.EquipmentMedium": "Medium Armor",
@@ -970,7 +974,7 @@
 "ROTV.EquipmentShield": "Shield",
 "ROTV.EquipmentShieldProficiency": "Shields",
 "ROTV.EquipmentOverwear": "Overwear",
-"ROTV.EquipmentTrinket": "Combat Gear",
+"ROTV.EquipmentTrinket": "Battle Gear",
 "ROTV.EquipmentUpgrade": "Upgrade",
 "ROTV.EquipmentVehicle": "Vehicle Equipment",
 "ROTV.Equipped": "Equipped",

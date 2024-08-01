@@ -36,7 +36,7 @@
                         <span data-tooltip="ROTV.Species">{{system.details.race.name}}</span>
                     {{else}}
                         <input type="text" name="system.details.race" value="{{system.details.race}}"
-                               placeholder="{{ localize 'ROTV.Species' }}">
+                               placeholder="{{ localize 'ROTV.Species.Label' }}">
                     {{/if}}
                 </li>
                 <li class="background">
@@ -250,12 +250,6 @@
                         <div class="counter-value">
                             <input type="text" name="system.attributes.exhaustion" value="{{system.attributes.exhaustion}}" placeholder="0" data-dtype="Number">
                         </div>
-                    </div>
-                    <div class="counter flexrow inspiration">
-                        <label class="flexrow">
-                            <input type="checkbox" name="system.attributes.inspiration"
-                                   {{checked system.attributes.inspiration}}>
-                        </label>
                     </div>
                 </div>
 
