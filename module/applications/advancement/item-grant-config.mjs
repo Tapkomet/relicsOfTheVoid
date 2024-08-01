@@ -5,9 +5,10 @@ import AdvancementConfig from "./advancement-config.mjs";
  */
 export default class ItemGrantConfig extends AdvancementConfig {
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
+      classes: ["rotv", "advancement", "item-grant"],
       dragDrop: [{ dropSelector: ".drop-target" }],
       dropKeyPath: "items",
       template: "systems/rotv/templates/advancement/item-grant-config.hbs"
@@ -16,19 +17,31 @@ export default class ItemGrantConfig extends AdvancementConfig {
 
   /* -------------------------------------------- */
 
-  /** @inheritdoc */
-  getData() {
-    const context = super.getData();
-    context.showSpellConfig = context.configuration.items.map(fromUuidSync).some(i => i.type === "spell");
+  /** @inheritDoc */
+  getData(options={}) {
+    const context = super.getData(options);
+    const indexes = context.configuration.items.map(i => fromUuidSync(i.uuid));
+    context.abilities = Object.entries(CONFIG.ROTV.abilities).reduce((obj, [k, c]) => {
+      obj[k] = { label: c.label, selected: context.configuration.spell?.ability.has(k) ? "selected" : "" };
+      return obj;
+    }, {});
+    context.showContainerWarning = indexes.some(i => i?.type === "container");
+    context.showSpellConfig = indexes.some(i => i?.type === "spell");
     return context;
   }
 
   /* -------------------------------------------- */
 
-  /** @inheritdoc */
+  /** @inheritDoc */
+  async prepareConfigurationUpdate(configuration) {
+    if ( configuration.spell ) configuration.spell.ability ??= [];
+    return configuration;
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
   _validateDroppedItem(event, item) {
-    if ( this.advancement.constructor.VALID_TYPES.has(item.type) ) return true;
-    const type = game.i18n.localize(`ITEM.Type${item.type.capitalize()}`);
-    throw new Error(game.i18n.format("ROTV.AdvancementItemTypeInvalidWarning", { type }));
+    this.advancement._validateItemType(item);
   }
 }

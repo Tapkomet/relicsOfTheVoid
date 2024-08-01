@@ -1,0 +1,14 @@
+<fieldset class="roll-formulas">
+    <legend>{{ localize "ROTV.RollConfiguration.Rolls" }}</legend>
+    {{#each rolls}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.Formula" }} {{#if type}}({{ type }}){{/if}}</label>
+        {{ formula }}
+    </div>
+    {{/each}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.RollSituationalBonus" }}</label>
+        <input type="text" name="situational" value="{{ situational }}"
+               placeholder="{{ localize 'ROTV.RollExample' }}">
+    </div>
+</fieldset>

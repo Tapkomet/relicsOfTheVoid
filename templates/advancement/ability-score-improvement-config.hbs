@@ -1,0 +1,21 @@
+<form autocomplete="off" data-id="{{_id}}" data-type="{{type}}">
+    {{> "rotv.advancement-controls"}}
+    <div class="form-group">
+        <label>{{localize "ROTV.AdvancementAbilityScoreImprovementCap"}}</label>
+        <div class="form-fields">
+            <input type="number" name="configuration.cap" value="{{configuration.cap}}" min="1" step="1"
+                         placeholder="{{localize 'None'}}">
+        </div>
+        <p class="hint">{{localize "ROTV.AdvancementAbilityScoreImprovementCapHint"}}</p>
+    </div>
+
+    <ul class="ability-scores">
+        {{> "rotv.advancement-ability-score-control" points canAdjust=true}}
+        <li class="hint">
+            {{localize "ROTV.AdvancementAbilityScoreImprovementPointsHint"}}
+        </li>
+        {{#each abilities}}
+        {{> "rotv.advancement-ability-score-control" this canAdjust=true}}
+        {{/each}}
+    </ul>
+</form>

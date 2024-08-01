@@ -1,3 +1,6 @@
+import { LocalDocumentField } from "../../fields.mjs";
+const { HTMLField, SchemaField, StringField } = foundry.data.fields;
+
 /**
  * Shared contents of the details schema between various actor types.
  */
@@ -12,9 +15,9 @@ export default class DetailsField {
    */
   static get common() {
     return {
-      biography: new foundry.data.fields.SchemaField({
-        value: new foundry.data.fields.HTMLField({label: "ROTV.Biography"}),
-        public: new foundry.data.fields.HTMLField({label: "ROTV.BiographyPublic"})
+      biography: new SchemaField({
+        value: new HTMLField({label: "ROTV.Biography"}),
+        public: new HTMLField({label: "ROTV.BiographyPublic"})
       }, {label: "ROTV.Biography"})
     };
   }
@@ -25,13 +28,18 @@ export default class DetailsField {
    * Fields shared between characters and NPCs.
    *
    * @type {object}
-   * @property {string} alignment  Creature's alignment.
-   * @property {string} race       Creature's race.
+   * @property {string} alignment    Creature's alignment.
+   * @property {ItemRotV|string} race  Creature's race item or name.
    */
   static get creature() {
     return {
-      alignment: new foundry.data.fields.StringField({required: true, label: "ROTV.Alignment"}),
-      race: new foundry.data.fields.StringField({required: true, label: "ROTV.Race"})
+      alignment: new StringField({required: true, label: "ROTV.Alignment"}),
+      ideal: new StringField({required: true, label: "ROTV.Ideals"}),
+      bond: new StringField({required: true, label: "ROTV.Bonds"}),
+      flaw: new StringField({required: true, label: "ROTV.Flaws"}),
+      race: new LocalDocumentField(foundry.documents.BaseItem, {
+        required: true, fallback: true, label: "ROTV.Species"
+      })
     };
   }
 }

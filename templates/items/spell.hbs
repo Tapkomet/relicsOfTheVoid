@@ -2,11 +2,11 @@
 
     {{!-- Item Sheet Header --}}
     <header class="sheet-header flexrow">
-        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img"/>
+        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img">
 
         <div class="header-details flexrow">
             <h1 class="charname">
-                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.SpellName' }}"/>
+                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.SpellName' }}">
             </h1>
 
             <div class="item-subtitle">
@@ -22,7 +22,7 @@
                     {{labels.school}}
                 </li>
                 <li>
-                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'ROTV.Source' }}"/>
+                    {{> "rotv.item-source"}}
                 </li>
             </ul>
         </div>
@@ -61,17 +61,16 @@
             <div class="form-group">
                 <label>{{ localize "ROTV.SpellSchool" }}</label>
                 <select name="system.school">
-                    {{selectOptions config.spellSchools selected=system.school blank=""}}
+                    {{selectOptions config.spellSchools selected=system.school labelAttr="label" blank=""}}
                 </select>
             </div>
 
             {{!-- Spell Components --}}
             <div class="spell-components form-group stacked">
                 <label>{{ localize "ROTV.SpellComponents" }}</label>
-                {{#each spellComponents as |component key|}}
+                {{#each properties}}
                 <label class="checkbox">
-                    <input type="checkbox" name="system.components.{{key}}" {{checked (lookup ../system.components key)}}>
-                    {{component.label}}
+                    <input type="checkbox" name="system.properties.{{@key}}" {{checked selected}}> {{ label }}
                 </label>
                 {{/each}}
             </div>
@@ -79,15 +78,15 @@
             {{!-- Material Components --}}
             <div class="form-group stacked">
                 <label>{{ localize "ROTV.SpellMaterials" }}</label>
-                <input class="materials" type="text" name="system.materials.value" value="{{system.materials.value}}"/>
+                <input class="materials" type="text" name="system.materials.value" value="{{system.materials.value}}">
                 {{#if system.materials.value}}
                 <div class="spell-materials flexrow">
                     <label>{{ localize "ROTV.Supply" }}</label>
                     {{numberInput system.materials.supply name="system.materials.supply" placeholder="0"}}
                     <label>{{ localize "ROTV.CostGP" }}</label>
-                    {{numberInput system.materials.cost name="system.materials.cost" placeholder="&mdash;"}}
+                    {{numberInput system.materials.cost name="system.materials.cost" placeholder="—"}}
                     <label>{{ localize "ROTV.Consumed" }}</label>
-                    <input type="checkbox" name="system.materials.consumed" {{checked system.materials.consumed}}/>
+                    <input type="checkbox" name="system.materials.consumed" {{checked system.materials.consumed}}>
                 </div>
                 {{/if}}
             </div>
@@ -97,13 +96,27 @@
                 <label>{{ localize "ROTV.SpellPreparationMode" }}</label>
                 <div class="form-fields">
                     <label class="checkbox prepared">
-                        {{ localize "ROTV.SpellPrepared" }} <input type="checkbox" name="system.preparation.prepared" {{checked system.preparation.prepared}}/>
+                        {{ localize "ROTV.SpellPrepared" }}
+                        <input type="checkbox" name="system.preparation.prepared" {{checked system.preparation.prepared}}>
                     </label>
                     <select name="system.preparation.mode">
-                        {{ selectOptions config.spellPreparationModes selected=system.preparation.mode }}
+                        {{ selectOptions config.spellPreparationModes selected=system.preparation.mode labelAttr="label" }}
                     </select>
                 </div>
             </div>
+
+            {{!-- Source Class --}}
+            {{#if isEmbedded}}
+            <div class="form-group input-select">
+                <label>{{ localize "ROTV.SpellSourceClass" }}</label>
+                <div class="form-fields">
+                    <select name="system.sourceClass">
+                        {{selectOptions document.parent.spellcastingClasses selected=system.sourceClass
+                                        labelAttr="name" blank=""}}
+                    </select>
+                </div>
+            </div>
+            {{/if}}
 
             <h3 class="form-header">{{ localize "ROTV.SpellCastingHeader" }}</h3>
 
@@ -127,7 +140,7 @@
                         {{/select}}
                     </select>
                     <input type="text" name="system.scaling.formula" value="{{system.scaling.formula}}"
-                           placeholder="{{ localize 'ROTV.ScalingFormula' }}" data-formula-editor/>
+                           placeholder="{{ localize 'ROTV.ScalingFormula' }}" data-formula-editor>
                 </div>
             </div>
         </div>

@@ -1,3 +1,7 @@
+import { FormulaField, MappingField } from "../../fields.mjs";
+
+const { SchemaField, SetField, StringField } = foundry.data.fields;
+
 /**
  * Shared contents of the traits schema between various actor types.
  */
@@ -19,21 +23,39 @@ export default class TraitsField {
    * @property {string} custom         Semicolon-separated list of custom traits.
    */
 
+  /**
+   * Data structure for a damage actor trait.
+   *
+   * @typedef {object} DamageModificationData
+   * @property {{[key: string]: string}} amount  Damage boost or reduction by damage type.
+   * @property {Set<string>} bypasses            Keys for physical properties that cause modification to be bypassed.
+   */
+
   /* -------------------------------------------- */
 
   /**
    * Fields shared between characters, NPCs, and vehicles.
    *
    * @type {object}
-   * @property {string} size         Actor's size.
-   * @property {SimpleTraitData} ci  Condition immunities.
+   * @property {string} size                Actor's size.
+   * @property {DamageTraitData} di         Damage immunities.
+   * @property {DamageTraitData} dr         Damage resistances.
+   * @property {DamageTraitData} dv         Damage vulnerabilities.
+   * @property {DamageModificationData} dm  Damage modification.
+   * @property {SimpleTraitData} ci         Condition immunities.
    */
   static get common() {
     return {
-      size: new foundry.data.fields.StringField({required: true, initial: "med", label: "ROTV.Size"}),
+      size: new StringField({required: true, initial: "med", label: "ROTV.Size"}),
       di: this.makeDamageTrait({label: "ROTV.DamImm"}),
       dr: this.makeDamageTrait({label: "ROTV.DamRes"}),
       dv: this.makeDamageTrait({label: "ROTV.DamVuln"}),
+      dm: new SchemaField({
+        amount: new MappingField(new FormulaField({deterministic: true}), {label: "ROTV.DamMod"}),
+        bypasses: new SetField(new StringField(), {
+          label: "ROTV.DamagePhysicalBypass", hint: "ROTV.DamagePhysicalBypassHint"
+        })
+      }),
       ci: this.makeSimpleTrait({label: "ROTV.ConImm"})
     };
   }
@@ -63,12 +85,12 @@ export default class TraitsField {
    * @returns {SchemaField}
    */
   static makeSimpleTrait(schemaOptions={}, {initial=[], extraFields={}}={}) {
-    return new foundry.data.fields.SchemaField({
+    return new SchemaField({
       ...extraFields,
-      value: new foundry.data.fields.SetField(
-        new foundry.data.fields.StringField(), {label: "ROTV.TraitsChosen", initial}
+      value: new SetField(
+        new StringField(), {label: "ROTV.TraitsChosen", initial}
       ),
-      custom: new foundry.data.fields.StringField({required: true, label: "ROTV.Special"})
+      custom: new StringField({required: true, label: "ROTV.Special"})
     }, schemaOptions);
   }
 
@@ -85,9 +107,28 @@ export default class TraitsField {
   static makeDamageTrait(schemaOptions={}, {initial=[], initialBypasses=[], extraFields={}}={}) {
     return this.makeSimpleTrait(schemaOptions, {initial, extraFields: {
       ...extraFields,
-      bypasses: new foundry.data.fields.SetField(new foundry.data.fields.StringField(), {
+      bypasses: new SetField(new StringField(), {
         label: "ROTV.DamagePhysicalBypass", hint: "ROTV.DamagePhysicalBypassHint", initial: initialBypasses
       })
     }});
+  }
+
+  /* -------------------------------------------- */
+  /*  Data Preparation                            */
+  /* -------------------------------------------- */
+
+  /**
+   * Modify resistances and immunities for the petrified condition.
+   * @this {CharacterData|NPCData}
+   */
+  static prepareResistImmune() {
+    if ( this.parent.hasConditionEffect("petrification") ) {
+      this.traits.dr.custom = game.i18n.localize("ROTV.DamageAll");
+      Object.keys(CONFIG.ROTV.damageTypes).forEach(type => this.traits.dr.value.add(type));
+      this.traits.dr.bypasses.clear();
+      this.traits.di.value.add("poison");
+      this.traits.ci.value.add("poisoned");
+      this.traits.ci.value.add("diseased");
+    }
   }
 }

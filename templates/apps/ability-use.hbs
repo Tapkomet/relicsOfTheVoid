@@ -1,18 +1,37 @@
 <form id="ability-use-form">
     <p>{{title}}</p>
     <p class="notes">{{note}}</p>
-    {{#each errors}}
-    <p class="notification error">{{this}}</p>
+    {{#each warnings}}
+    <p class="notification warning">{{this}}</p>
     {{/each}}
 
-    {{#if consumeSpellSlot}}
+    {{#if (eq scaling "resource")}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.ConsumeScalingLabel" }}</label>
+        <div class="form-fields">
+            <select name="resourceAmount">
+                {{#if resourceArray}}
+                {{#select item.system.consume.target}}
+                {{#each resourceOptions}}
+                <option value="{{key}}" {{disabled (not canCast)}}>{{label}}</option>
+                {{/each}}
+                {{/select}}
+                {{else}}
+                {{selectOptions resourceOptions selected=resourceAmount localize=true}}
+                {{/if}}
+            </select>
+        </div>
+    </div>
+    {{/if}}
+
+    {{#if (eq scaling "slot")}}
     <div class="form-group">
         <label>{{ localize "ROTV.SpellCastUpcast" }}</label>
         <div class="form-fields">
-            <select name="consumeSpellLevel">
-                {{#select item.system.level}}
-                {{#each spellLevels as |l|}}
-                <option value="{{l.level}}" {{disabled (not l.canCast)}}>{{l.label}}</option>
+            <select name="slotLevel">
+                {{#select slotLevel}}
+                {{#each slotOptions as |l|}}
+                <option value="{{l.key}}" {{disabled (not l.canCast)}}>{{l.label}}</option>
                 {{/each}}
                 {{/select}}
             </select>
@@ -21,40 +40,110 @@
 
     <div class="form-group">
         <label class="checkbox">
-            <input type="checkbox" name="consumeSpellSlot" checked>{{localize "ROTV.SpellCastConsume"}}
+            <input type="checkbox" name="consumeSpellSlot" {{ checked consumeSpellSlot }}>
+            {{localize "ROTV.SpellCastConsume"}}
         </label>
     </div>
     {{/if}}
 
-    {{#if consumeUses}}
+    {{#if (ne beginConcentrating null)}}
+    {{#if concentration.show}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.ConcentratingEnd" }}</label>
+        <div class="form-fields">
+            <select name="endConcentration">
+                {{selectOptions concentration.options selected=endConcentration sort=true blank=concentration.optional nameAttr="name" labelAttr="label"}}
+            </select>
+        </div>
+    </div>
+    {{/if}}
+
     <div class="form-group">
         <label class="checkbox">
-            <input type="checkbox" name="consumeUsage" checked>{{localize "ROTV.AbilityUseConsume"}}
+            <input type="checkbox" name="beginConcentrating" {{checked beginConcentrating}}>
+            {{ localize "ROTV.Concentration" }}
         </label>
     </div>
     {{/if}}
 
-    {{#if consumeResource}}
+    {{#if (ne consumeUsage null)}}
     <div class="form-group">
         <label class="checkbox">
-            <input type="checkbox" name="consumeResource" checked>{{localize "ROTV.ConsumeResource"}}
+            <input type="checkbox" name="consumeUsage" {{ checked consumeUsage }}>
+            {{localize "ROTV.AbilityUseConsume"}}
         </label>
     </div>
     {{/if}}
 
-    {{#if consumeRecharge}}
+    {{#if (ne consumeResource null)}}
     <div class="form-group">
         <label class="checkbox">
-            <input type="checkbox" name="consumeRecharge" checked>{{localize "ROTV.ConsumeRecharge"}}
+            <input type="checkbox" name="consumeResource" {{ checked consumeResource }}>
+            {{localize "ROTV.ConsumeResource"}}
         </label>
     </div>
     {{/if}}
 
-    {{#if createTemplate}}
+    {{#if (ne createMeasuredTemplate null)}}
     <div class="form-group">
         <label class="checkbox">
-            <input type="checkbox" name="createMeasuredTemplate" checked>{{localize "ROTV.PlaceTemplate"}}
+            <input type="checkbox" name="createMeasuredTemplate" {{ checked createMeasuredTemplate }}>
+            {{ localize "ROTV.PlaceTemplate" }}
         </label>
     </div>
+    {{/if}}
+
+    {{#if enchantmentOptions.profiles}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.Enchantment.Label" }}
+        </label>
+        <div class="form-fields">
+            <select name="enchantmentProfile" aria-label="{{ localize 'ROTV.Enchantment.Label' }}">
+                {{ selectOptions enchantmentOptions.profiles selected=enchantmentProfile }}
+            </select>
+        </div>
+    </div>
+    {{else if enchantmentOptions.profile}}
+    <input type="hidden" name="enchantmentProfile" value="{{ enchantmentOptions.profile }}">
+    {{/if}}
+
+    {{#if (ne createSummons null)}}
+    <div class="form-group">
+        <label class="checkbox">
+            <input type="checkbox" name="createSummons" {{ checked createSummons }}>
+            {{ localize "ROTV.Summoning.Action.Place" }}
+        </label>
+        {{#if summoningOptions.profiles}}
+        <div class="form-fields">
+            <select name="summonsProfile" aria-label="{{ localize 'ROTV.Summoning.Profile.Label' }}">
+                {{ selectOptions summoningOptions.profiles selected=summonsProfile }}
+            </select>
+        </div>
+        {{else}}
+        <input type="hidden" name="summonsProfile" value="{{ summoningOptions.profile }}">
+        {{/if}}
+    </div>
+
+    {{#if summoningOptions.creatureSizes}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.Size" }}</label>
+        <div class="form-fields">
+            <select name="summonsOptions.creatureSize">
+                {{ selectOptions summoningOptions.creatureSizes }}
+            </select>
+        </div>
+    </div>
+    {{/if}}
+
+    {{#if summoningOptions.creatureTypes}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.CreatureType" }}</label>
+        <div class="form-fields">
+            <select name="summonsOptions.creatureType">
+                {{ selectOptions summoningOptions.creatureTypes }}
+            </select>
+        </div>
+    </div>
+    {{/if}}
     {{/if}}
 </form>

@@ -14,23 +14,51 @@ export default class ItemGrantFlow extends AdvancementFlow {
 
   /* -------------------------------------------- */
 
-  /** @inheritdoc */
-  async getData() {
-    const config = this.advancement.configuration.items;
+  /**
+   * Produce the rendering context for this flow.
+   * @returns {object}
+   */
+  async getContext() {
+    const config = this.advancement.configuration;
     const added = this.retainedData?.items.map(i => foundry.utils.getProperty(i, "flags.rotv.sourceId"))
       ?? this.advancement.value.added;
     const checked = new Set(Object.values(added ?? {}));
-
-    const items = await Promise.all(config.map(fromUuid));
-    return foundry.utils.mergeObject(super.getData(), {
+    return {
       optional: this.advancement.configuration.optional,
-      items: items.reduce((arr, item) => {
-        if ( !item ) return arr;
-        item.checked = added ? checked.has(item.uuid) : true;
-        arr.push(item);
-        return arr;
-      }, [])
-    });
+      items: config.items.map(i => {
+        const item = foundry.utils.deepClone(fromUuidSync(i.uuid));
+        if ( !item ) return null;
+        item.checked = added ? checked.has(item.uuid) : (config.optional && !i.optional);
+        item.optional = config.optional || i.optional;
+        return item;
+      }, []).filter(i => i),
+      abilities: this.getSelectAbilities()
+    };
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  async getData(options={}) {
+    return foundry.utils.mergeObject(super.getData(options), await this.getContext());
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Get the context information for selected spell abilities.
+   * @returns {object}
+   */
+  getSelectAbilities() {
+    const config = this.advancement.configuration;
+    return {
+      options: config.spell?.ability.size > 1 ? config.spell.ability.reduce((obj, k) => {
+        obj[k] = CONFIG.ROTV.abilities[k]?.label;
+        return obj;
+      }, {}) : null,
+      selected: this.ability ?? this.retainedData?.ability ?? this.advancement.value.ability
+        ?? config.spell?.ability.first()
+    };
   }
 
   /* -------------------------------------------- */

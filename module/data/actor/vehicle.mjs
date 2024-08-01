@@ -1,4 +1,5 @@
 import { FormulaField } from "../fields.mjs";
+import SourceField from "../shared/source-field.mjs";
 import AttributesFields from "./templates/attributes.mjs";
 import CommonTemplate from "./templates/common.mjs";
 import DetailsFields from "./templates/details.mjs";
@@ -10,7 +11,6 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {string} vehicleType                      Type of vehicle as defined in `ROTV.vehicleTypes`.
  * @property {object} attributes
  * @property {object} attributes.ac
- * @property {number} attributes.damRed
  * @property {number} attributes.ac.flat               Flat value used for flat or natural armor calculation.
  * @property {string} attributes.ac.calc               Name of one of the built-in formulas to use.
  * @property {string} attributes.ac.formula            Custom formula to use.
@@ -38,6 +38,8 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {object} cargo                            Details on this vehicle's crew and cargo capacities.
  * @property {PassengerData[]} cargo.crew              Creatures responsible for operating the vehicle.
  * @property {PassengerData[]} cargo.passengers        Creatures just takin' a ride.
+ * @property {object} details
+ * @property {SourceField} details.source              Adventure or sourcebook where this vehicle originated.
  */
 export default class VehicleData extends CommonTemplate {
 
@@ -52,8 +54,6 @@ export default class VehicleData extends CommonTemplate {
       vehicleType: new foundry.data.fields.StringField({required: true, initial: "water", label: "ROTV.VehicleType"}),
       attributes: new foundry.data.fields.SchemaField({
         ...AttributesFields.common,
-        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
-        }),
         ac: new foundry.data.fields.SchemaField({
           flat: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.ArmorClassFlat"}),
           calc: new foundry.data.fields.StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
@@ -100,7 +100,10 @@ export default class VehicleData extends CommonTemplate {
           })
         }, {label: "ROTV.VehicleCargoCrew"})
       }, {label: "ROTV.Attributes"}),
-      details: new foundry.data.fields.SchemaField(DetailsFields.common, {label: "ROTV.Details"}),
+      details: new foundry.data.fields.SchemaField({
+        ...DetailsFields.common,
+        source: new SourceField()
+      }, {label: "ROTV.Details"}),
       traits: new foundry.data.fields.SchemaField({
         ...TraitsFields.common,
         size: new foundry.data.fields.StringField({required: true, initial: "lg", label: "ROTV.Size"}),
@@ -121,9 +124,47 @@ export default class VehicleData extends CommonTemplate {
   /* -------------------------------------------- */
 
   /** @inheritdoc */
-  static migrateData(source) {
-    super.migrateData(source);
+  static _migrateData(source) {
+    super._migrateData(source);
     AttributesFields._migrateInitiative(source.attributes);
+    VehicleData.#migrateSource(source);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Convert source string into custom object.
+   * @param {object} source  The candidate source data from which the model will be constructed.
+   */
+  static #migrateSource(source) {
+    if ( source.details?.source && (foundry.utils.getType(source.details.source) !== "Object") ) {
+      source.details.source = { custom: source.details.source };
+    }
+  }
+
+  /* -------------------------------------------- */
+  /*  Data Preparation                            */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  prepareBaseData() {
+    this.attributes.prof = 0;
+    AttributesFields.prepareBaseArmorClass.call(this);
+    AttributesFields.prepareBaseEncumbrance.call(this);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  prepareDerivedData() {
+    const rollData = this.parent.getRollData({ deterministic: true });
+    const { originalSaves } = this.parent.getOriginalStats();
+
+    this.prepareAbilities({ rollData, originalSaves });
+    AttributesFields.prepareEncumbrance.call(this, rollData, { validateItem: item =>
+      (item.flags.rotv?.vehicleCargo === true) || !["weapon", "equipment"].includes(item.type)
+    });
+    AttributesFields.prepareHitPoints.call(this, this.attributes.hp);
   }
 }
 

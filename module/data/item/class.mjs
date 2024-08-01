@@ -1,67 +1,89 @@
-import SystemDataModel from "../abstract.mjs";
-import { AdvancementField, IdentifierField } from "../fields.mjs";
+import TraitAdvancement from "../../documents/advancement/trait.mjs";
+import { ItemDataModel } from "../abstract.mjs";
+import { AdvancementField, FormulaField, IdentifierField } from "../fields.mjs";
 import ItemDescriptionTemplate from "./templates/item-description.mjs";
+import StartingEquipmentTemplate from "./templates/starting-equipment.mjs";
+
+const { ArrayField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
 /**
  * Data definition for Class items.
  * @mixes ItemDescriptionTemplate
+ * @mixes StartingEquipmentTemplate
  *
  * @property {string} identifier        Identifier slug for this class.
  * @property {number} levels            Current number of levels in this class.
  * @property {string} hitDice           Denomination of hit dice available as defined in `ROTV.hitDieTypes`.
  * @property {number} hitDiceUsed       Number of hit dice consumed.
  * @property {object[]} advancement     Advancement objects for this class.
- * @property {string[]} saves           Savings throws in which this class grants proficiency.
- * @property {object} skills            Available class skills and selected skills.
- * @property {number} skills.number     Number of skills selectable by the player.
- * @property {string[]} skills.choices  List of skill keys that are valid to be chosen.
- * @property {string[]} skills.value    List of skill keys the player has chosen.
  * @property {object} spellcasting      Details on class's spellcasting ability.
  * @property {string} spellcasting.progression  Spell progression granted by class as from `ROTV.spellProgression`.
  * @property {string} spellcasting.ability      Ability score to use for spellcasting.
+ * @property {string} wealth            Formula used to determine starting wealth.
  */
-export default class ClassData extends SystemDataModel.mixin(ItemDescriptionTemplate) {
+export default class ClassData extends ItemDataModel.mixin(ItemDescriptionTemplate, StartingEquipmentTemplate) {
   /** @inheritdoc */
   static defineSchema() {
     return this.mergeSchema(super.defineSchema(), {
       identifier: new IdentifierField({required: true, label: "ROTV.Identifier"}),
-      levels: new foundry.data.fields.NumberField({
+      levels: new NumberField({
         required: true, nullable: false, integer: true, min: 0, initial: 1, label: "ROTV.ClassLevels"
       }),
-      hitDice: new foundry.data.fields.StringField({
+      hitDice: new StringField({
         required: true, initial: "d6", blank: false, label: "ROTV.HitDice",
         validate: v => /d\d+/.test(v), validationError: "must be a dice value in the format d#"
       }),
-      hitDiceUsed: new foundry.data.fields.NumberField({
+      hitDiceUsed: new NumberField({
         required: true, nullable: false, integer: true, initial: 0, min: 0, label: "ROTV.HitDiceUsed"
       }),
-      advancement: new foundry.data.fields.ArrayField(new AdvancementField(), {label: "ROTV.AdvancementTitle"}),
-      saves: new foundry.data.fields.ArrayField(new foundry.data.fields.StringField(), {label: "ROTV.ClassSaves"}),
-      skills: new foundry.data.fields.SchemaField({
-        number: new foundry.data.fields.NumberField({
-          required: true, nullable: false, integer: true, min: 0, initial: 2, label: "ROTV.ClassSkillsNumber"
-        }),
-        choices: new foundry.data.fields.ArrayField(
-          new foundry.data.fields.StringField(), {label: "ROTV.ClassSkillsEligible"}
-        ),
-        value: new foundry.data.fields.ArrayField(
-          new foundry.data.fields.StringField(), {label: "ROTV.ClassSkillsChosen"}
-        )
-      }),
-      spellcasting: new foundry.data.fields.SchemaField({
-        progression: new foundry.data.fields.StringField({
+      advancement: new ArrayField(new AdvancementField(), {label: "ROTV.AdvancementTitle"}),
+      spellcasting: new SchemaField({
+        progression: new StringField({
           required: true, initial: "none", blank: false, label: "ROTV.SpellProgression"
         }),
-        ability: new foundry.data.fields.StringField({required: true, label: "ROTV.SpellAbility"})
-      }, {label: "ROTV.Spellcasting"})
+        ability: new StringField({required: true, label: "ROTV.SpellAbility"})
+      }, {label: "ROTV.Spellcasting"}),
+      wealth: new FormulaField({label: "ROTV.StartingEquipment.Wealth.Label"})
     });
   }
 
   /* -------------------------------------------- */
 
+  /** @override */
+  static get compendiumBrowserFilters() {
+    return new Map([
+      ["hasSpellcasting", {
+        label: "ROTV.CompendiumBrowser.Filters.HasSpellcasting",
+        type: "boolean",
+        createFilter: (filters, value, def) => {
+          if ( value === 0 ) return;
+          const filter = { k: "system.spellcasting.progression", v: "none" };
+          if ( value === -1 ) filters.push(filter);
+          else filters.push({ o: "NOT", v: filter });
+        }
+      }]
+    ]);
+  }
+
+  /* -------------------------------------------- */
+  /*  Data Preparation                            */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  async getFavoriteData() {
+    const context = await super.getFavoriteData();
+    if ( this.parent.subclass ) context.subtitle = this.parent.subclass.name;
+    context.value = this.levels;
+    return context;
+  }
+
+  /* -------------------------------------------- */
+  /*  Migrations                                  */
+  /* -------------------------------------------- */
+
   /** @inheritdoc */
-  static migrateData(source) {
-    super.migrateData(source);
+  static _migrateData(source) {
+    super._migrateData(source);
     ClassData.#migrateLevels(source);
     ClassData.#migrateSpellcastingData(source);
   }
@@ -91,5 +113,57 @@ export default class ClassData extends SystemDataModel.mixin(ItemDescriptionTemp
       progression: source.spellcasting,
       ability: ""
     };
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Migrate the class's saves & skills into TraitAdvancements.
+   * @param {object} source  The candidate source data from which the model will be constructed.
+   * @protected
+   */
+  static _migrateTraitAdvancement(source) {
+    const system = source.system;
+    if ( !system?.advancement || system.advancement.find(a => a.type === "Trait") ) return;
+    let needsMigration = false;
+
+    if ( system.saves?.length ) {
+      const savesData = {
+        type: "Trait",
+        level: 1,
+        configuration: {
+          grants: system.saves.map(t => `saves:${t}`)
+        }
+      };
+      savesData.value = {
+        chosen: savesData.configuration.grants
+      };
+      system.advancement.push(new TraitAdvancement(savesData).toObject());
+      delete system.saves;
+      needsMigration = true;
+    }
+
+    if ( system.skills?.choices?.length ) {
+      const skillsData = {
+        type: "Trait",
+        level: 1,
+        configuration: {
+          choices: [{
+            count: system.skills.number ?? 1,
+            pool: system.skills.choices.map(t => `skills:${t}`)
+          }]
+        }
+      };
+      if ( system.skills.value?.length ) {
+        skillsData.value = {
+          chosen: system.skills.value.map(t => `skills:${t}`)
+        };
+      }
+      system.advancement.push(new TraitAdvancement(skillsData).toObject());
+      delete system.skills;
+      needsMigration = true;
+    }
+
+    if ( needsMigration ) foundry.utils.setProperty(source, "flags.rotv.persistSourceMigration", true);
   }
 }

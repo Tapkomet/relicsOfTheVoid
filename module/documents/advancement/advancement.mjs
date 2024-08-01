@@ -14,7 +14,7 @@ class AdvancementError extends Error {
 
 /**
  * Abstract base class which various advancement types can subclass.
- * @param {ItemRelics} item          Item to which this advancement belongs.
+ * @param {ItemRotV} item          Item to which this advancement belongs.
  * @param {object} [data={}]     Raw data stored in the advancement object.
  * @param {object} [options={}]  Options which affect DataModel construction.
  * @abstract
@@ -64,7 +64,7 @@ export default class Advancement extends BaseAdvancement {
    *                                   the level selection control in the configuration window is hidden and the
    *                                   advancement should provide its own implementation of `Advancement#levels`
    *                                   and potentially its own level configuration interface.
-   * @property {Set<string>} validItemTypes  Set of types to which this advancement can be added.
+   * @property {Set<string>} validItemTypes  Set of types to which this advancement can be added. (deprecated)
    * @property {object} apps
    * @property {*} apps.config         Subclass of AdvancementConfig that allows for editing of this advancement type.
    * @property {*} apps.flow           Subclass of AdvancementFlow that is displayed while fulfilling this advancement.
@@ -81,12 +81,20 @@ export default class Advancement extends BaseAdvancement {
       title: game.i18n.localize("ROTV.AdvancementTitle"),
       hint: "",
       multiLevel: false,
-      validItemTypes: new Set(["background", "class", "subclass"]),
+      validItemTypes: new Set(["background", "class", "race", "subclass"]),
       apps: {
         config: AdvancementConfig,
         flow: AdvancementFlow
       }
     };
+  }
+
+  /**
+   * Configuration information for this advancement type.
+   * @type {AdvancementMetadata}
+   */
+  get metadata() {
+    return this.constructor.metadata;
   }
 
   /* -------------------------------------------- */
@@ -115,7 +123,7 @@ export default class Advancement extends BaseAdvancement {
 
   /**
    * Item to which this advancement belongs.
-   * @type {ItemRelics}
+   * @type {ItemRotV}
    */
   get item() {
     return this.parent.parent;
@@ -125,7 +133,7 @@ export default class Advancement extends BaseAdvancement {
 
   /**
    * Actor to which this advancement's item belongs, if the item is embedded.
-   * @type {ActorRelics|null}
+   * @type {ActorRotV|null}
    */
   get actor() {
     return this.item.parent ?? null;
@@ -152,8 +160,8 @@ export default class Advancement extends BaseAdvancement {
    */
   get appliesToClass() {
     const originalClass = this.item.isOriginalClass;
-    return (originalClass === null) || !this.classRestriction
-      || (this.classRestriction === "primary" && originalClass)
+    return !this.classRestriction
+      || (this.classRestriction === "primary" && [true, null].includes(originalClass))
       || (this.classRestriction === "secondary" && !originalClass);
   }
 
@@ -167,6 +175,21 @@ export default class Advancement extends BaseAdvancement {
   prepareData() {
     this.title = this.title || this.constructor.metadata.title;
     this.icon = this.icon || this.constructor.metadata.icon;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Perform preliminary operations before an Advancement is created.
+   * @param {object} data      The initial data object provided to the document creation request.
+   * @returns {boolean|void}   A return value of false indicates the creation operation should be cancelled.
+   * @protected
+   */
+  _preCreate(data) {
+    if ( !["class", "subclass"].includes(this.item.type)
+      || foundry.utils.hasProperty(data, "level")
+      || this.constructor.metadata.multiLevel ) return;
+    this.updateSource({level: 1});
   }
 
   /* -------------------------------------------- */
@@ -244,7 +267,6 @@ export default class Advancement extends BaseAdvancement {
    * @returns {Promise<Advancement>}  This advancement after updates have been applied.
    */
   async update(updates) {
-    this.constructor._migrateUpdateData(updates);
     await this.item.updateAdvancement(this.id, updates);
     return this;
   }
@@ -257,7 +279,6 @@ export default class Advancement extends BaseAdvancement {
    * @returns {Advancement}   This advancement after updates have been applied.
    */
   updateSource(updates) {
-    this.constructor._migrateUpdateData(updates);
     super.updateSource(updates);
     return this;
   }
@@ -266,7 +287,7 @@ export default class Advancement extends BaseAdvancement {
 
   /**
    * Can an advancement of this type be added to the provided item?
-   * @param {ItemRelics} item  Item to check against.
+   * @param {ItemRotV} item  Item to check against.
    * @returns {boolean}    Should this be enabled as an option on the `AdvancementSelection` dialog?
    */
   static availableForItem(item) {
@@ -320,51 +341,20 @@ export default class Advancement extends BaseAdvancement {
   async reverse(level) { }
 
   /* -------------------------------------------- */
-  /*  Deprecations and Compatibility              */
-  /* -------------------------------------------- */
 
   /**
-   * @deprecated since 2.1.0
-   * @ignore
+   * Fetch an item and create a clone with the proper flags.
+   * @param {string} uuid  UUID of the item to fetch.
+   * @param {string} [id]  Optional ID to use instead of a random one.
+   * @returns {object|null}
    */
-  get data() {
-    foundry.utils.logCompatibilityWarning(
-      `You are accessing the ${this.constructor.name}#data object which is no longer used. `
-      + "Since 2.1 the Advancement class and its contained DataModel are merged into a combined data structure. "
-      + "You should now reference keys which were previously contained within the data object directly.",
-      { since: "RotV 2.1", until: "RotV 2.2" }
-    );
-    const data = {};
-    for ( const k of this.schema.keys() ) {
-      data[k] = this[k];
-    }
-    return this.constructor.shimData(data, {embedded: false});
+  async createItemData(uuid, id) {
+    const source = await fromUuid(uuid);
+    if ( !source ) return null;
+    return source.clone({
+      _id: id ?? foundry.utils.randomID(),
+      "flags.rotv.sourceId": uuid,
+      "flags.rotv.advancementOrigin": `${this.item.id}.${this.id}`
+    }, {keepId: true}).toObject();
   }
-
-  /**
-   * Shim to remove leading `data.` from updates.
-   * @ignore
-   */
-  static _migrateUpdateData(updates) {
-    let logWarning = false;
-    for ( const [key, value] of Object.entries(updates) ) {
-      if ( key.startsWith("data.") ) {
-        updates[key.substring(5)] = value;
-        delete updates[key];
-        logWarning = true;
-      }
-    }
-    if ( updates.data ) {
-      Object.assign(updates, updates.data);
-      delete updates.data;
-      logWarning = true;
-    }
-    if ( logWarning ) foundry.utils.logCompatibilityWarning(
-      "An update being performed on an advancement points to `data`. Advancement data has moved to the top level so the"
-      + " leading `data.` is no longer required.",
-      { since: "RotV 2.1", until: "RotV 2.2" }
-    );
-    return updates;
-  }
-
 }

@@ -40,26 +40,25 @@ export default class PropertyAttribution extends Application {
   /* -------------------------------------------- */
 
   /**
-   * Render this view as a tooltip rather than a whole window.
-   * @param {HTMLElement} element  The element to which the tooltip should be attached.
+   * Prepare tooltip contents.
+   * @returns {Promise<string>}
    */
-  async renderTooltip(element) {
+  async renderTooltip() {
     const data = this.getData(this.options);
-    const text = (await this._renderInner(data))[0].outerHTML;
-    game.tooltip.activate(element, { text, cssClass: "property-attribution" });
+    return (await this._renderInner(data))[0].outerHTML;
   }
 
   /* -------------------------------------------- */
 
   /** @inheritDoc */
-  getData() {
+  getData(options={}) {
     const property = foundry.utils.getProperty(this.object.system, this.property);
     let total;
     if ( Number.isNumeric(property)) total = property;
     else if ( typeof property === "object" && Number.isNumeric(property.value) ) total = property.value;
     const sources = foundry.utils.duplicate(this.attributions);
     return {
-      caption: this.options.title,
+      caption: game.i18n.localize(options.title),
       sources: sources.map(entry => {
         if ( entry.label.startsWith("@") ) entry.label = this.getPropertyLabel(entry.label.slice(1));
         if ( (entry.mode === CONST.ACTIVE_EFFECT_MODES.ADD) && (entry.value < 0) ) {
@@ -82,9 +81,9 @@ export default class PropertyAttribution extends Application {
   getPropertyLabel(property) {
     const parts = property.split(".");
     if ( parts[0] === "abilities" && parts[1] ) {
-      return CONFIG.ROTV.abilities[parts[1]] ?? property;
+      return CONFIG.ROTV.abilities[parts[1]]?.label ?? property;
     } else if ( (property === "attributes.ac.dex") && CONFIG.ROTV.abilities.dex ) {
-      return CONFIG.ROTV.abilities.dex;
+      return CONFIG.ROTV.abilities.dex.label;
     } else if ( (parts[0] === "prof") || (property === "attributes.prof") ) {
       return game.i18n.localize("ROTV.Proficiency");
     }

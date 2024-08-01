@@ -5,7 +5,7 @@
         <label>{{localize "ROTV.AbilityModifier"}}</label>
         <div class="form-fields">
             <select name="system.attributes.init.ability">
-                {{selectOptions abilities selected=ability blank=""}}
+                {{selectOptions abilities selected=ability blank="" labelAttr="label"}}
             </select>
         </div>
     </div>
@@ -13,18 +13,18 @@
     <div class="form-group">
         <label>{{localize "ROTV.InitiativeBonus"}}</label>
         <div class="form-fields">
-            <input name="system.attributes.init.bonus" type="text" value="{{bonus}}"/>
+            <input name="system.attributes.init.bonus" type="text" value="{{bonus}}">
         </div>
     </div>
 
     <div class="form-group">
         <label>{{localize "ROTV.FlagsAlert"}}</label>
-        <input type="checkbox" name="flags.rotv.initiativeAlert" {{checked initiativeAlert}}/>
+        <input type="checkbox" name="flags.rotv.initiativeAlert" {{checked initiativeAlert}}>
     </div>
 
     <div class="form-group">
         <label>{{localize "ROTV.FlagsInitiativeAdv"}}</label>
-        <input type="checkbox" name="flags.rotv.initiativeAdv" {{checked initiativeAdv}}/>
+        <input type="checkbox" name="flags.rotv.initiativeAdv" {{checked initiativeAdv}}>
     </div>
 
     <button type="submit"><i class="far fa-save"></i> {{ localize "Submit"}}</button>

@@ -1,5 +1,129 @@
 /* -------------------------------------------- */
+/*  Formatters                                  */
+/* -------------------------------------------- */
+
+/**
+ * Format a Challenge Rating using the proper fractional symbols.
+ * @param {number} value  CR value for format.
+ * @returns {string}
+ */
+export function formatCR(value) {
+  return { 0.125: "⅛", 0.25: "¼", 0.5: "½" }[value] ?? formatNumber(value);
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Format a modifier for display with its sign separate.
+ * @param {number} mod  The modifier.
+ * @returns {Handlebars.SafeString}
+ */
+function formatModifier(mod) {
+  if ( !Number.isFinite(mod) ) return new Handlebars.SafeString("");
+  return new Handlebars.SafeString(`<span class="sign">${mod < 0 ? "-" : "+"}</span>${Math.abs(mod)}`);
+}
+
+/* -------------------------------------------- */
+
+/**
+ * A helper for using Intl.NumberFormat within handlebars.
+ * @param {number} value    The value to format.
+ * @param {object} options  Options forwarded to {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat}
+ * @returns {string}
+ */
+export function formatNumber(value, options) {
+  const formatter = new Intl.NumberFormat(game.i18n.lang, options);
+  return formatter.format(value);
+}
+
+/* -------------------------------------------- */
+
+/**
+ * A helper function to format textarea text to HTML with linebreaks.
+ * @param {string} value  The text to format.
+ * @returns {Handlebars.SafeString}
+ */
+export function formatText(value) {
+  return new Handlebars.SafeString(value?.replaceAll("\n", "<br>") ?? "");
+}
+
+/* -------------------------------------------- */
 /*  Formulas                                    */
+/* -------------------------------------------- */
+
+/**
+ * Return whether a string is a valid reroll, explosion, min, or max dice modifier.
+ * @param {string} mod      The modifier to test.
+ * @returns {boolean}
+ */
+export function isValidDieModifier(mod) {
+  const regex = {
+    reroll: /rr?([0-9]+)?([<>=]+)?([0-9]+)?/i,
+    explode: /xo?([0-9]+)?([<>=]+)?([0-9]+)?/i,
+    minimum: /(?:min)([0-9]+)/i,
+    maximum: /(?:max)([0-9]+)/i,
+    dropKeep: /[dk]([hl])?([0-9]+)?/i,
+    count: /(?:c[sf])([<>=]+)?([0-9]+)?/i
+  };
+  return Object.values(regex).some(rgx => rgx.test(mod));
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Handle a delta input for a number value from a form.
+ * @param {HTMLInputElement} input  Input that contains the modified value.
+ * @param {Document} target         Target document to be updated.
+ * @returns {number|void}
+ */
+export function parseInputDelta(input, target) {
+  let value = input.value;
+  if ( ["+", "-"].includes(value[0]) ) {
+    const delta = parseFloat(value);
+    value = Number(foundry.utils.getProperty(target, input.dataset.name ?? input.name)) + delta;
+  }
+  else if ( value[0] === "=" ) value = Number(value.slice(1));
+  if ( Number.isNaN(value) ) return;
+  input.value = value;
+  return value;
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Replace referenced data attributes in the roll formula with values from the provided data.
+ * If the attribute is not found in the provided data, display a warning on the actor.
+ * @param {string} formula           The original formula within which to replace.
+ * @param {object} data              The data object which provides replacements.
+ * @param {object} [options={}]
+ * @param {ActorRotV} [options.actor]            Actor for which the value is being prepared.
+ * @param {ItemRotV} [options.item]              Item for which the value is being prepared.
+ * @param {string|null} [options.missing="0"]  Value to use when replacing missing references, or `null` to not replace.
+ * @param {string} [options.property]          Name of the property to which this formula belongs.
+ * @returns {string}                 Formula with replaced data.
+ */
+export function replaceFormulaData(formula, data, { actor, item, missing="0", property }={}) {
+  const dataRgx = new RegExp(/@([a-z.0-9_-]+)/gi);
+  const missingReferences = new Set();
+  formula = String(formula).replace(dataRgx, (match, term) => {
+    let value = foundry.utils.getProperty(data, term);
+    if ( value == null ) {
+      missingReferences.add(match);
+      return missing ?? match[0];
+    }
+    return String(value).trim();
+  });
+  actor ??= item?.parent;
+  if ( (missingReferences.size > 0) && actor && property ) {
+    const listFormatter = new Intl.ListFormat(game.i18n.lang, { style: "long", type: "conjunction" });
+    const message = game.i18n.format("ROTV.FormulaMissingReferenceWarn", {
+      property, name: item?.name ?? actor.name, references: listFormatter.format(missingReferences)
+    });
+    actor._preparationWarnings.push({ message, link: item?.uuid ?? actor.uuid, type: "warning" });
+  }
+  return formula;
+}
+
 /* -------------------------------------------- */
 
 /**
@@ -14,7 +138,7 @@ export function simplifyBonus(bonus, data={}) {
   if ( Number.isNumeric(bonus) ) return Number(bonus);
   try {
     const roll = new Roll(bonus, data);
-    return roll.isDeterministic ? Roll.safeEval(roll.formula) : 0;
+    return roll.isDeterministic ? roll.evaluateSync().total : 0;
   } catch(error) {
     console.error(error);
     return 0;
@@ -22,19 +146,48 @@ export function simplifyBonus(bonus, data={}) {
 }
 
 /* -------------------------------------------- */
+/*  IDs                                         */
+/* -------------------------------------------- */
+
+/**
+ * Create an ID from the input truncating or padding the value to make it reach 16 characters.
+ * @param {string} id
+ * @returns {string}
+ */
+export function staticID(id) {
+  if ( id.length >= 16 ) return id.substring(0, 16);
+  return id.padEnd(16, "0");
+}
+
+/* -------------------------------------------- */
 /*  Object Helpers                              */
 /* -------------------------------------------- */
 
 /**
+ * Transform an object, returning only the keys which match the provided filter.
+ * @param {object} obj         Object to transform.
+ * @param {Function} [filter]  Filtering function. If none is provided, it will just check for truthiness.
+ * @returns {string[]}         Array of filtered keys.
+ */
+export function filteredKeys(obj, filter) {
+  filter ??= e => e;
+  return Object.entries(obj).filter(e => filter(e[1])).map(e => e[0]);
+}
+
+/* -------------------------------------------- */
+
+/**
  * Sort the provided object by its values or by an inner sortKey.
- * @param {object} obj        The object to sort.
- * @param {string} [sortKey]  An inner key upon which to sort.
- * @returns {object}          A copy of the original object that has been sorted.
+ * @param {object} obj                 The object to sort.
+ * @param {string|Function} [sortKey]  An inner key upon which to sort or sorting function.
+ * @returns {object}                   A copy of the original object that has been sorted.
  */
 export function sortObjectEntries(obj, sortKey) {
   let sorted = Object.entries(obj);
-  if ( sortKey ) sorted = sorted.sort((a, b) => a[1][sortKey].localeCompare(b[1][sortKey]));
-  else sorted = sorted.sort((a, b) => a[1].localeCompare(b[1]));
+  const sort = (lhs, rhs) => foundry.utils.getType(lhs) === "string" ? lhs.localeCompare(rhs, game.i18n.lang) : lhs - rhs;
+  if ( foundry.utils.getType(sortKey) === "function" ) sorted = sorted.sort((lhs, rhs) => sortKey(lhs[1], rhs[1]));
+  else if ( sortKey ) sorted = sorted.sort((lhs, rhs) => sort(lhs[1][sortKey], rhs[1][sortKey]));
+  else sorted = sorted.sort((lhs, rhs) => sort(lhs[1], rhs[1]));
   return Object.fromEntries(sorted);
 }
 
@@ -70,11 +223,59 @@ export function indexFromUuid(uuid) {
 
 /**
  * Creates an HTML document link for the provided UUID.
- * @param {string} uuid  UUID for which to produce the link.
- * @returns {string}     Link to the item or empty string if item wasn't found.
+ * Try to build links to compendium content synchronously to avoid DB lookups.
+ * @param {string} uuid               UUID for which to produce the link.
+ * @param {object} [options]
+ * @param {string} [options.tooltip]  Tooltip to add to the link.
+ * @returns {string}                  Link to the item or empty string if item wasn't found.
  */
-export function linkForUuid(uuid) {
-  return TextEditor._createContentLink(["", "UUID", uuid]).outerHTML;
+export function linkForUuid(uuid, { tooltip }={}) {
+  let doc = fromUuidSync(uuid);
+  if ( !doc ) return "";
+  if ( uuid.startsWith("Compendium.") && !(doc instanceof foundry.abstract.Document) ) {
+    const {collection} = foundry.utils.parseUuid(uuid);
+    const cls = collection.documentClass;
+    // Minimal "shell" of a document using index data
+    doc = new cls(foundry.utils.deepClone(doc), {pack: collection.metadata.id});
+  }
+  const a = doc.toAnchor();
+  if ( tooltip ) a.dataset.tooltip = tooltip;
+  return a.outerHTML;
+}
+
+/* -------------------------------------------- */
+/*  Targeting                                   */
+/* -------------------------------------------- */
+
+/**
+ * Get currently selected tokens in the scene or user's character's tokens.
+ * @returns {TokenRotV[]}
+ */
+export function getSceneTargets() {
+  let targets = canvas.tokens.controlled.filter(t => t.actor);
+  if ( !targets.length && game.user.character ) targets = game.user.character.getActiveTokens();
+  return targets;
+}
+
+/* -------------------------------------------- */
+/*  Conversions                                 */
+/* -------------------------------------------- */
+
+/**
+ * Convert the provided weight to another unit.
+ * @param {number} value  The weight being converted.
+ * @param {string} from   The initial units.
+ * @param {string} to     The final units.
+ * @returns {number}      Weight in the specified units.
+ */
+export function convertWeight(value, from, to) {
+  if ( from === to ) return value;
+  const message = unit => `Weight unit ${unit} not defined in CONFIG.ROTV.weightUnits`;
+  if ( !CONFIG.ROTV.weightUnits[from] ) throw new Error(message(from));
+  if ( !CONFIG.ROTV.weightUnits[to] ) throw new Error(message(to));
+  return value
+    * CONFIG.ROTV.weightUnits[from].conversion
+    / CONFIG.ROTV.weightUnits[to].conversion;
 }
 
 /* -------------------------------------------- */
@@ -107,15 +308,35 @@ export const validators = {
 export async function preloadHandlebarsTemplates() {
   const partials = [
     // Shared Partials
-    "systems/rotv/templates/actors/parts/active-effects.hbs",
+    "systems/rotv/templates/shared/active-effects.hbs",
+    "systems/rotv/templates/shared/active-effects2.hbs",
+    "systems/rotv/templates/shared/inventory.hbs",
+    "systems/rotv/templates/shared/inventory2.hbs",
     "systems/rotv/templates/apps/parts/trait-list.hbs",
 
     // Actor Sheet Partials
+    "systems/rotv/templates/actors/parts/actor-classes.hbs",
+    "systems/rotv/templates/actors/parts/actor-trait-pills.hbs",
     "systems/rotv/templates/actors/parts/actor-traits.hbs",
-    "systems/rotv/templates/actors/parts/actor-inventory.hbs",
     "systems/rotv/templates/actors/parts/actor-features.hbs",
+    "systems/rotv/templates/actors/parts/actor-inventory.hbs",
     "systems/rotv/templates/actors/parts/actor-spellbook.hbs",
     "systems/rotv/templates/actors/parts/actor-warnings.hbs",
+    "systems/rotv/templates/actors/parts/actor-warnings-dialog.hbs",
+    "systems/rotv/templates/actors/parts/biography-textbox.hbs",
+    "systems/rotv/templates/actors/tabs/character-biography.hbs",
+    "systems/rotv/templates/actors/tabs/character-details.hbs",
+    "systems/rotv/templates/actors/tabs/creature-features.hbs",
+    "systems/rotv/templates/actors/tabs/creature-spells.hbs",
+    "systems/rotv/templates/actors/tabs/group-members.hbs",
+    "systems/rotv/templates/actors/tabs/npc-biography.hbs",
+
+    // Actor Sheet Item Summary Columns
+    "systems/rotv/templates/actors/parts/columns/column-feature-controls.hbs",
+    "systems/rotv/templates/actors/parts/columns/column-formula.hbs",
+    "systems/rotv/templates/actors/parts/columns/column-recovery.hbs",
+    "systems/rotv/templates/actors/parts/columns/column-roll.hbs",
+    "systems/rotv/templates/actors/parts/columns/column-uses.hbs",
 
     // Item Sheet Partials
     "systems/rotv/templates/items/parts/item-action.hbs",
@@ -124,12 +345,15 @@ export async function preloadHandlebarsTemplates() {
     "systems/rotv/templates/items/parts/item-description.hbs",
     "systems/rotv/templates/items/parts/item-mountable.hbs",
     "systems/rotv/templates/items/parts/item-spellcasting.hbs",
+    "systems/rotv/templates/items/parts/item-source.hbs",
     "systems/rotv/templates/items/parts/item-summary.hbs",
+    "systems/rotv/templates/items/parts/item-tooltip.hbs",
 
     // Journal Partials
     "systems/rotv/templates/journal/parts/journal-table.hbs",
 
     // Advancement Partials
+    "systems/rotv/templates/advancement/parts/advancement-ability-score-control.hbs",
     "systems/rotv/templates/advancement/parts/advancement-controls.hbs",
     "systems/rotv/templates/advancement/parts/advancement-spell-config.hbs"
   ];
@@ -146,13 +370,82 @@ export async function preloadHandlebarsTemplates() {
 /* -------------------------------------------- */
 
 /**
+ * A helper that converts the provided object into a series of `data-` entries.
+ * @param {object} object   Object to convert into dataset entries.
+ * @param {object} options  Handlebars options.
+ * @returns {string}
+ */
+function dataset(object, options) {
+  const entries = [];
+  for ( let [key, value] of Object.entries(object ?? {}) ) {
+    key = key.replace(/[A-Z]+(?![a-z])|[A-Z]/g, (a, b) => (b ? "-" : "") + a.toLowerCase());
+    entries.push(`data-${key}="${value}"`);
+  }
+  return new Handlebars.SafeString(entries.join(" "));
+}
+
+/* -------------------------------------------- */
+
+/**
+ * A helper to create a set of <option> elements in a <select> block grouped together
+ * in <optgroup> based on the provided categories.
+ *
+ * @param {SelectChoices} choices          Choices to format.
+ * @param {object} [options]
+ * @param {boolean} [options.localize]     Should the label be localized?
+ * @param {string} [options.blank]         Name for the empty option, if one should be added.
+ * @param {string} [options.labelAttr]     Attribute pointing to label string.
+ * @param {string} [options.chosenAttr]    Attribute pointing to chosen boolean.
+ * @param {string} [options.childrenAttr]  Attribute pointing to array of children.
+ * @returns {Handlebars.SafeString}        Formatted option list.
+ */
+function groupedSelectOptions(choices, options) {
+  const localize = options.hash.localize ?? false;
+  const blank = options.hash.blank ?? null;
+  const labelAttr = options.hash.labelAttr ?? "label";
+  const chosenAttr = options.hash.chosenAttr ?? "chosen";
+  const childrenAttr = options.hash.childrenAttr ?? "children";
+
+  // Create an option
+  const option = (name, label, chosen) => {
+    if ( localize ) label = game.i18n.localize(label);
+    html += `<option value="${name}" ${chosen ? "selected" : ""}>${label}</option>`;
+  };
+
+  // Create a group
+  const group = category => {
+    let label = category[labelAttr];
+    if ( localize ) game.i18n.localize(label);
+    html += `<optgroup label="${label}">`;
+    children(category[childrenAttr]);
+    html += "</optgroup>";
+  };
+
+  // Add children
+  const children = children => {
+    for ( let [name, child] of Object.entries(children) ) {
+      if ( child[childrenAttr] ) group(child);
+      else option(name, child[labelAttr], child[chosenAttr] ?? false);
+    }
+  };
+
+  // Create the options
+  let html = "";
+  if ( blank !== null ) option("", blank);
+  children(choices);
+  return new Handlebars.SafeString(html);
+}
+
+/* -------------------------------------------- */
+
+/**
  * A helper that fetch the appropriate item context from root and adds it to the first block parameter.
  * @param {object} context  Current evaluation context.
  * @param {object} options  Handlebars options.
  * @returns {string}
  */
 function itemContext(context, options) {
-  if ( arguments.length !== 2 ) throw new Error("#rotv-with requires exactly one argument");
+  if ( arguments.length !== 2 ) throw new Error("#rotv-itemContext requires exactly one argument");
   if ( foundry.utils.getType(context) === "function" ) context = context.call(this);
 
   const ctx = options.data.root.itemContext?.[context.id];
@@ -167,13 +460,44 @@ function itemContext(context, options) {
 /* -------------------------------------------- */
 
 /**
- * Register custom Handlebars helpers used by Relics.
+ * Conceal a section and display a notice if unidentified.
+ * @param {boolean} conceal  Should the section be concealed?
+ * @param {object} options   Handlebars options.
+ * @returns {string}
+ */
+function concealSection(conceal, options) {
+  let content = options.fn(this);
+  if ( !conceal ) return content;
+
+  content = `<div inert>
+    ${content}
+  </div>
+  <div class="unidentified-notice">
+      <div>
+          <strong>${game.i18n.localize("ROTV.Unidentified.Title")}</strong>
+          <p>${game.i18n.localize("ROTV.Unidentified.Notice")}</p>
+      </div>
+  </div>`;
+  return content;
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Register custom Handlebars helpers used by RotV.
  */
 export function registerHandlebarsHelpers() {
   Handlebars.registerHelper({
     getProperty: foundry.utils.getProperty,
-    "rotv-linkForUuid": linkForUuid,
-    "rotv-itemContext": itemContext
+    "rotv-concealSection": concealSection,
+    "rotv-dataset": dataset,
+    "rotv-formatCR": formatCR,
+    "rotv-formatModifier": formatModifier,
+    "rotv-groupedSelectOptions": groupedSelectOptions,
+    "rotv-itemContext": itemContext,
+    "rotv-linkForUuid": (uuid, options) => linkForUuid(uuid, options.hash),
+    "rotv-numberFormat": (context, options) => formatNumber(context, options.hash),
+    "rotv-textFormat": formatText
   });
 }
 
@@ -212,9 +536,16 @@ export function preLocalize(configKeyPath, { key, keys=[], sort=false }={}) {
 export function performPreLocalization(config) {
   for ( const [keyPath, settings] of Object.entries(_preLocalizationRegistrations) ) {
     const target = foundry.utils.getProperty(config, keyPath);
+    if ( !target ) continue;
     _localizeObject(target, settings.keys);
     if ( settings.sort ) foundry.utils.setProperty(config, keyPath, sortObjectEntries(target, settings.keys[0]));
   }
+
+  // Localize & sort status effects
+  CONFIG.statusEffects.forEach(s => s.name = game.i18n.localize(s.name));
+  CONFIG.statusEffects.sort((lhs, rhs) =>
+    lhs.id === "dead" ? -1 : rhs.id === "dead" ? 1 : lhs.name.localeCompare(rhs.name, game.i18n.lang)
+  );
 }
 
 /* -------------------------------------------- */
@@ -247,10 +578,96 @@ function _localizeObject(obj, keys) {
     }
 
     for ( const key of keys ) {
-      if ( !v[key] ) continue;
-      v[key] = game.i18n.localize(v[key]);
+      const value = foundry.utils.getProperty(v, key);
+      if ( !value ) continue;
+      foundry.utils.setProperty(v, key, game.i18n.localize(value));
     }
   }
+}
+
+/* -------------------------------------------- */
+/*  Localization                                */
+/* -------------------------------------------- */
+
+/**
+ * A cache of already-fetched labels for faster lookup.
+ * @type {Map<string, string>}
+ */
+const _attributeLabelCache = new Map();
+
+/**
+ * Convert an attribute path to a human-readable label.
+ * @param {string} attr              The attribute path.
+ * @param {object} [options]
+ * @param {ActorRotV} [options.actor]  An optional reference actor.
+ * @returns {string|void}
+ */
+export function getHumanReadableAttributeLabel(attr, { actor }={}) {
+  // Check any actor-specific names first.
+  if ( attr.startsWith("resources.") && actor ) {
+    const resource = foundry.utils.getProperty(actor, `system.${attr}`);
+    if ( resource.label ) return resource.label;
+  }
+
+  if ( (attr === "details.xp.value") && (actor?.type === "npc") ) {
+    return game.i18n.localize("ROTV.ExperiencePointsValue");
+  }
+
+  if ( attr.startsWith(".") && actor ) {
+    const item = fromUuidSync(attr, { relative: actor });
+    return item?.name ?? attr;
+  }
+
+  // Check if the attribute is already in cache.
+  let label = _attributeLabelCache.get(attr);
+  if ( label ) return label;
+
+  // Derived fields.
+  if ( attr === "attributes.init.total" ) label = "ROTV.InitiativeBonus";
+  else if ( attr === "attributes.ac.value" ) label = "ROTV.ArmorClass";
+  else if ( attr === "attributes.spelldc" ) label = "ROTV.SpellDC";
+
+  // Abilities.
+  else if ( attr.startsWith("abilities.") ) {
+    const [, key] = attr.split(".");
+    label = game.i18n.format("ROTV.AbilityScoreL", { ability: CONFIG.ROTV.abilities[key].label });
+  }
+
+  // Skills.
+  else if ( attr.startsWith("skills.") ) {
+    const [, key] = attr.split(".");
+    label = game.i18n.format("ROTV.SkillPassiveScore", { skill: CONFIG.ROTV.skills[key].label });
+  }
+
+  // Spell slots.
+  else if ( attr.startsWith("spells.") ) {
+    const [, key] = attr.split(".");
+    if ( !/spell\d+/.test(key) ) label = `ROTV.SpellSlots${key.capitalize()}`;
+    else {
+      const plurals = new Intl.PluralRules(game.i18n.lang, {type: "ordinal"});
+      const level = Number(key.slice(5));
+      label = game.i18n.format(`ROTV.SpellSlotsN.${plurals.select(level)}`, { n: level });
+    }
+  }
+
+  // Attempt to find the attribute in a data model.
+  if ( !label ) {
+    const { CharacterData, NPCData, VehicleData, GroupData } = rotv.dataModels.actor;
+    for ( const model of [CharacterData, NPCData, VehicleData, GroupData] ) {
+      const field = model.schema.getField(attr);
+      if ( field ) {
+        label = field.label;
+        break;
+      }
+    }
+  }
+
+  if ( label ) {
+    label = game.i18n.localize(label);
+    _attributeLabelCache.set(attr, label);
+  }
+
+  return label;
 }
 
 /* -------------------------------------------- */
@@ -295,8 +712,8 @@ export async function synchronizeActorSpells(actorPack, spellsPack) {
 
 /**
  * A helper function to synchronize spell data for a specific Actor.
- * @param {ActorRelics} actor
- * @param {Object<string,ItemRelics>} spellsMap
+ * @param {ActorRotV} actor
+ * @param {Object<string,ItemRotV>} spellsMap
  * @returns {{toDelete: string[], toCreate: object[]}}
  * @private
  */
@@ -318,6 +735,7 @@ function _synchronizeActorSpells(actor, spellsMap) {
     const {preparation, uses, save} = spell.toObject().system;
     Object.assign(spellData.system, {preparation, uses});
     spellData.system.save.dc = save.dc;
+    foundry.utils.setProperty(spellData, "_stats.compendiumSource", source.uuid);
     foundry.utils.setProperty(spellData, "flags.core.sourceId", source.uuid);
 
     // Record spells to be deleted and created

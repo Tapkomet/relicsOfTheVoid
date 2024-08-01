@@ -31,17 +31,22 @@
 
             {{!-- Character Summary --}}
             <ul class="summary flexrow">
-                <li>
-                    <input type="text" name="system.details.race" value="{{system.details.race}}" placeholder="{{ localize 'ROTV.Race' }}"/>
+                <li class="race">
+                    {{#if system.details.race.name}}
+                        <span data-tooltip="ROTV.Species">{{system.details.race.name}}</span>
+                    {{else}}
+                        <input type="text" name="system.details.race" value="{{system.details.race}}"
+                               placeholder="{{ localize 'ROTV.Species' }}">
+                    {{/if}}
                 </li>
-                <li>
-                    {{#if labels.background}}
-                        <span data-tooltip="ROTV.Background">{{labels.background}}</span>
+                <li class="background">
+                    {{#if system.details.background.name}}
+                        <span data-tooltip="ROTV.Background">{{system.details.background.name}}</span>
                     {{else}}
                         <input type="text" name="system.details.background" value="{{system.details.background}}" placeholder="{{ localize 'ROTV.Background' }}"/>
                     {{/if}}
                 </li>
-                <li>
+                <li class="alignment">
                     <input type="text" name="system.details.alignment" value="{{system.details.alignment}}" placeholder="{{ localize 'ROTV.Alignment' }}"/>
                 </li>
                 <li class="proficiency">
@@ -53,14 +58,14 @@
             <ul class="attributes flexrow">
                 <li class="attribute health">
                     <h4 class="attribute-name box-title">{{localize "ROTV.HitPoints"}}</h4>
-                    <a class="config-button" data-action="hit-points" data-tooltip="ROTV.HitPointsConfig">
+                    <a class="config-button" data-action="hitPoints" data-tooltip="ROTV.HitPointsConfig">
                         <i class="fas fa-cog"></i>
                     </a>
                     <div class="attribute-value multiple">
                         <input name="system.attributes.hp.value" type="text" value="{{hp.value}}" placeholder="10"
                             data-tooltip="ROTV.HitPointsCurrent" data-dtype="Number">
                         <span class="sep"> / </span>
-                        <span data-tooltip="{{#if hp.max}}ROTV.HitPointsOverride{{else}}ROTV.HitPointsMax{{/if}}">
+                        <span data-tooltip="{{#if source.attributes.hp.max}}ROTV.HitPointsOverride{{else}}ROTV.HitPointsMax{{/if}}">
                             {{hp.max}}
                         </span>
                     </div>
@@ -75,9 +80,16 @@
                 </li>
 
                 <li class="attribute hit-dice">
-                    <h4 class="attribute-name box-title">{{ localize "ROTV.DR" }}</h4>
-                    <div class="attribute-value">
-                        <input type="text" name="system.attributes.damRed" data-dtype="Number" value="{{system.attributes.damRed}}" placeholder="0"/>
+                    <h4 class="attribute-name box-title">{{ localize "ROTV.HitDice" }}</h4>
+                    <a class="config-button" data-action="hitDice" data-tooltip="ROTV.HitDiceConfig">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                    <div class="attribute-value multiple">
+                        <label class="hit-dice">
+                            <span data-tooltip="ROTV.HitDiceRemaining">{{system.attributes.hd.value}}</span>
+                            <span class="sep"> / </span>
+                            <span data-tooltip="ROTV.HitDiceMax">{{system.details.level}}</span>
+                        </label>
                     </div>
                     <footer class="attribute-footer">
                         <a class="rest short-rest" data-tooltip="ROTV.ShortRest">{{localize "ROTV.RestS"}}</a>
@@ -94,6 +106,9 @@
                         data-attribution-caption="ROTV.ArmorClass" data-tooltip-direction="DOWN">
                         <span>{{system.attributes.ac.value}}</span>
                     </div>
+                    <footer class="attribute-footer">
+                        <span class="spell-dc">{{localize "ROTV.SpellDC"}} {{system.attributes.spelldc}}</span>
+                    </footer>
                 </li>
 
                 <li class="attribute movement">
@@ -144,7 +159,7 @@
                 <li class="ability {{#if ability.proficient}}proficient{{/if}}" data-ability="{{id}}">
                     <h4 class="ability-name box-title rollable">{{ability.label}}</h4>
                     <input type="text" name="system.abilities.{{id}}.value" value="{{ability.value}}"
-                        class="ability-score" placeholder="0" data-dtype="Number">
+                        class="ability-score" placeholder="10" data-dtype="Number">
                     <div class="ability-modifiers flexrow">
                         <span class="ability-mod" data-tooltip="ROTV.Modifier">
                             {{numberFormat ability.mod decimals=0 sign=true}}
@@ -158,7 +173,8 @@
                             {{numberFormat ability.save decimals=0 sign=true}}
                         </span>
                     </div>
-                    <a class="config-button" data-action="ability" data-tooltip="ROTV.AbilityConfigure">
+                    <a class="config-button" data-action="ability"
+                       data-tooltip="{{ localize "ROTV.AbilityConfigure" ability=ability.label }}">
                         <i class="fas fa-cog"></i>
                     </a>
                 </li>
@@ -169,7 +185,8 @@
             <ul class="skills-list">
             {{#each config.skills as |obj s|}}
             {{#with (lookup ../skills s) as |skill|}}
-                <li class="skill flexrow {{#if skill.value}}proficient{{/if}}" data-skill="{{s}}">
+                <li class="proficiency-row skill flexrow {{#if skill.value}}proficient{{/if}}"
+                    data-property="skills" data-key="{{s}}">
                     <input type="hidden" name="system.skills.{{s}}.value"
                            value="{{skill.baseValue}}" data-dtype="Number">
                     <input type="hidden" name="system.skills.{{s}}.ability" value="{{skill.ability}}">
@@ -231,8 +248,14 @@
                     <div class="counter flexrow exhaustion">
                         <h4>{{ localize "ROTV.Exhaustion" }}</h4>
                         <div class="counter-value">
-                            <input type="text" name="system.attributes.stress" data-dtype="Number" placeholder="0" value="{{system.attributes.stress}}" />
+                            <input type="text" name="system.attributes.exhaustion" value="{{system.attributes.exhaustion}}" placeholder="0" data-dtype="Number">
                         </div>
+                    </div>
+                    <div class="counter flexrow inspiration">
+                        <label class="flexrow">
+                            <input type="checkbox" name="system.attributes.inspiration"
+                                   {{checked system.attributes.inspiration}}>
+                        </label>
                     </div>
                 </div>
 
@@ -243,7 +266,7 @@
 
         {{!-- Inventory Tab --}}
         <div class="tab inventory flexcol" data-group="primary" data-tab="inventory">
-            {{> "rotv.actor-inventory" sections=inventory}}
+            {{> "rotv.inventory" sections=inventory}}
         </div>
 
         {{!-- Features Tab --}}
@@ -268,8 +291,6 @@
                 <textarea name="system.details.appearance">{{system.details.appearance}}</textarea>
                 <label>{{ localize "ROTV.PersonalityTraits" }}</label>
                 <textarea name="system.details.trait">{{system.details.trait}}</textarea>
-                <label>{{ localize "ROTV.Passion" }}</label>
-                <textarea name="system.details.passion">{{system.details.passion}}</textarea>
                 <label>{{ localize "ROTV.Ideals" }}</label>
                 <textarea name="system.details.ideal">{{system.details.ideal}}</textarea>
                 <label>{{ localize "ROTV.Bonds" }}</label>

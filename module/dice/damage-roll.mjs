@@ -1,5 +1,5 @@
 /**
- * A type of Roll specific to a damage (or healing) roll in the Relics system.
+ * A type of Roll specific to a damage (or healing) roll in the RotV system.
  * @param {string} formula                       The string formula to parse
  * @param {object} data                          The data object against which to parse attributes within the formula
  * @param {object} [options={}]                  Extra optional arguments which describe or modify the DamageRoll
@@ -114,18 +114,27 @@ export default class DamageRoll extends Roll {
    * @protected
    */
   configureDamage() {
-    let flatBonus = 0;
+    const flatBonus = new Map();
     for ( let [i, term] of this.terms.entries() ) {
       // Multiply dice terms
       if ( term instanceof DiceTerm ) {
+        if ( term._number instanceof Roll ) {
+          // Complex number term.
+          if ( !term._number.isDeterministic ) continue;
+          if ( !term._number._evaluated ) term._number.evaluateSync();
+        }
         term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
         term.number = term.options.baseNumber;
         if ( this.isCritical ) {
-          let cm = this.options.criticalMultiplier ?? 1;
+          let cm = this.options.criticalMultiplier ?? 2;
 
           // Powerful critical - maximize damage and reduce the multiplier by 1
           if ( this.options.powerfulCritical ) {
-            flatBonus += (term.number * term.faces);
+            let bonus = term.number * term.faces;
+            if ( bonus > 0 ) {
+              const flavor = term.flavor?.toLowerCase().trim() ?? game.i18n.localize("ROTV.PowerfulCritical");
+              flatBonus.set(flavor, (flatBonus.get(flavor) ?? 0) + bonus);
+            }
             cm = Math.max(1, cm-1);
           }
 
@@ -141,16 +150,18 @@ export default class DamageRoll extends Roll {
         term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
         term.number = term.options.baseNumber;
         if ( this.isCritical ) {
-          term.number *= (this.options.criticalMultiplier ?? 1);
+          term.number *= (this.options.criticalMultiplier ?? 2);
           term.options.critical = true;
         }
       }
     }
 
     // Add powerful critical bonus
-    if ( this.options.powerfulCritical && (flatBonus > 0) ) {
-      this.terms.push(new OperatorTerm({operator: "+"}));
-      this.terms.push(new NumericTerm({number: flatBonus}, {flavor: game.i18n.localize("ROTV.PowerfulCritical")}));
+    if ( this.options.powerfulCritical && flatBonus.size ) {
+      for ( const [type, number] of flatBonus.entries() ) {
+        this.terms.push(new OperatorTerm({operator: "+"}));
+        this.terms.push(new NumericTerm({number, options: {flavor: type}}));
+      }
     }
 
     // Add extra critical damage term
@@ -168,16 +179,59 @@ export default class DamageRoll extends Roll {
   }
 
   /* -------------------------------------------- */
+  /*  Chat Messages                               */
+  /* -------------------------------------------- */
 
   /** @inheritdoc */
   toMessage(messageData={}, options={}) {
-    messageData.flavor = messageData.flavor || this.options.flavor;
-    if ( this.isCritical ) {
+    return this.constructor.toMessage([this], messageData, options);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Transform a Roll instance into a ChatMessage, displaying the roll result.
+   * This function can either create the ChatMessage directly, or return the data object that will be used to create.
+   *
+   * @param {DamageRoll[]} rolls             Rolls to add to the message.
+   * @param {object} messageData             The data object to use when creating the message.
+   * @param {options} [options]              Additional options which modify the created message.
+   * @param {string} [options.rollMode]      The template roll mode to use for the message from CONFIG.Dice.rollModes.
+   * @param {boolean} [options.create=true]  Whether to automatically create the chat message, or only return the
+   *                                         prepared chatData object.
+   * @returns {Promise<ChatMessage|object>}  A promise which resolves to the created ChatMessage document if create is
+   *                                         true, or the Object of prepared chatData otherwise.
+   */
+  static async toMessage(rolls, messageData={}, {rollMode, create=true}={}) {
+    rollMode = rolls.at(-1)?.options.rollMode ?? rollMode ?? game.settings.get("core", "rollMode");
+    let isCritical = false;
+    for ( const roll of rolls ) {
+      if ( !roll._evaluated ) await roll.evaluate({ allowInteractive: rollMode !== CONST.DICE_ROLL_MODES.BLIND });
+      messageData.flavor ??= roll.options.flavor;
+      isCritical ||= roll.isCritical;
+    }
+    if ( isCritical ) {
       const label = game.i18n.localize("ROTV.CriticalHit");
       messageData.flavor = messageData.flavor ? `${messageData.flavor} (${label})` : label;
     }
-    options.rollMode = options.rollMode ?? this.options.rollMode;
-    return super.toMessage(messageData, options);
+
+    // Prepare chat data
+    messageData = foundry.utils.mergeObject({
+      user: game.user.id,
+      sound: CONFIG.sounds.dice
+    }, messageData);
+    messageData.rolls = rolls;
+
+    // Either create the message or just return the chat data
+    const cls = getDocumentClass("ChatMessage");
+    const msg = new cls(messageData);
+
+    // Either create or return the data
+    if ( create ) return cls.create(msg.toObject(), { rollMode });
+    else {
+      if ( rollMode ) msg.applyRollMode(rollMode);
+      return msg.toObject();
+    }
   }
 
   /* -------------------------------------------- */
@@ -196,11 +250,36 @@ export default class DamageRoll extends Roll {
    * @returns {Promise<D20Roll|null>}         A resulting D20Roll object constructed with the dialog, or null if the
    *                                          dialog was closed
    */
-  async configureDialog({title, defaultRollMode, defaultCritical=false, template, allowCritical=true}={}, options={}) {
+  async configureDialog(data={}, options={}) {
+    const rolls = await this.constructor.configureDialog([this], data, options);
+    return rolls[0] ?? null;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Create a Dialog prompt used to configure evaluation of one or more daamge rolls.
+   * @param {DamageRoll[]} rolls                Damage rolls to configure.
+   * @param {object} [data={}]                  Dialog configuration data
+   * @param {string} [data.title]               The title of the shown dialog window
+   * @param {number} [data.defaultRollMode]     The roll mode that the roll mode select element should default to
+   * @param {string} [data.defaultCritical]     Should critical be selected as default
+   * @param {string} [data.template]            A custom path to an HTML template to use instead of the default
+   * @param {boolean} [data.allowCritical=true] Allow critical hit to be chosen as a possible damage mode
+   * @param {object} options                    Additional Dialog customization options
+   * @returns {Promise<D20Roll|null>}           A resulting D20Roll object constructed with the dialog, or null if the
+   *                                            dialog was closed
+   */
+  static async configureDialog(rolls, {
+    title, defaultRollMode, defaultCritical=false, template, allowCritical=true}={}, options={}) {
 
     // Render the Dialog inner HTML
-    const content = await renderTemplate(template ?? this.constructor.EVALUATION_TEMPLATE, {
-      formula: `${this.formula} + @bonus`,
+    const content = await renderTemplate(template ?? this.EVALUATION_TEMPLATE, {
+      formulas: rolls.map((roll, index) => ({
+        formula: `${roll.formula}${index === 0 ? " + @bonus" : ""}`,
+        type: CONFIG.ROTV.damageTypes[roll.options.type]?.label
+          ?? CONFIG.ROTV.healingTypes[roll.options.type]?.label ?? null
+      })),
       defaultRollMode,
       rollModes: CONFIG.Dice.rollModes
     });
@@ -211,12 +290,17 @@ export default class DamageRoll extends Roll {
         title,
         content,
         buttons: {
+          critical: {
+            condition: allowCritical,
+            label: game.i18n.localize("ROTV.CriticalHit"),
+            callback: html => resolve(rolls.map((r, i) => r._onDialogSubmit(html, true, i === 0)))
+          },
           normal: {
             label: game.i18n.localize(allowCritical ? "ROTV.Normal" : "ROTV.Roll"),
-            callback: html => resolve(this._onDialogSubmit(html, false))
+            callback: html => resolve(rolls.map((r, i) => r._onDialogSubmit(html, false, i === 0)))
           }
         },
-        default: "normal",
+        default: defaultCritical ? "critical" : "normal",
         close: () => resolve(null)
       }, options).render(true);
     });
@@ -228,14 +312,15 @@ export default class DamageRoll extends Roll {
    * Handle submission of the Roll evaluation configuration Dialog
    * @param {jQuery} html         The submitted dialog content
    * @param {boolean} isCritical  Is the damage a critical hit?
+   * @param {boolean} isFirst     Is this the first roll being prepared?
    * @returns {DamageRoll}        This damage roll.
    * @private
    */
-  _onDialogSubmit(html, isCritical) {
+  _onDialogSubmit(html, isCritical, isFirst) {
     const form = html[0].querySelector("form");
 
     // Append a situational bonus term
-    if ( form.bonus.value ) {
+    if ( form.bonus.value && isFirst ) {
       const bonus = new DamageRoll(form.bonus.value, this.data);
       if ( !(bonus.terms[0] instanceof OperatorTerm) ) this.terms.push(new OperatorTerm({operator: "+"}));
       this.terms = this.terms.concat(bonus.terms);

@@ -2,7 +2,7 @@
  * Base class for the advancement interface displayed by the advancement prompt that should be subclassed by
  * individual advancement types.
  *
- * @param {ItemRelics} item           Item to which the advancement belongs.
+ * @param {ItemRotV} item           Item to which the advancement belongs.
  * @param {string} advancementId  ID of the advancement this flow modifies.
  * @param {number} level          Level for which to configure this flow.
  * @param {object} [options={}]   Application rendering options.
@@ -13,7 +13,7 @@ export default class AdvancementFlow extends FormApplication {
 
     /**
      * The item that houses the Advancement.
-     * @type {ItemRelics}
+     * @type {ItemRotV}
      */
     this.item = item;
 
@@ -74,6 +74,17 @@ export default class AdvancementFlow extends FormApplication {
 
   /* -------------------------------------------- */
 
+  /**
+   * Set the retained data for this flow. This method gives the flow a chance to do any additional prep
+   * work required for the retained data before the application is rendered.
+   * @param {object} data  Retained data associated with this flow.
+   */
+  async retainData(data) {
+    this.retainedData = data;
+  }
+
+  /* -------------------------------------------- */
+
   /** @inheritdoc */
   getData() {
     return {
@@ -89,8 +100,25 @@ export default class AdvancementFlow extends FormApplication {
   /* -------------------------------------------- */
 
   /** @inheritdoc */
+  async _render(...args) {
+    await super._render(...args);
+
+    // Call setPosition on manager to adjust for size changes
+    this.options.manager?.setPosition();
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
   async _updateObject(event, formData) {
     await this.advancement.apply(this.level, formData);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  _canDragDrop(selector) {
+    return true;
   }
 
 }

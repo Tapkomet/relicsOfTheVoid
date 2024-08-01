@@ -1,13 +1,15 @@
 <form>
+    {{#each formulas}}
     <div class="form-group">
-        <label>{{ localize "ROTV.Formula" }}</label>
-        <input type="text" name="formula" value="{{formula}}" disabled/>
+        <label>{{ localize "ROTV.Formula" }} {{#if type}}({{type}}){{/if}}</label>
+        <input type="text" name="formula" value="{{formula}}" disabled>
     </div>
+    {{/each}}
     {{#if chooseModifier}}
     <div class="form-group">
         <label>{{ localize "ROTV.AbilityModifier" }}</label>
         <select name="ability">
-            {{selectOptions abilities selected=defaultAbility}}
+            {{selectOptions abilities selected=defaultAbility labelAttr="label"}}
         </select>
     </div>
     {{/if}}

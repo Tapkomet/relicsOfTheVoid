@@ -1,8 +1,8 @@
 /**
- * An extension of the base CombatTracker class to provide some Relics-specific functionality.
+ * An extension of the base CombatTracker class to provide some RotV-specific functionality.
  * @extends {CombatTracker}
  */
-export default class CombatTrackerRelics extends CombatTracker {
+export default class CombatTrackerRotV extends CombatTracker {
   /** @inheritdoc */
   async _onCombatantControl(event) {
     const btn = event.currentTarget;

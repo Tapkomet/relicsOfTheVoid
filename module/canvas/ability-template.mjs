@@ -1,5 +1,5 @@
 /**
- * A helper class for building MeasuredTemplates for Relics spells and abilities
+ * A helper class for building MeasuredTemplates for RotV spells and abilities
  */
 export default class AbilityTemplate extends MeasuredTemplate {
 
@@ -28,17 +28,18 @@ export default class AbilityTemplate extends MeasuredTemplate {
   /* -------------------------------------------- */
 
   /**
-   * A factory method to create an AbilityTemplate instance using provided data from an ItemRelics instance
-   * @param {ItemRelics} item               The Item object for which to construct the template
+   * A factory method to create an AbilityTemplate instance using provided data from an ItemRotV instance
+   * @param {ItemRotV} item               The Item object for which to construct the template
+   * @param {object} [options={}]       Options to modify the created template.
    * @returns {AbilityTemplate|null}    The template object, or null if the item does not produce a template
    */
-  static fromItem(item) {
+  static fromItem(item, options={}) {
     const target = item.system.target ?? {};
     const templateShape = rotv.config.areaTargetTypes[target.type]?.template;
     if ( !templateShape ) return null;
 
     // Prepare template data
-    const templateData = {
+    const templateData = foundry.utils.mergeObject({
       t: templateShape,
       user: game.user.id,
       distance: target.value,
@@ -46,25 +47,40 @@ export default class AbilityTemplate extends MeasuredTemplate {
       x: 0,
       y: 0,
       fillColor: game.user.color,
-      flags: { rotv: { origin: item.uuid } }
-    };
+      flags: { rotv: { origin: item.uuid, spellLevel: item.system.level } }
+    }, options);
 
     // Additional type-specific data
     switch ( templateShape ) {
       case "cone":
         templateData.angle = CONFIG.MeasuredTemplate.defaults.angle;
         break;
-      case "rect": // Relics rectangular AoEs are always cubes
-        templateData.distance = Math.hypot(target.value, target.value);
+      case "rect": // RotV rectangular AoEs are always cubes
         templateData.width = target.value;
-        templateData.direction = 45;
+        if ( game.settings.get("rotv", "gridAlignedSquareTemplates") ) {
+          templateData.distance = Math.hypot(target.value, target.value);
+          templateData.direction = 45;
+        } else {
+          // Override as 'ray' to make the template able to be rotated without morphing its shape
+          templateData.t = "ray";
+        }
         break;
-      case "ray": // Relics rays are most commonly 1 square (5 ft) in width
+      case "ray": // RotV rays are most commonly 1 square (5 ft) in width
         templateData.width = target.width ?? canvas.dimensions.distance;
         break;
       default:
         break;
     }
+
+    /**
+     * A hook event that fires before a template is created for an Item.
+     * @function rotv.preCreateItemTemplate
+     * @memberof hookEvents
+     * @param {ItemRotV} item                     Item for which the template is being placed.
+     * @param {object} templateData             Data used to create the new template.
+     * @returns {boolean}                       Explicitly return false to prevent the template from being placed.
+     */
+    if ( Hooks.call("rotv.preCreateItemTemplate", item, templateData) === false ) return null;
 
     // Return the template constructed from the item data
     const cls = CONFIG.MeasuredTemplate.documentClass;
@@ -72,6 +88,16 @@ export default class AbilityTemplate extends MeasuredTemplate {
     const object = new this(template);
     object.item = item;
     object.actorSheet = item.actor?.sheet || null;
+
+    /**
+     * A hook event that fires after a template is created for an Item.
+     * @function rotv.createItemTemplate
+     * @memberof hookEvents
+     * @param {ItemRotV} item                Item for which the template is being placed.
+     * @param {AbilityTemplate} template   The template being placed.
+     */
+    Hooks.callAll("rotv.createItemTemplate", item, object);
+
     return object;
   }
 

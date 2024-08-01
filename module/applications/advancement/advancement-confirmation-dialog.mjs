@@ -15,7 +15,7 @@ export default class AdvancementConfirmationDialog extends Dialog {
 
   /**
    * A helper function that displays the dialog prompting for an item deletion.
-   * @param {ItemRelics} item  Item to be deleted.
+   * @param {ItemRotV} item  Item to be deleted.
    * @returns {Promise<boolean|null>}  Resolves with whether advancements should be unapplied. Rejects with null.
    */
   static forDelete(item) {
@@ -34,7 +34,7 @@ export default class AdvancementConfirmationDialog extends Dialog {
 
   /**
    * A helper function that displays the dialog prompting for leveling down.
-   * @param {ItemRelics} item  The class whose level is being changed.
+   * @param {ItemRotV} item  The class whose level is being changed.
    * @returns {Promise<boolean|null>}  Resolves with whether advancements should be unapplied. Rejects with null.
    */
   static forLevelDown(item) {
@@ -53,7 +53,7 @@ export default class AdvancementConfirmationDialog extends Dialog {
 
   /**
    * A helper constructor function which displays the confirmation dialog.
-   * @param {ItemRelics} item              Item to be changed.
+   * @param {ItemRotV} item              Item to be changed.
    * @param {string} title             Localized dialog title.
    * @param {string} message           Localized dialog message.
    * @param {object} continueButton    Object containing label and icon for the action button.

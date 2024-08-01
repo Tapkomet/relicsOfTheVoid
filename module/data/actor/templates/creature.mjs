@@ -1,4 +1,5 @@
 import { FormulaField, MappingField } from "../../fields.mjs";
+import RollConfigField from "../../shared/roll-config-field.mjs";
 import CommonTemplate from "./common.mjs";
 
 /**
@@ -16,6 +17,8 @@ import CommonTemplate from "./common.mjs";
  * @property {object} bonuses
  * @property {AttackBonusesData} bonuses.mwak        Bonuses to melee weapon attacks.
  * @property {AttackBonusesData} bonuses.rwak        Bonuses to ranged weapon attacks.
+ * @property {AttackBonusesData} bonuses.msak        Bonuses to melee spell attacks.
+ * @property {AttackBonusesData} bonuses.rsak        Bonuses to ranged spell attacks.
  * @property {object} bonuses.abilities              Bonuses to ability scores.
  * @property {string} bonuses.abilities.check        Numeric or dice bonus to ability checks.
  * @property {string} bonuses.abilities.save         Numeric or dice bonus to ability saves.
@@ -31,6 +34,8 @@ export default class CreatureTemplate extends CommonTemplate {
       bonuses: new foundry.data.fields.SchemaField({
         mwak: makeAttackBonuses({label: "ROTV.BonusMWAttack"}),
         rwak: makeAttackBonuses({label: "ROTV.BonusRWAttack"}),
+        msak: makeAttackBonuses({label: "ROTV.BonusMSAttack"}),
+        rsak: makeAttackBonuses({label: "ROTV.BonusRSAttack"}),
         abilities: new foundry.data.fields.SchemaField({
           check: new FormulaField({required: true, label: "ROTV.BonusAbilityCheck"}),
           save: new FormulaField({required: true, label: "ROTV.BonusAbilitySave"}),
@@ -40,17 +45,31 @@ export default class CreatureTemplate extends CommonTemplate {
           dc: new FormulaField({required: true, deterministic: true, label: "ROTV.BonusSpellDC"})
         }, {label: "ROTV.BonusSpell"})
       }, {label: "ROTV.Bonuses"}),
-      skills: new MappingField(new foundry.data.fields.SchemaField({
-        value: new foundry.data.fields.NumberField({required: true, initial: 0, label: "ROTV.ProficiencyLevel"}),
-        ability: new foundry.data.fields.StringField({required: true, initial: "dex", label: "ROTV.Ability"}),
+      skills: new MappingField(new RollConfigField({
+        value: new foundry.data.fields.NumberField({
+          required: true, nullable: false, min: 0, max: 2, step: 0.5, initial: 0, label: "ROTV.ProficiencyLevel"
+        }),
+        ability: "dex",
         bonuses: new foundry.data.fields.SchemaField({
           check: new FormulaField({required: true, label: "ROTV.SkillBonusCheck"}),
           passive: new FormulaField({required: true, label: "ROTV.SkillBonusPassive"})
         }, {label: "ROTV.SkillBonuses"})
-      }), {initialKeys: CONFIG.ROTV.skills, initialValue: this._initialSkillValue}),
+      }), {
+        initialKeys: CONFIG.ROTV.skills, initialValue: this._initialSkillValue,
+        initialKeysOnly: true, label: "ROTV.Skills"
+      }),
+      tools: new MappingField(new RollConfigField({
+        value: new foundry.data.fields.NumberField({
+          required: true, nullable: false, min: 0, max: 2, step: 0.5, initial: 1, label: "ROTV.ProficiencyLevel"
+        }),
+        ability: "int",
+        bonuses: new foundry.data.fields.SchemaField({
+          check: new FormulaField({required: true, label: "ROTV.CheckBonus"})
+        }, {label: "ROTV.ToolBonuses"})
+      })),
       spells: new MappingField(new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.NumberField({
-          nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SpellProfAvailable"
+          nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.SpellProgAvailable"
         }),
         override: new foundry.data.fields.NumberField({
           integer: true, min: 0, label: "ROTV.SpellProgOverride"
@@ -86,11 +105,14 @@ export default class CreatureTemplate extends CommonTemplate {
   }
 
   /* -------------------------------------------- */
+  /*  Migrations                                  */
+  /* -------------------------------------------- */
 
   /** @inheritdoc */
-  static migrateData(source) {
-    super.migrateData(source);
+  static _migrateData(source) {
+    super._migrateData(source);
     CreatureTemplate.#migrateSensesData(source);
+    CreatureTemplate.#migrateToolData(source);
   }
 
   /* -------------------------------------------- */
@@ -115,7 +137,7 @@ export default class CreatureTemplate extends CommonTemplate {
       const match = s.match(pattern);
       if ( !match ) continue;
       const type = match[1].toLowerCase();
-      if ( type in CONFIG.ROTV.senses ) {
+      if ( (type in CONFIG.ROTV.senses) && !(type in source.attributes.senses) ) {
         source.attributes.senses[type] = Number(match[2]).toNearest(0.5);
         wasMatched = true;
       }
@@ -123,6 +145,42 @@ export default class CreatureTemplate extends CommonTemplate {
 
     // If nothing was matched, but there was an old string - put the whole thing in "special"
     if ( !wasMatched && original ) source.attributes.senses.special = original;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Migrate traits.toolProf to the tools field.
+   * @param {object} source  The candidate source data from which the model will be constructed.
+   */
+  static #migrateToolData(source) {
+    const original = source.traits?.toolProf;
+    if ( !original || foundry.utils.isEmpty(original.value) ) return;
+    source.tools ??= {};
+    for ( const prof of original.value ) {
+      const validProf = (prof in CONFIG.ROTV.toolProficiencies) || (prof in CONFIG.ROTV.toolIds);
+      if ( !validProf || (prof in source.tools) ) continue;
+      source.tools[prof] = {
+        value: 1,
+        ability: "int",
+        bonuses: {check: ""}
+      };
+    }
+  }
+
+  /* -------------------------------------------- */
+  /*  Helpers                                     */
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  getRollData({ deterministic=false }={}) {
+    const data = super.getRollData({ deterministic });
+    data.classes = {};
+    for ( const [identifier, cls] of Object.entries(this.parent.classes) ) {
+      data.classes[identifier] = {...cls.system};
+      if ( cls.subclass ) data.classes[identifier].subclass = cls.subclass.system;
+    }
+    return data;
   }
 }
 

@@ -2,11 +2,11 @@
 
     {{!-- Item Sheet Header --}}
     <header class="sheet-header flexrow">
-        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img"/>
+        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img">
 
         <div class="header-details flexrow">
             <h1 class="charname">
-                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}"/>
+                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}">
             </h1>
 
             <div class="item-subtitle">
@@ -19,10 +19,10 @@
                     {{labels.featType}}
                 </li>
                 <li>
-                    <input type="text" name="system.requirements" value="{{system.requirements}}" placeholder="{{ localize 'ROTV.Requirements' }}"/>
+                    <input type="text" name="system.requirements" value="{{system.requirements}}" placeholder="{{ localize 'ROTV.Requirements' }}">
                 </li>
                 <li>
-                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'ROTV.Source' }}"/>
+                    {{> "rotv.item-source"}}
                 </li>
             </ul>
         </div>
@@ -39,30 +39,68 @@
     <section class="sheet-body">
 
         {{!-- Description Tab --}}
-        {{> "rotv.item-description"}}
+        {{> "rotv.item-description" }}
 
         {{!-- Details Tab --}}
         <div class="tab details" data-group="primary" data-tab="details">
-            <h3 class="form-header">{{localize "ROTV.ItemFeatureDetails"}}</h3>
+            <h3 class="form-header">{{ localize "ROTV.ItemFeatureDetails" }}</h3>
 
             {{!-- Feature Type --}}
             <div class="form-group">
-                <label>{{localize "ROTV.ItemFeatureType"}}</label>
+                <label>{{ localize "ROTV.ItemFeatureType" }}</label>
                 <select name="system.type.value">
-                    {{selectOptions config.featureTypes selected=system.type.value blank="" labelAttr="label"}}
+                    {{ selectOptions config.featureTypes selected=system.type.value blank="" labelAttr="label" }}
                 </select>
             </div>
 
-            {{#if featureSubtypes}}
+            {{#if itemSubtypes}}
             <div class="form-group">
                 <label>
-                    {{localize "ROTV.ItemFeatureSubtype"
-                        category=(lookup (lookup config.featureTypes system.type.value) "label")}}
+                    {{ localize "ROTV.ItemFeatureSubtype"
+                                category=(lookup (lookup config.featureTypes system.type.value) "label") }}
                 </label>
                 <select name="system.type.subtype">
-                    {{selectOptions featureSubtypes selected=system.type.subtype blank=""}}
+                    {{ selectOptions itemSubtypes selected=system.type.subtype blank="" }}
                 </select>
             </div>
+            {{/if}}
+
+            {{!-- Feature Properties --}}
+            <div class="feature-properties form-group stacked">
+                <label>{{ localize "ROTV.ItemFeatureProperties" }}</label>
+                {{#each properties}}
+                <label class="checkbox">
+                    <input type="checkbox" name="system.properties.{{ @key }}" {{ checked selected }}> {{ label }}
+                </label>
+                {{/each}}
+            </div>
+
+            <h3 class="form-header">{{ localize "ROTV.Prerequisites.Header" }}</h3>
+
+            <div class="form-group">
+                <label>{{ localize "ROTV.Prerequisites.FIELDS.prerequisites.level.label" }}</label>
+                {{ numberInput system.prerequisites.level name="system.prerequisites.level" step=1 }}
+                <p class="hint">{{ localize "ROTV.Prerequisites.FIELDS.prerequisites.level.hint" }}</p>
+            </div>
+
+            {{#if system.isEnchantmentSource}}
+            <h3 class="form-header">{{ localize "ROTV.Enchantment.Label" }}</h3>
+
+            <div class="form-group">
+                <label>{{ localize "ROTV.Enchantment.FIELDS.enchantment.items.max.label" }}</label>
+                <input type="text" name="system.enchantment.items.max" value="{{ source.enchantment.items.max }}">
+                <p class="hint">{{ localize "ROTV.Enchantment.FIELDS.enchantment.items.max.hint" }}</p>
+            </div>
+            
+            <div class="form-group">
+                <label>{{ localize "ROTV.Enchantment.FIELDS.enchantment.items.period.label" }}</label>
+                <select name="system.enchantment.items.period">
+                    {{ selectOptions config.enchantmentPeriods selected=system.enchantment.items.period
+                                     labelAttr="label" blank=(localize "ROTV.UsesPeriods.Never") }}
+                </select>
+                <p class="hint">{{ localize "ROTV.Enchantment.FIELDS.enchantment.items.period.hint" }}</p>
+            </div>
+
             {{/if}}
 
             <h3 class="form-header">{{ localize "ROTV.FeatureUsage" }}</h3>
@@ -77,10 +115,10 @@
                 <div class="form-fields">
                     <span>{{ localize "ROTV.FeatureRechargeOn" }}</span>
                     {{numberInput system.recharge.value name="system.recharge.value"
-                        placeholder=(localize "ROTV.FeatureRechargeResult")}}
+                                  placeholder=(localize "ROTV.FeatureRechargeResult")}}
                     <label class="checkbox">
                         {{ localize "ROTV.Charged" }}
-                        <input type="checkbox" name="system.recharge.charged" {{checked system.recharge.charged}}/>
+                        <input type="checkbox" name="system.recharge.charged" {{checked system.recharge.charged}}>
                     </label>
                 </div>
             </div>

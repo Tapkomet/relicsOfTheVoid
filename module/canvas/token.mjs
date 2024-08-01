@@ -1,7 +1,22 @@
 /**
  * Extend the base Token class to implement additional system-specific logic.
  */
-export default class TokenRelics extends Token {
+export default class TokenRotV extends Token {
+
+  /**
+   * Update the token ring when this token is targeted.
+   * @param {UserRotV} user         The user whose targeting has changed.
+   * @param {TokenRotV} token       The token that was targeted.
+   * @param {boolean} targeted    Is the token targeted or not?
+   */
+  static onTargetToken(user, token, targeted) {
+    if ( !targeted ) return;
+    if ( !token.hasDynamicRing ) return;
+    const color = Color.from(user.color);
+    token.ring.flashColor(color, { duration: 500, easing: token.ring.constructor.easeTwoPeaks });
+  }
+
+  /* -------------------------------------------- */
 
   /** @inheritdoc */
   _drawBar(number, bar, data) {
@@ -21,18 +36,18 @@ export default class TokenRelics extends Token {
   _drawHPBar(number, bar, data) {
 
     // Extract health data
-    let {value, max, temp, tempmax} = this.document.actor.system.attributes.hp;
+    let {value, max, effectiveMax, temp, tempmax} = this.document.actor.system.attributes.hp;
     temp = Number(temp || 0);
     tempmax = Number(tempmax || 0);
 
     // Differentiate between effective maximum and displayed maximum
-    const effectiveMax = Math.max(0, max + tempmax);
+    effectiveMax = Math.max(0, effectiveMax);
     let displayMax = max + (tempmax > 0 ? tempmax : 0);
 
     // Allocate percentages of the total
-    const tempPct = Math.clamped(temp, 0, displayMax) / displayMax;
-    const colorPct = Math.clamped(value, 0, effectiveMax) / displayMax;
-    const hpColor = rotv.documents.ActorRelics.getHPColor(value, effectiveMax);
+    const tempPct = Math.clamp(temp, 0, displayMax) / displayMax;
+    const colorPct = Math.clamp(value, 0, effectiveMax) / displayMax;
+    const hpColor = rotv.documents.ActorRotV.getHPColor(value, effectiveMax);
 
     // Determine colors to use
     const blk = 0x000000;
@@ -42,7 +57,7 @@ export default class TokenRelics extends Token {
     const w = this.w;
     let h = Math.max((canvas.dimensions.size / 12), 8);
     if ( this.document.height >= 2 ) h *= 1.6;
-    const bs = Math.clamped(h / 8, 1, 2);
+    const bs = Math.clamp(h / 8, 1, 2);
     const bs1 = bs+1;
 
     // Overall bar container
@@ -72,5 +87,38 @@ export default class TokenRelics extends Token {
     // Set position
     let posY = (number === 0) ? (this.h - h) : 0;
     bar.position.set(0, posY);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  _onApplyStatusEffect(statusId, active) {
+    const applicableEffects = [CONFIG.specialStatusEffects.DEFEATED, CONFIG.specialStatusEffects.INVISIBLE];
+    if ( applicableEffects.includes(statusId) && this.hasDynamicRing ) {
+      this.renderFlags.set({refreshRingVisuals: true});
+    }
+    super._onApplyStatusEffect(statusId, active);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  _configureFilterEffect(statusId, active) {
+    if ( (statusId === CONFIG.specialStatusEffects.INVISIBLE) && this.hasDynamicRing ) active = false;
+    return super._configureFilterEffect(statusId, active);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @override */
+  getRingColors() {
+    return this.document.getRingColors();
+  }
+
+  /* -------------------------------------------- */
+
+  /** @override */
+  getRingEffects() {
+    return this.document.getRingEffects();
   }
 }

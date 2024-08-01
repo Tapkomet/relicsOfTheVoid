@@ -2,29 +2,55 @@
 
     {{!-- Item Sheet Header --}}
     <header class="sheet-header flexrow">
-        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img"/>
+        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img">
 
         <div class="header-details flexrow">
             <h1 class="charname">
-                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}"/>
+                {{#if system.identified}}
+                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}">
+                {{else}}
+                <input name="system.unidentified.name" type="text" value="{{system.unidentified.name}}"
+                       placeholder="{{ localize 'ROTV.NameUnidentified' }}">
+                {{/if}}
             </h1>
 
             <div class="item-subtitle">
                 <h4 class="item-type">{{itemType}}</h4>
-                <span class="item-status">{{itemStatus}}</span>
+                <label class="equipped">
+                    <input type="checkbox" name="system.equipped" {{checked system.equipped}}>
+                    {{#if system.equipped}}
+                        {{ localize "ROTV.Equipped" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
+                    {{else}}
+                        {{ localize "ROTV.Unequipped" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
+                    {{/if}}
+                </label>
+                <label class="identified">
+                    <input type="checkbox" name="system.identified" {{checked system.identified}}>
+                    {{#if system.identified}}
+                        {{ localize "ROTV.Identified" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
+                    {{else}}
+                        {{ localize "ROTV.Unidentified.Title" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
+                    {{/if}}
+                </label>
             </div>
 
             <ul class="summary flexrow">
+                <li>{{ system.type.label }}</li>
                 <li>
-                    {{lookup config.weaponTypes system.weaponType }}
-                </li>
-                <li>
-                    <select name="system.rarity">
+                    {{#if concealDetails}}
+                    <span>{{ localize "ROTV.Unidentified.Title" }}</span>
+                    {{else}}
+                    <select name="system.rarity" {{~#if concealDetails}} inert{{/if}}>
                         {{selectOptions config.itemRarity selected=system.rarity blank=""}}
                     </select>
+                    {{/if}}
                 </li>
                 <li>
-                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'ROTV.Source' }}"/>
+                    {{> "rotv.item-source"}}
                 </li>
             </ul>
         </div>
@@ -45,53 +71,38 @@
 
         {{!-- Details Tab --}}
         <div class="tab details" data-group="primary" data-tab="details">
+
             <h3 class="form-header">{{ localize "ROTV.ItemWeaponDetails" }}</h3>
 
             {{!-- Weapon Type --}}
             <div class="form-group">
                 <label>{{ localize "ROTV.ItemWeaponType" }}</label>
-                <select name="system.weaponType">
-                    {{selectOptions config.weaponTypes selected=system.weaponType}}
+                <select name="system.type.value">
+                    {{selectOptions config.weaponTypes selected=system.type.value}}
                 </select>
             </div>
+
 
             <div class="form-group">
-                <label>{{ localize "ROTV.ItemWeaponBase" }}</label>
-                <select name="system.baseItem">
-                    {{selectOptions baseItems selected=system.baseItem blank=""}}
+                <label>{{localize "ROTV.Proficiency"}}</label>
+                <select name="system.proficient" data-dtype="Number">
+                    {{selectOptions config.weaponAndArmorProficiencyLevels selected=system.proficient
+                                    blank=(localize "ROTV.Automatic")}}
                 </select>
             </div>
-
-            {{#unless isMountable}}
-
-            {{!-- Weapon Status --}}
-            <div class="form-group stacked">
-                <label>{{ localize "ROTV.ItemWeaponStatus" }}</label>
-                <div class="form-fields">
-                    <label class="checkbox">
-                        <input type="checkbox" name="system.proficient" {{checked system.proficient}}/> {{ localize "ROTV.Proficient" }}
-                    </label>
-                    <label class="checkbox">
-                        <input type="checkbox" name="system.equipped" {{checked system.equipped}}/> {{ localize "ROTV.Equipped" }}
-                    </label>
-                    <label class="checkbox">
-                        <input type="checkbox" name="system.identified" {{checked system.identified}}/> {{ localize "ROTV.Identified" }}
-                    </label>
-                </div>
-            </div>
-            {{/unless}}
 
             {{!-- Weapon Properties --}}
             <div class="form-group stacked weapon-properties">
                 <label>{{ localize "ROTV.ItemWeaponProperties" }}</label>
-                {{#each config.weaponProperties as |name prop|}}
+                {{#each properties}}
                 <label class="checkbox">
-                    <input type="checkbox" name="system.properties.{{prop}}" {{checked (lookup ../system.properties prop)}}/> {{ name }}
+                    <input type="checkbox" name="system.properties.{{ @key }}" {{ checked selected }}>
+                    {{ label }}
                 </label>
                 {{/each}}
             </div>
 
-            {{#if isMountable}}
+            {{#if system.isMountable}}
             <div class="form-group">
                 <label>{{localize 'ROTV.ArmorClass'}}</label>
                 <div class="form-fields">
@@ -99,20 +110,16 @@
                 </div>
             </div>
 
-
             {{> "rotv.item-mountable"}}
             {{/if}}
 
-            {{#if isMountable}}
-                <div class="form-group">
-                    <label>{{localize 'ROTV.DR'}}</label>
-                    <div class="form-fields">
-                        {{numberInput system.damRed name="system.damRed"}}
-                    </div>
+            {{#if properties.mgc.selected}}
+            <div class="form-group">
+                <label>{{ localize "ROTV.MagicalBonus" }}</label>
+                <div class="form-fields">
+                    {{ numberInput system.magicalBonus name="system.magicalBonus" min="0" step="1" placeholder="0" }}
                 </div>
-
-
-                {{> "rotv.item-mountable"}}
+            </div>
             {{/if}}
 
             <h3 class="form-header">{{ localize "ROTV.ItemWeaponUsage" }}</h3>

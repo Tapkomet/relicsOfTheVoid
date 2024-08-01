@@ -1,42 +1,84 @@
+import SystemDataModel from "../../abstract.mjs";
+import SourceField from "../../shared/source-field.mjs";
+
+const { SchemaField, HTMLField } = foundry.data.fields;
+
 /**
  * Data model template with item description & source.
  *
  * @property {object} description               Various item descriptions.
  * @property {string} description.value         Full item description.
  * @property {string} description.chat          Description displayed in chat card.
- * @property {string} description.unidentified  Description displayed if item is unidentified.
- * @property {string} source                    Adventure or sourcebook where this item originated.
+ * @property {SourceField} source               Adventure or sourcebook where this item originated.
  * @mixin
  */
-export default class ItemDescriptionTemplate extends foundry.abstract.DataModel {
+export default class ItemDescriptionTemplate extends SystemDataModel {
   /** @inheritdoc */
   static defineSchema() {
     return {
-      description: new foundry.data.fields.SchemaField({
-        value: new foundry.data.fields.HTMLField({required: true, nullable: true, label: "ROTV.Description"}),
-        chat: new foundry.data.fields.HTMLField({required: true, nullable: true, label: "ROTV.DescriptionChat"}),
-        unidentified: new foundry.data.fields.HTMLField({
-          required: true, nullable: true, label: "ROTV.DescriptionUnidentified"
-        })
+      description: new SchemaField({
+        value: new HTMLField({required: true, nullable: true, label: "ROTV.Description"}),
+        chat: new HTMLField({required: true, nullable: true, label: "ROTV.DescriptionChat"})
       }),
-      source: new foundry.data.fields.StringField({required: true, label: "ROTV.Source"})
+      source: new SourceField()
     };
   }
 
   /* -------------------------------------------- */
+  /*  Data Migrations                             */
+  /* -------------------------------------------- */
 
   /** @inheritdoc */
-  static migrateData(source) {
+  static _migrateData(source) {
+    super._migrateData(source);
     ItemDescriptionTemplate.#migrateSource(source);
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Convert null source to the blank string.
+   * Convert source string into custom object.
    * @param {object} source  The candidate source data from which the model will be constructed.
    */
   static #migrateSource(source) {
-    if ( source.source === null ) source.source = "";
+    if ( ("source" in source) && (foundry.utils.getType(source.source) !== "Object") ) {
+      source.source = { custom: source.source };
+    }
+  }
+
+  /* -------------------------------------------- */
+  /*  Getters                                     */
+  /* -------------------------------------------- */
+
+  /**
+   * What properties can be used for this item?
+   * @returns {Set<string>}
+   */
+  get validProperties() {
+    return new Set(CONFIG.ROTV.validProperties[this.parent.type] ?? []);
+  }
+
+  /* -------------------------------------------- */
+  /*  Helpers                                     */
+  /* -------------------------------------------- */
+
+  /**
+   * Create the properties filter configuration for a type.
+   * @param {string} type  Item type.
+   * @returns {CompendiumBrowserFilterDefinitionEntry}
+   */
+  static compendiumBrowserPropertiesFilter(type) {
+    return {
+      label: "ROTV.Properties",
+      type: "set",
+      config: {
+        choices: Object.entries(CONFIG.ROTV.itemProperties).reduce((obj, [k, v]) => {
+          if ( CONFIG.ROTV.validProperties[type]?.has(k) ) obj[k] = v;
+          return obj;
+        }, {}),
+        keyPath: "system.properties",
+        multiple: true
+      }
+    };
   }
 }

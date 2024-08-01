@@ -9,7 +9,7 @@ export default class ActorArmorConfig extends BaseConfigSheet {
 
     /**
      * Cloned copy of the actor for previewing changes.
-     * @type {ActorRelics}
+     * @type {ActorRotV}
      */
     this.clone = this.document.clone();
   }
@@ -22,8 +22,7 @@ export default class ActorArmorConfig extends BaseConfigSheet {
       classes: ["rotv", "actor-armor-config"],
       template: "systems/rotv/templates/apps/actor-armor.hbs",
       width: 320,
-      height: "auto",
-      sheetConfig: false
+      height: "auto"
     });
   }
 

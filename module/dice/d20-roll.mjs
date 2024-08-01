@@ -1,5 +1,5 @@
 /**
- * A type of Roll specific to a d20-based check, save, or attack roll in the Relics system.
+ * A type of Roll specific to a d20-based check, save, or attack roll in the RotV system.
  * @param {string} formula                       The string formula to parse
  * @param {object} data                          The data object against which to parse attributes within the formula
  * @param {object} [options={}]                  Extra optional arguments which describe or modify the D20Roll
@@ -55,14 +55,14 @@ export default class D20Roll extends Roll {
   /* -------------------------------------------- */
 
   /**
-   * Advantage mode of a Relics d20 roll
+   * Advantage mode of a RotV d20 roll
    * @enum {number}
    */
   static ADV_MODE = {
     NORMAL: 0,
     ADVANTAGE: 1,
     DISADVANTAGE: -1
-  }
+  };
 
   /* -------------------------------------------- */
 
@@ -141,24 +141,23 @@ export default class D20Roll extends Roll {
     d20.modifiers = [];
 
     // Halfling Lucky
-    //if ( this.options.halflingLucky ) d20.modifiers.push("r1=1");
+    if ( this.options.halflingLucky ) d20.modifiers.push("r1=1");
 
     // Reliable Talent
-    //if ( this.options.reliableTalent ) d20.modifiers.push("min10");
+    if ( this.options.reliableTalent ) d20.modifiers.push("min10");
 
     // Handle Advantage or Disadvantage
-    //if ( this.hasAdvantage ) {
-    //  d20.number = this.options.elvenAccuracy ? 3 : 2;
-     // d20.modifiers.push("kh");
-     // d20.options.advantage = true;
-    //}
-    //else if ( this.hasDisadvantage ) {
-    //  d20.number = 2;
-    //  d20.modifiers.push("kl");
-    //  d20.options.disadvantage = true;
-    //}
-    //else
-    d20.number = 1;
+    if ( this.hasAdvantage ) {
+      d20.number = this.options.elvenAccuracy ? 3 : 2;
+      d20.modifiers.push("kh");
+      d20.options.advantage = true;
+    }
+    else if ( this.hasDisadvantage ) {
+      d20.number = 2;
+      d20.modifiers.push("kl");
+      d20.options.disadvantage = true;
+    }
+    else d20.number = 1;
 
     // Assign critical and fumble thresholds
     if ( this.options.critical ) d20.options.critical = this.options.critical;
@@ -176,9 +175,13 @@ export default class D20Roll extends Roll {
 
   /** @inheritdoc */
   async toMessage(messageData={}, options={}) {
+    // Record the preferred rollMode
+    options.rollMode ??= this.options.rollMode;
+    if ( options.rollMode === "roll" ) options.rollMode = undefined;
+    options.rollMode ||= game.settings.get("core", "rollMode");
 
     // Evaluate the roll now so we have the results available to determine whether reliable talent came into play
-    if ( !this._evaluated ) await this.evaluate({async: true});
+    if ( !this._evaluated ) await this.evaluate({ allowInteractive: options.rollMode !== CONST.DICE_ROLL_MODES.BLIND });
 
     // Add appropriate advantage mode message flavor and rotv roll flags
     messageData.flavor = messageData.flavor || this.options.flavor;
@@ -193,8 +196,6 @@ export default class D20Roll extends Roll {
       if ( isRT ) d20.options.flavor = d20.options.flavor ? `${d20.options.flavor} (${label})` : label;
     }
 
-    // Record the preferred rollMode
-    options.rollMode = options.rollMode ?? this.options.rollMode;
     return super.toMessage(messageData, options);
   }
 
@@ -220,7 +221,7 @@ export default class D20Roll extends Roll {
 
     // Render the Dialog inner HTML
     const content = await renderTemplate(template ?? this.constructor.EVALUATION_TEMPLATE, {
-      formula: `${this.formula} + @bonus`,
+      formulas: [{formula: `${this.formula} + @bonus`}],
       defaultRollMode,
       rollModes: CONFIG.Dice.rollModes,
       chooseModifier,
@@ -278,25 +279,11 @@ export default class D20Roll extends Roll {
       this.terms = this.terms.concat(bonus.terms);
     }
 
-
-
-    if (advantageMode == D20Roll.ADV_MODE.ADVANTAGE) {
-        this.terms.push(new OperatorTerm({operator: "-"}));
-        this.terms.push(new NumericTerm({number: "9"}));
-    }
-
-
-    if (advantageMode == D20Roll.ADV_MODE.DISADVANTAGE) {
-        this.terms.push(new OperatorTerm({operator: "-"}));
-        this.terms.push(new NumericTerm({number: "6"}));
-    }
-
     // Customize the modifier
     if ( form.ability?.value ) {
       const abl = this.data.abilities[form.ability.value];
       this.terms = this.terms.flatMap(t => {
         if ( t.term === "@mod" ) return new NumericTerm({number: abl.mod});
-        if ( t.term === "@dmgMod" ) return new NumericTerm({number: abl.dmgMod});
         if ( t.term === "@abilityCheckBonus" ) {
           const bonus = abl.bonuses?.check;
           if ( bonus ) return new Roll(bonus, this.data).terms;
@@ -304,7 +291,7 @@ export default class D20Roll extends Roll {
         }
         return t;
       });
-      this.options.flavor += ` (${CONFIG.ROTV.abilities[form.ability.value]})`;
+      this.options.flavor += ` (${CONFIG.ROTV.abilities[form.ability.value]?.label ?? ""})`;
     }
 
     // Apply advantage or disadvantage

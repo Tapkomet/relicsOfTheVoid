@@ -26,7 +26,7 @@ export default class AdvancementConfig extends FormApplication {
 
   /**
    * Parent item to which this advancement belongs.
-   * @type {ItemRelics}
+   * @type {ItemRotV}
    */
   item;
 
@@ -68,7 +68,7 @@ export default class AdvancementConfig extends FormApplication {
   /** @inheritdoc */
   async close(options={}) {
     await super.close(options);
-    delete this.advancement.apps[this.appId];
+    delete this.advancement?.apps[this.appId];
   }
 
   /* -------------------------------------------- */
@@ -79,28 +79,19 @@ export default class AdvancementConfig extends FormApplication {
     if ( ["class", "subclass"].includes(this.item.type) ) delete levels[0];
     else levels[0] = game.i18n.localize("ROTV.AdvancementLevelAnyHeader");
     const context = {
+      appId: this.id,
       CONFIG: CONFIG.ROTV,
       ...this.advancement.toObject(false),
       src: this.advancement.toObject(),
       default: {
         title: this.advancement.constructor.metadata.title,
-        icon: this.advancement.constructor.metadata.icon
+        icon: this.advancement.constructor.metadata.icon,
+        hint: ""
       },
       levels,
       showClassRestrictions: this.item.type === "class",
       showLevelSelector: !this.advancement.constructor.metadata.multiLevel
     };
-    Object.defineProperty(context, "data", {
-      get() {
-        foundry.utils.logCompatibilityWarning(
-          `You are accessing the ${this.constructor.name}#data object which is no longer used. `
-          + "Since 2.1 the Advancement class and its contained DataModel are merged into a combined data structure. "
-          + "You should now reference keys which were previously contained within the data object directly.",
-          { since: "RotV 2.1", until: "RotV 2.2" }
-        );
-        return context;
-      }
-    });
     return context;
   }
 
@@ -111,7 +102,7 @@ export default class AdvancementConfig extends FormApplication {
    * @param {object} configuration  Configuration object.
    * @returns {object}              Modified configuration.
    */
-  prepareConfigurationUpdate(configuration) {
+  async prepareConfigurationUpdate(configuration) {
     return configuration;
   }
 
@@ -123,6 +114,10 @@ export default class AdvancementConfig extends FormApplication {
 
     // Remove an item from the list
     if ( this.options.dropKeyPath ) html.on("click", "[data-action='delete']", this._onItemDelete.bind(this));
+
+    for ( const element of html[0].querySelectorAll("multi-select") ) {
+      element.addEventListener("change", this._onChangeInput.bind(this));
+    }
   }
 
   /* -------------------------------------------- */
@@ -138,17 +133,7 @@ export default class AdvancementConfig extends FormApplication {
   /** @inheritdoc */
   async _updateObject(event, formData) {
     let updates = foundry.utils.expandObject(formData);
-    if ( updates.data ) {
-      foundry.utils.logCompatibilityWarning(
-        "An update being performed on an advancement points to `data`. Advancement data has moved to the top level so the"
-        + " leading `data.` is no longer required.",
-        { since: "RotV 2.1", until: "RotV 2.2" }
-      );
-      const data = updates.data;
-      delete updates.data;
-      updates = { ...updates, ...data };
-    }
-    if ( updates.configuration ) updates.configuration = this.prepareConfigurationUpdate(updates.configuration);
+    if ( updates.configuration ) updates.configuration = await this.prepareConfigurationUpdate(updates.configuration);
     await this.advancement.update(updates);
   }
 
@@ -163,7 +148,11 @@ export default class AdvancementConfig extends FormApplication {
    */
   static _cleanedObject(object) {
     return Object.entries(object).reduce((obj, [key, value]) => {
-      if ( value ) obj[key] = value;
+      let keep = false;
+      if ( foundry.utils.getType(value) === "Object" ) {
+        keep = Object.values(value).some(v => v);
+      } else if ( value ) keep = true;
+      if ( keep ) obj[key] = value;
       else obj[`-=${key}`] = null;
       return obj;
     }, {});
@@ -176,7 +165,7 @@ export default class AdvancementConfig extends FormApplication {
   /**
    * Handle deleting an existing Item entry from the Advancement.
    * @param {Event} event        The originating click event.
-   * @returns {Promise<ItemRelics>}  The updated parent Item after the application re-renders.
+   * @returns {Promise<ItemRotV>}  The updated parent Item after the application re-renders.
    * @protected
    */
   async _onItemDelete(event) {
@@ -185,7 +174,7 @@ export default class AdvancementConfig extends FormApplication {
     if ( !uuidToDelete ) return;
     const items = foundry.utils.getProperty(this.advancement.configuration, this.options.dropKeyPath);
     const updates = { configuration: await this.prepareConfigurationUpdate({
-      [this.options.dropKeyPath]: items.filter(uuid => uuid !== uuidToDelete)
+      [this.options.dropKeyPath]: items.filter(i => i.uuid !== uuidToDelete)
     }) };
     await this.advancement.update(updates);
   }
@@ -215,22 +204,27 @@ export default class AdvancementConfig extends FormApplication {
     try {
       this._validateDroppedItem(event, item);
     } catch(err) {
-      return ui.notifications.error(err.message);
+      ui.notifications.error(err.message);
+      return null;
     }
 
     const existingItems = foundry.utils.getProperty(this.advancement.configuration, this.options.dropKeyPath);
 
     // Abort if this uuid is the parent item
     if ( item.uuid === this.item.uuid ) {
-      return ui.notifications.error(game.i18n.localize("ROTV.AdvancementItemGrantRecursiveWarning"));
+      ui.notifications.error("ROTV.AdvancementItemGrantRecursiveWarning", {localize: true});
+      return null;
     }
 
     // Abort if this uuid exists already
-    if ( existingItems.includes(item.uuid) ) {
-      return ui.notifications.warn(game.i18n.localize("ROTV.AdvancementItemGrantDuplicateWarning"));
+    if ( existingItems.find(i => i.uuid === item.uuid) ) {
+      ui.notifications.warn("ROTV.AdvancementItemGrantDuplicateWarning", {localize: true});
+      return null;
     }
 
-    await this.advancement.update({[`configuration.${this.options.dropKeyPath}`]: [...existingItems, item.uuid]});
+    await this.advancement.update({[`configuration.${this.options.dropKeyPath}`]: [
+      ...existingItems, { uuid: item.uuid }
+    ]});
   }
 
   /* -------------------------------------------- */
@@ -239,7 +233,7 @@ export default class AdvancementConfig extends FormApplication {
    * Called when an item is dropped to validate the Item before it is saved. An error should be thrown
    * if the item is invalid.
    * @param {Event} event  Triggering drop event.
-   * @param {ItemRelics} item  The materialized Item that was dropped.
+   * @param {ItemRotV} item  The materialized Item that was dropped.
    * @throws An error if the item is invalid.
    * @protected
    */

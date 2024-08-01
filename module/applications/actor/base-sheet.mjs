@@ -1,41 +1,61 @@
-import ActiveEffectRelics from "../../documents/active-effect.mjs";
 import * as Trait from "../../documents/actor/trait.mjs";
-import ItemRelics from "../../documents/item.mjs";
+import ItemRotV from "../../documents/item.mjs";
+import EffectsElement from "../components/effects.mjs";
 
 import ActorAbilityConfig from "./ability-config.mjs";
 import ActorArmorConfig from "./armor-config.mjs";
+import ActorConcentrationConfig from "./concentration-config.mjs";
 import ActorHitDiceConfig from "./hit-dice-config.mjs";
 import ActorHitPointsConfig from "./hit-points-config.mjs";
 import ActorInitiativeConfig from "./initiative-config.mjs";
 import ActorMovementConfig from "./movement-config.mjs";
 import ActorSensesConfig from "./senses-config.mjs";
 import ActorSheetFlags from "./sheet-flags.mjs";
-import ActorSkillConfig from "./skill-config.mjs";
 import ActorTypeConfig from "./type-config.mjs";
+import DamageModificationConfig from "./damage-modification-config.mjs";
+import SourceConfig from "../source-config.mjs";
 
 import AdvancementConfirmationDialog from "../advancement/advancement-confirmation-dialog.mjs";
 import AdvancementManager from "../advancement/advancement-manager.mjs";
 
-import PropertyAttribution from "../property-attribution.mjs";
 import TraitSelector from "./trait-selector.mjs";
+import ProficiencyConfig from "./proficiency-config.mjs";
+import ToolSelector from "./tool-selector.mjs";
+import ActorSheetMixin from "./sheet-mixin.mjs";
+import ActorSpellSlotsConfig from "./spell-slots-config.mjs";
 
 /**
  * Extend the basic ActorSheet class to suppose system-specific logic and functionality.
  * @abstract
  */
-export default class ActorSheetRelics extends ActorSheet {
+export default class ActorSheetRotV extends ActorSheetMixin(ActorSheet) {
+
+  /**
+   * @typedef {object} FilterStateRotV
+   * @property {string} name             Filtering by name.
+   * @property {Set<string>} properties  Filtering by some property.
+   */
 
   /**
    * Track the set of item filters which are applied
-   * @type {Object<string, Set>}
+   * @type {Object<string, FilterStateRotV>}
    * @protected
    */
   _filters = {
-    inventory: new Set(),
-    spellbook: new Set(),
-    features: new Set(),
-    effects: new Set()
+    inventory: { name: "", properties: new Set() },
+    spellbook: { name: "", properties: new Set() },
+    features: { name: "", properties: new Set() },
+    effects: { name: "", properties: new Set() }
   };
+
+  /* -------------------------------------------- */
+
+  /**
+   * Track the most recent drag event.
+   * @type {DragEvent}
+   * @protected
+   */
+  _event = null;
 
   /* -------------------------------------------- */
 
@@ -52,17 +72,20 @@ export default class ActorSheetRelics extends ActorSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       scrollY: [
-        ".inventory .inventory-list",
-        ".features .inventory-list",
-        ".spellbook .inventory-list",
-        ".effects .inventory-list"
+        "rotv-inventory .inventory-list",
+        "rotv-effects .effects-list",
+        ".center-pane"
       ],
       tabs: [{navSelector: ".tabs", contentSelector: ".sheet-body", initial: "description"}],
-      width: 700,
-      height: Math.max(657, Math.max(
+      width: 720,
+      height: Math.max(680, Math.max(
         237 + (Object.keys(CONFIG.ROTV.abilities).length * 70),
         240 + (Object.keys(CONFIG.ROTV.skills).length * 24)
-      ))
+      )),
+      elements: {
+        effects: "rotv-effects",
+        inventory: "rotv-inventory"
+      }
     });
   }
 
@@ -101,10 +124,11 @@ export default class ActorSheetRelics extends ActorSheet {
       itemContext: {},
       abilities: foundry.utils.deepClone(this.actor.system.abilities),
       skills: foundry.utils.deepClone(this.actor.system.skills ?? {}),
+      tools: foundry.utils.deepClone(this.actor.system.tools ?? {}),
       labels: this._getLabels(),
       movement: this._getMovementSpeed(this.actor.system),
       senses: this._getSenses(this.actor.system),
-      effects: ActiveEffectRelics.prepareActiveEffectCategories(this.actor.effects),
+      effects: EffectsElement.prepareCategories(this.actor.allApplicableEffects()),
       warnings: foundry.utils.deepClone(this.actor._preparationWarnings),
       filters: this._filters,
       owner: this.actor.isOwner,
@@ -117,21 +141,17 @@ export default class ActorSheetRelics extends ActorSheet {
       isVehicle: this.actor.type === "vehicle",
       config: CONFIG.ROTV,
       rollableClass: this.isEditable ? "rollable" : "",
-      rollData: this.actor.getRollData()
+      rollData: this.actor.getRollData(),
+      overrides: {
+        attunement: foundry.utils.hasProperty(this.actor.overrides, "system.attributes.attunement.max")
+      },
+      elements: this.options.elements
     };
 
-    /** @deprecated */
-    Object.defineProperty(context, "data", {
-      get() {
-        const msg = `You are accessing the "data" attribute within the rendering context provided by the ActorSheetRelics
-        class. This attribute has been deprecated in favor of "system" and will be removed in a future release`;
-        foundry.utils.logCompatibilityWarning(msg, { since: "RotV 2.0", until: "RotV 2.2" });
-        return context.system;
-      }
-    });
-
-    // Sort Owned Items
-    context.items.sort((a, b) => (a.sort || 0) - (b.sort || 0));
+    // Remove items in containers & sort remaining
+    context.items = context.items
+      .filter(i => !this.actor.items.has(i.system.container))
+      .sort((a, b) => (a.sort || 0) - (b.sort || 0));
 
     // Temporary HP
     const hp = {...context.system.attributes.hp};
@@ -143,18 +163,28 @@ export default class ActorSheetRelics extends ActorSheet {
     for ( const [a, abl] of Object.entries(context.abilities) ) {
       abl.icon = this._getProficiencyIcon(abl.proficient);
       abl.hover = CONFIG.ROTV.proficiencyLevels[abl.proficient];
-      abl.label = CONFIG.ROTV.abilities[a];
+      abl.label = CONFIG.ROTV.abilities[a]?.label;
       abl.baseProf = source.system.abilities[a]?.proficient ?? 0;
+      abl.key = a;
     }
 
-    // Skills
-    for ( const [s, skl] of Object.entries(context.skills) ) {
-      skl.abbreviation = CONFIG.ROTV.abilityAbbreviations[skl.ability];
-      skl.icon = this._getProficiencyIcon(skl.value);
-      skl.hover = CONFIG.ROTV.proficiencyLevels[skl.value];
-      skl.label = CONFIG.ROTV.skills[s]?.label;
-      skl.baseValue = source.system.skills[s]?.value ?? 0;
-    }
+    // Skills & tools.
+    const baseAbility = (prop, key) => {
+      let src = source.system[prop]?.[key]?.ability;
+      if ( src ) return src;
+      if ( prop === "skills" ) src = CONFIG.ROTV.skills[key]?.ability;
+      return src ?? "int";
+    };
+    ["skills", "tools"].forEach(prop => {
+      for ( const [key, entry] of Object.entries(context[prop]) ) {
+        entry.abbreviation = CONFIG.ROTV.abilities[entry.ability]?.abbreviation;
+        entry.icon = this._getProficiencyIcon(entry.value);
+        entry.hover = CONFIG.ROTV.proficiencyLevels[entry.value];
+        entry.label = (prop === "skills") ? CONFIG.ROTV.skills[key]?.label : Trait.keyLabel(key, {trait: "tool"});
+        entry.baseValue = source.system[prop]?.[key]?.value ?? 0;
+        entry.baseAbility = baseAbility(prop, key);
+      }
+    });
 
     // Update traits
     context.traits = this._prepareTraits(context.system);
@@ -164,14 +194,16 @@ export default class ActorSheetRelics extends ActorSheet {
     context.expandedData = {};
     for ( const id of this._expanded ) {
       const item = this.actor.items.get(id);
-      if ( item ) context.expandedData[id] = await item.getChatData({secrets: this.actor.isOwner});
+      if ( item ) {
+        context.expandedData[id] = await item.getChatData({secrets: this.actor.isOwner});
+        if ( context.itemContext[id] ) context.itemContext[id].expanded = context.expandedData[id];
+      }
     }
 
     // Biography HTML enrichment
     context.biographyHTML = await TextEditor.enrichHTML(context.system.details.biography.value, {
       secrets: this.actor.isOwner,
       rollData: context.rollData,
-      async: true,
       relativeTo: this.actor
     });
 
@@ -232,7 +264,7 @@ export default class ActorSheetRelics extends ActorSheet {
     if ( largestPrimary ) {
       let primary = speeds.shift();
       return {
-        primary: `${primary ? primary[1] : "0"} ${movement.units}`,
+        primary: `${primary ? primary[1] : "0"} ${movement.units || Object.keys(CONFIG.ROTV.movementUnits)[0]}`,
         special: speeds.map(s => s[1]).join(", ")
       };
     }
@@ -240,7 +272,7 @@ export default class ActorSheetRelics extends ActorSheet {
     // Case 2: Walk as primary
     else {
       return {
-        primary: `${movement.walk || 0} ${movement.units}`,
+        primary: `${movement.walk || 0} ${movement.units || Object.keys(CONFIG.ROTV.movementUnits)[0]}`,
         special: speeds.length ? speeds.map(s => s[1]).join(", ") : ""
       };
     }
@@ -260,9 +292,9 @@ export default class ActorSheetRelics extends ActorSheet {
     for ( let [k, label] of Object.entries(CONFIG.ROTV.senses) ) {
       const v = senses[k] ?? 0;
       if ( v === 0 ) continue;
-      tags[k] = `${game.i18n.localize(label)} ${v} ${senses.units}`;
+      tags[k] = `${game.i18n.localize(label)} ${v} ${senses.units ?? Object.keys(CONFIG.ROTV.movementUnits)[0]}`;
     }
-    if ( senses.special ) tags.special = senses.special;
+    if ( senses.special ) senses.special.split(";").forEach((c, i) => tags[`custom${i+1}`] = c.trim());
     return tags;
   }
 
@@ -272,109 +304,6 @@ export default class ActorSheetRelics extends ActorSheet {
   async activateEditor(name, options={}, initialContent="") {
     options.relativeLinks = true;
     return super.activateEditor(name, options, initialContent);
-  }
-
-  /* --------------------------------------------- */
-  /*  Property Attribution                         */
-  /* --------------------------------------------- */
-
-  /**
-   * Break down all of the Active Effects affecting a given target property.
-   * @param {string} target               The data property being targeted.
-   * @returns {AttributionDescription[]}  Any active effects that modify that property.
-   * @protected
-   */
-  _prepareActiveEffectAttributions(target) {
-    return this.actor.effects.reduce((arr, e) => {
-      let source = e.sourceName;
-      if ( e.origin === this.actor.uuid ) source = e.label;
-      if ( !source || e.disabled || e.isSuppressed ) return arr;
-      const value = e.changes.reduce((n, change) => {
-        if ( (change.key !== target) || !Number.isNumeric(change.value) ) return n;
-        if ( change.mode !== CONST.ACTIVE_EFFECT_MODES.ADD ) return n;
-        return n + Number(change.value);
-      }, 0);
-      if ( !value ) return arr;
-      arr.push({value, label: source, mode: CONST.ACTIVE_EFFECT_MODES.ADD});
-      return arr;
-    }, []);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Produce a list of armor class attribution objects.
-   * @param {object} rollData             Data provided by ActorRelics#getRollData
-   * @returns {AttributionDescription[]}  List of attribution descriptions.
-   * @protected
-   */
-  _prepareArmorClassAttribution(rollData) {
-    const ac = rollData.attributes.ac;
-    const cfg = CONFIG.ROTV.armorClasses[ac.calc];
-    const attribution = [];
-
-    // Base AC Attribution
-    switch ( ac.calc ) {
-
-      // Flat AC
-      case "flat":
-        return [{
-          label: game.i18n.localize("ROTV.ArmorClassFlat"),
-          mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
-          value: ac.flat
-        }];
-
-      // Natural armor
-      case "natural":
-        attribution.push({
-          label: game.i18n.localize("ROTV.ArmorClassNatural"),
-          mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
-          value: ac.flat
-        });
-        break;
-
-      default:
-        const formula = ac.calc === "custom" ? ac.formula : cfg.formula;
-        let base = ac.base;
-        const dataRgx = new RegExp(/@([a-z.0-9_-]+)/gi);
-        for ( const [match, term] of formula.matchAll(dataRgx) ) {
-          const value = String(foundry.utils.getProperty(rollData, term));
-          if ( (term === "attributes.ac.armor") || (value === "0") ) continue;
-          if ( Number.isNumeric(value) ) base -= Number(value);
-          attribution.push({
-            label: match,
-            mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-            value
-          });
-        }
-        const armorInFormula = formula.includes("@attributes.ac.armor");
-        let label = game.i18n.localize("ROTV.PropertyBase");
-        if ( armorInFormula ) label = this.actor.armor?.name ?? game.i18n.localize("ROTV.ArmorClassUnarmored");
-        attribution.unshift({
-          label,
-          mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
-          value: base
-        });
-        break;
-    }
-
-    // Shield
-    if ( ac.shield !== 0 ) attribution.push({
-      label: this.actor.shield?.name ?? game.i18n.localize("ROTV.EquipmentShield"),
-      mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-      value: ac.shield
-    });
-
-    // Bonus
-    if ( ac.bonus !== 0 ) attribution.push(...this._prepareActiveEffectAttributions("system.attributes.ac.bonus"));
-
-    // Cover
-    if ( ac.cover !== 0 ) attribution.push({
-      label: game.i18n.localize("ROTV.Cover"),
-      mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-      value: ac.cover
-    });
-    return attribution;
   }
 
   /* -------------------------------------------- */
@@ -388,11 +317,9 @@ export default class ActorSheetRelics extends ActorSheet {
   _prepareTraits(systemData) {
     const traits = {};
     for ( const [trait, traitConfig] of Object.entries(CONFIG.ROTV.traits) ) {
-      const key = traitConfig.actorKeyPath ?? `traits.${trait}`;
-      let data = foundry.utils.getProperty(systemData, key);
-      const choices = CONFIG.ROTV[traitConfig.configKey];
+      const key = traitConfig.actorKeyPath?.replace("system.", "") ?? `traits.${trait}`;
+      const data = foundry.utils.deepClone(foundry.utils.getProperty(systemData, key));
       if ( !data ) continue;
-
       foundry.utils.setProperty(traits, key, data);
       let values = data.value;
       if ( !values ) values = [];
@@ -403,14 +330,14 @@ export default class ActorSheetRelics extends ActorSheet {
       const physical = [];
       if ( data.bypasses?.size ) {
         values = values.filter(t => {
-          if ( !CONFIG.ROTV.physicalDamageTypes[t] ) return true;
+          if ( !CONFIG.ROTV.damageTypes[t]?.isPhysical ) return true;
           physical.push(t);
           return false;
         });
       }
 
       data.selected = values.reduce((obj, key) => {
-        obj[key] = Trait.keyLabel(trait, key) ?? key;
+        obj[key] = Trait.keyLabel(key, { trait }) ?? key;
         return obj;
       }, {});
 
@@ -419,14 +346,24 @@ export default class ActorSheetRelics extends ActorSheet {
         const damageTypesFormatter = new Intl.ListFormat(game.i18n.lang, { style: "long", type: "conjunction" });
         const bypassFormatter = new Intl.ListFormat(game.i18n.lang, { style: "long", type: "disjunction" });
         data.selected.physical = game.i18n.format("ROTV.DamagePhysicalBypasses", {
-          damageTypes: damageTypesFormatter.format(physical.map(t => choices[t])),
-          bypassTypes: bypassFormatter.format(data.bypasses.map(t => CONFIG.ROTV.physicalWeaponProperties[t]))
+          damageTypes: damageTypesFormatter.format(physical.map(t => Trait.keyLabel(t, { trait }))),
+          bypassTypes: bypassFormatter.format(data.bypasses.reduce((acc, t) => {
+            const v = CONFIG.ROTV.itemProperties[t];
+            if ( v && v.isPhysical ) acc.push(v.label);
+            return acc;
+          }, []))
         });
       }
 
       // Add custom entries
       if ( data.custom ) data.custom.split(";").forEach((c, i) => data.selected[`custom${i+1}`] = c.trim());
       data.cssClass = !foundry.utils.isEmpty(data.selected) ? "" : "inactive";
+
+      // If petrified, display "All Damage" instead of all damage types separately
+      if ( (trait === "dr") && this.document.hasConditionEffect("petrification") ) {
+        data.selected = { custom1: game.i18n.localize("ROTV.DamageAll") };
+        data.cssClass = "";
+      }
     }
     return traits;
   }
@@ -455,33 +392,35 @@ export default class ActorSheetRelics extends ActorSheet {
     const spellbook = {};
 
     // Define section and label mappings
-    const sections = {atwill: -20, innate: -10, pact: 0.5 };
-    const useLabels = {"-20": "-", "-10": "-", 0: "&infin;"};
+    const sections = Object.entries(CONFIG.ROTV.spellPreparationModes).reduce((acc, [k, {order}]) => {
+      if ( Number.isNumeric(order) ) acc[k] = Number(order);
+      return acc;
+    }, {});
+    const useLabels = {"-30": "-", "-20": "-", "-10": "-", 0: "&infin;"};
 
     // Format a spellbook entry for a certain indexed level
-    const registerSection = (sl, i, label, {prepMode="prepared", value, max, override}={}) => {
+    const registerSection = (sl, i, label, {prepMode="prepared", value, max, override, config}={}) => {
       const aeOverride = foundry.utils.hasProperty(this.actor.overrides, `system.spells.spell${i}.override`);
       spellbook[i] = {
         order: i,
         label: label,
         usesSlots: i > 0,
         canCreate: owner,
-        canPrepare: (context.actor.type === "character") && (i >= 1),
+        canPrepare: ((context.actor.type === "character") && (i >= 1)) || config?.prepares,
         spells: [],
         uses: useLabels[i] || value || 0,
         slots: useLabels[i] || max || 0,
         override: override || 0,
-        dataset: {type: "spell", level: prepMode in sections ? 1 : i, "preparation.mode": prepMode},
+        dataset: {type: "spell", level: prepMode in sections ? 1 : i, preparationMode: prepMode},
         prop: sl,
         editable: context.editable && !aeOverride
       };
     };
 
     // Determine the maximum spell level which has a slot
-    const maxLevel = Array.fromRange(10).reduce((max, i) => {
-      if ( i === 0 ) return max;
+    const maxLevel = Array.fromRange(Object.keys(CONFIG.ROTV.spellLevels).length - 1, 1).reduce((max, i) => {
       const level = levels[`spell${i}`];
-      if ( (level.max || level.override ) && ( i > max ) ) max = i;
+      if ( level && (level.max || level.override ) && ( i > max ) ) max = i;
       return max;
     }, 0);
 
@@ -494,18 +433,20 @@ export default class ActorSheetRelics extends ActorSheet {
       }
     }
 
-    // Pact magic users have cantrips and a pact magic section
-    if ( levels.pact && levels.pact.max ) {
-      if ( !spellbook["0"] ) registerSection("spell0", 0, CONFIG.ROTV.spellLevels[0]);
-      const l = levels.pact;
-      const config = CONFIG.ROTV.spellPreparationModes.pact;
-      const level = game.i18n.localize(`ROTV.SpellLevel${levels.pact.level}`);
-      const label = `${config} — ${level}`;
-      registerSection("pact", sections.pact, label, {
-        prepMode: "pact",
+    // Create spellbook sections for all alternative spell preparation modes that have spell slots.
+    for ( const [k, v] of Object.entries(CONFIG.ROTV.spellPreparationModes) ) {
+      if ( !(k in levels) || !v.upcast || !levels[k].max ) continue;
+
+      if ( !spellbook["0"] && v.cantrips ) registerSection("spell0", 0, CONFIG.ROTV.spellLevels[0]);
+      const l = levels[k];
+      const level = game.i18n.localize(`ROTV.SpellLevel${l.level}`);
+      const label = `${v.label} — ${level}`;
+      registerSection(k, sections[k], label, {
+        prepMode: k,
         value: l.value,
         max: l.max,
-        override: l.override
+        override: l.override,
+        config: v
       });
     }
 
@@ -521,11 +462,12 @@ export default class ActorSheetRelics extends ActorSheet {
         if ( !spellbook[s] ) {
           const l = levels[mode] || {};
           const config = CONFIG.ROTV.spellPreparationModes[mode];
-          registerSection(mode, s, config, {
+          registerSection(mode, s, config.label, {
             prepMode: mode,
             value: l.value,
             max: l.max,
-            override: l.override
+            override: l.override,
+            config: config
           });
         }
       }
@@ -548,14 +490,49 @@ export default class ActorSheetRelics extends ActorSheet {
   /* -------------------------------------------- */
 
   /**
-   * Determine whether an Owned Item will be shown based on the current set of filters.
-   * @param {object[]} items       Copies of item data to be filtered.
+   * Filter child embedded Documents based on the current set of filters.
+   * @param {string} collection    The embedded collection name.
+   * @param {Set<string>} filters  Filters to apply to the children.
+   * @returns {Document[]}
+   * @protected
+   */
+  _filterChildren(collection, filters) {
+    switch ( collection ) {
+      case "items": return this._filterItems(this.actor.items, filters);
+      case "effects": return this._filterEffects(Array.from(this.actor.allApplicableEffects()), filters);
+    }
+    return [];
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Filter Active Effects based on the current set of filters.
+   * @param {ActiveEffectRotV[]} effects  The effects to filter.
+   * @param {Set<string>} filters       Filters to apply to the effects.
+   * @returns {ActiveEffectRotV[]}
+   * @protected
+   */
+  _filterEffects(effects, filters) {
+    return effects;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Filter items based on the current set of filters.
+   * @param {ItemRotV[]} items       Copies of item data to be filtered.
    * @param {Set<string>} filters  Filters applied to the item list.
-   * @returns {object[]}           Subset of input items limited by the provided filters.
+   * @returns {ItemRotV[]}           Subset of input items limited by the provided filters.
    * @protected
    */
   _filterItems(items, filters) {
+    const spellSchools = new Set(Object.keys(CONFIG.ROTV.spellSchools));
     return items.filter(item => {
+
+      // Subclass-specific logic.
+      const filtered = this._filterItem(item);
+      if ( filtered !== undefined ) return filtered;
 
       // Action usage
       for ( let f of ["action", "bonus", "reaction"] ) {
@@ -563,19 +540,37 @@ export default class ActorSheetRelics extends ActorSheet {
       }
 
       // Spell-specific filters
-      if ( filters.has("ritual") && (item.system.components.ritual !== true) ) return false;
-      if ( filters.has("concentration") && (item.system.components.concentration !== true) ) return false;
+      if ( filters.has("ritual") && !item.system.properties?.has("ritual") ) return false;
+      if ( filters.has("concentration") && !item.system.properties?.has("concentration") ) return false;
+      const schoolFilter = spellSchools.intersection(filters);
+      if ( schoolFilter.size && !schoolFilter.has(item.system.school) ) return false;
       if ( filters.has("prepared") ) {
-        if ( (item.system.level === 0) || ["innate", "always"].includes(item.system.preparation.mode) ) return true;
+        if ( ["innate", "always"].includes(item.system.preparation?.mode) ) return true;
         if ( this.actor.type === "npc" ) return true;
-        return item.system.preparation.prepared;
+        return item.system.preparation?.prepared;
       }
 
       // Equipment-specific filters
       if ( filters.has("equipped") && (item.system.equipped !== true) ) return false;
+      if ( filters.has("mgc") && !item.system.properties?.has("mgc") ) return false;
+
+      // Feature-specific filters
+      if ( filters.has("lr") && (item.system.uses?.per !== "lr") ) return false;
+      if ( filters.has("sr") && (item.system.uses?.per !== "sr") ) return false;
+
       return true;
     });
   }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Determine whether an Item will be shown based on the current set of filters.
+   * @param {ItemRotV} item  The item.
+   * @returns {boolean|void}
+   * @protected
+   */
+  _filterItem(item) {}
 
   /* -------------------------------------------- */
 
@@ -601,20 +596,8 @@ export default class ActorSheetRelics extends ActorSheet {
 
   /** @inheritdoc */
   activateListeners(html) {
-    // Activate Item Filters
-    const filterLists = html.find(".filter-list");
-    filterLists.each(this._initializeFilterItemList.bind(this));
-    filterLists.on("click", ".filter-item", this._onToggleFilter.bind(this));
-
-    // Item summaries
-    html.find(".item .item-name.rollable h4").click(event => this._onItemSummary(event));
-
-    // View Item Sheets
-    html.find(".item-edit").click(this._onItemEdit.bind(this));
-
     // Property attributions
-    html.find("[data-attribution]").mouseover(this._onPropertyAttribution.bind(this));
-    html.find(".attributable").mouseover(this._onPropertyAttribution.bind(this));
+    this.form.querySelectorAll("[data-attribution], .attributable").forEach(this._applyAttributionTooltips.bind(this));
 
     // Preparation Warnings
     html.find(".warnings").click(this._onWarningLink.bind(this));
@@ -630,7 +613,10 @@ export default class ActorSheetRelics extends ActorSheet {
       html.find(".ability-proficiency").click(this._onToggleAbilityProficiency.bind(this));
 
       // Toggle Skill Proficiency
-      html.find(".skill-proficiency").on("click contextmenu", this._onCycleSkillProficiency.bind(this));
+      html.find(".skill-proficiency").on("click contextmenu", event => this._onCycleProficiency(event, "skill"));
+
+      // Toggle Tool Proficiency
+      html.find(".tool-proficiency").on("click contextmenu", event => this._onCycleProficiency(event, "tool"));
 
       // Trait Selector
       html.find(".trait-selector").click(this._onTraitSelector.bind(this));
@@ -638,37 +624,26 @@ export default class ActorSheetRelics extends ActorSheet {
       // Configure Special Flags
       html.find(".config-button").click(this._onConfigMenu.bind(this));
 
-      // Owned Item management
-      html.find(".item-create").click(this._onItemCreate.bind(this));
-      html.find(".item-delete").click(this._onItemDelete.bind(this));
-      html.find(".item-uses input").click(ev => ev.target.select()).change(this._onUsesChange.bind(this));
-      html.find(".slot-max-override").click(this._onSpellSlotOverride.bind(this));
+      // Changing Level
+      html.find(".level-selector").change(this._onLevelChange.bind(this));
 
-      // Active Effect management
-      html.find(".effect-control").click(ev => ActiveEffectRelics.onManageActiveEffect(ev, this.actor));
+      // Owned Item management
+      html.find(".slot-max-override").click(this._onSpellSlotOverride.bind(this));
+      html.find(".attunement-max-override").click(this._onAttunementOverride.bind(this));
+
       this._disableOverriddenFields(html);
     }
 
-    // Owner Only Listeners
-    if ( this.actor.isOwner ) {
-
+    // Owner Only Listeners, for non-compendium actors.
+    if ( this.actor.isOwner && !this.actor.compendium ) {
       // Ability Checks
       html.find(".ability-name").click(this._onRollAbilityTest.bind(this));
 
       // Roll Skill Checks
       html.find(".skill-name").click(this._onRollSkillCheck.bind(this));
 
-      // Item Rolling
-      html.find(".rollable .item-image").click(event => this._onItemUse(event));
-      html.find(".item .item-recharge").click(event => this._onItemRecharge(event));
-
-      // Item Context Menu
-      new ContextMenu(html, ".item-list .item", [], {onOpen: this._onItemContext.bind(this)});
-    }
-
-    // Otherwise, remove rollable classes
-    else {
-      html.find(".rollable").each((i, el) => el.classList.remove("rollable"));
+      // Roll Tool Checks.
+      html.find(".tool-name").on("click", this._onRollToolCheck.bind(this));
     }
 
     // Handle default listeners last so system listeners are triggered first
@@ -683,24 +658,25 @@ export default class ActorSheetRelics extends ActorSheet {
    * @protected
    */
   _disableOverriddenFields(html) {
+    const proficiencyToggles = {
+      ability: /system\.abilities\.([^.]+)\.proficient/,
+      skill: /system\.skills\.([^.]+)\.value/,
+      tool: /system\.tools\.([^.]+)\.value/
+    };
+
     for ( const override of Object.keys(foundry.utils.flattenObject(this.actor.overrides)) ) {
       html.find(`input[name="${override}"],select[name="${override}"]`).each((i, el) => {
         el.disabled = true;
         el.dataset.tooltip = "ROTV.ActiveEffectOverrideWarning";
       });
 
-      const [, ability] = override.match(/system\.abilities\.([^.]+)\.proficient/) || [];
-      if ( ability ) {
-        const toggle = html.find(`li[data-ability="${ability}"] .proficiency-toggle`);
-        toggle.addClass("disabled");
-        toggle.attr("data-tooltip", "ROTV.ActiveEffectOverrideWarning");
-      }
-
-      const [, skill] = override.match(/system\.skills\.([^.]+)\.value/) || [];
-      if ( skill ) {
-        const toggle = html.find(`li[data-skill="${skill}"] .proficiency-toggle`);
-        toggle.addClass("disabled");
-        toggle.attr("data-tooltip", "ROTV.ActiveEffectOverrideWarning");
+      for ( const [key, regex] of Object.entries(proficiencyToggles) ) {
+        const [, match] = override.match(regex) || [];
+        if ( match ) {
+          const toggle = html.find(`li[data-${key}="${match}"] .proficiency-toggle`);
+          toggle.addClass("disabled");
+          toggle.attr("data-tooltip", "ROTV.ActiveEffectOverrideWarning");
+        }
       }
 
       const [, spell] = override.match(/system\.spells\.(spell\d)\.override/) || [];
@@ -713,153 +689,31 @@ export default class ActorSheetRelics extends ActorSheet {
   /* -------------------------------------------- */
 
   /**
-   * Handle activation of a context menu for an embedded Item or ActiveEffect document.
-   * Dynamically populate the array of context menu options.
-   * @param {HTMLElement} element       The HTML element for which the context menu is activated
-   * @protected
-   */
-  _onItemContext(element) {
-
-    // Active Effects
-    if ( element.classList.contains("effect") ) {
-      const effect = this.actor.effects.get(element.dataset.effectId);
-      if ( !effect ) return;
-      ui.context.menuItems = this._getActiveEffectContextOptions(effect);
-      Hooks.call("rotv.getActiveEffectContextOptions", effect, ui.context.menuItems);
-    }
-
-    // Items
-    else {
-      const item = this.actor.items.get(element.dataset.itemId);
-      if ( !item ) return;
-      ui.context.menuItems = this._getItemContextOptions(item);
-      Hooks.call("rotv.getItemContextOptions", item, ui.context.menuItems);
-    }
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare an array of context menu options which are available for owned ActiveEffect documents.
-   * @param {ActiveEffectRelics} effect         The ActiveEffect for which the context menu is activated
-   * @returns {ContextMenuEntry[]}          An array of context menu options offered for the ActiveEffect
-   * @protected
-   */
-  _getActiveEffectContextOptions(effect) {
-    return [
-      {
-        name: "ROTV.ContextMenuActionEdit",
-        icon: "<i class='fas fa-edit fa-fw'></i>",
-        callback: () => effect.sheet.render(true)
-      },
-      {
-        name: "ROTV.ContextMenuActionDuplicate",
-        icon: "<i class='fas fa-copy fa-fw'></i>",
-        callback: () => effect.clone({label: game.i18n.format("DOCUMENT.CopyOf", {name: effect.label})}, {save: true})
-      },
-      {
-        name: "ROTV.ContextMenuActionDelete",
-        icon: "<i class='fas fa-trash fa-fw'></i>",
-        callback: () => effect.deleteDialog()
-      },
-      {
-        name: effect.disabled ? "ROTV.ContextMenuActionEnable" : "ROTV.ContextMenuActionDisable",
-        icon: effect.disabled ? "<i class='fas fa-check fa-fw'></i>" : "<i class='fas fa-times fa-fw'></i>",
-        callback: () => effect.update({disabled: !effect.disabled})
-      }
-    ];
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare an array of context menu options which are available for owned Item documents.
-   * @param {ItemRelics} item                   The Item for which the context menu is activated
-   * @returns {ContextMenuEntry[]}          An array of context menu options offered for the Item
-   * @protected
-   */
-  _getItemContextOptions(item) {
-
-    // Standard Options
-    const options = [
-      {
-        name: "ROTV.ContextMenuActionEdit",
-        icon: "<i class='fas fa-edit fa-fw'></i>",
-        callback: () => item.sheet.render(true)
-      },
-      {
-        name: "ROTV.ContextMenuActionDuplicate",
-        icon: "<i class='fas fa-copy fa-fw'></i>",
-        condition: () => !["race", "background", "class", "subclass"].includes(item.type),
-        callback: () => item.clone({name: game.i18n.format("DOCUMENT.CopyOf", {name: item.name})}, {save: true})
-      },
-      {
-        name: "ROTV.ContextMenuActionDelete",
-        icon: "<i class='fas fa-trash fa-fw'></i>",
-        callback: () => item.deleteDialog()
-      }
-    ];
-
-    // Toggle Attunement State
-    if ( ("attunement" in item.system) && (item.system.attunement !== CONFIG.ROTV.attunementTypes.NONE) ) {
-      const isAttuned = item.system.attunement === CONFIG.ROTV.attunementTypes.ATTUNED;
-      options.push({
-        name: isAttuned ? "ROTV.ContextMenuActionUnattune" : "ROTV.ContextMenuActionAttune",
-        icon: "<i class='fas fa-sun fa-fw'></i>",
-        callback: () => item.update({
-          "system.attunement": CONFIG.ROTV.attunementTypes[isAttuned ? "REQUIRED" : "ATTUNED"]
-        })
-      });
-    }
-
-    // Toggle Equipped State
-    if ( "equipped" in item.system ) options.push({
-      name: item.system.equipped ? "ROTV.ContextMenuActionUnequip" : "ROTV.ContextMenuActionEquip",
-      icon: "<i class='fas fa-shield-alt fa-fw'></i>",
-      callback: () => item.update({"system.equipped": !item.system.equipped})
-    });
-
-    // Toggle Prepared State
-    if ( ("preparation" in item.system) && (item.system.preparation?.mode === "prepared") ) options.push({
-      name: item.system?.preparation?.prepared ? "ROTV.ContextMenuActionUnprepare" : "ROTV.ContextMenuActionPrepare",
-      icon: "<i class='fas fa-sun fa-fw'></i>",
-      callback: () => item.update({"system.preparation.prepared": !item.system.preparation?.prepared})
-    });
-    return options;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Initialize Item list filters by activating the set of filters which are currently applied
-   * @param {number} i  Index of the filter in the list.
-   * @param {HTML} ul   HTML object for the list item surrounding the filter.
+   * Respond to a new level being selected from the level selector.
+   * @param {Event} event                           The originating change.
+   * @returns {Promise<AdvancementManager|ItemRotV>}  Manager if advancements needed, otherwise updated class item.
    * @private
    */
-  _initializeFilterItemList(i, ul) {
-    const set = this._filters[ul.dataset.filter];
-    const filters = ul.querySelectorAll(".filter-item");
-    for ( let li of filters ) {
-      if ( set.has(li.dataset.filter) ) li.classList.add("active");
+  async _onLevelChange(event) {
+    event.preventDefault();
+    const delta = Number(event.target.value);
+    const classId = event.target.closest("[data-item-id]")?.dataset.itemId;
+    if ( !delta || !classId ) return;
+    const classItem = this.actor.items.get(classId);
+    if ( !game.settings.get("rotv", "disableAdvancements") ) {
+      const manager = AdvancementManager.forLevelChange(this.actor, classId, delta);
+      if ( manager.steps.length ) {
+        if ( delta > 0 ) return manager.render(true);
+        try {
+          const shouldRemoveAdvancements = await AdvancementConfirmationDialog.forLevelDown(classItem);
+          if ( shouldRemoveAdvancements ) return manager.render(true);
+        }
+        catch(err) {
+          return;
+        }
+      }
     }
-  }
-
-  /* -------------------------------------------- */
-  /*  Event Listeners and Handlers                */
-  /* -------------------------------------------- */
-
-  /**
-   * Handle input changes to numeric form fields, allowing them to accept delta-typed inputs.
-   * @param {Event} event  Triggering event.
-   * @protected
-   */
-  _onChangeInputDelta(event) {
-    const input = event.target;
-    const value = input.value;
-    if ( ["+", "-"].includes(value[0]) ) {
-      const delta = parseFloat(value);
-      input.value = Number(foundry.utils.getProperty(this.actor, input.name)) + delta;
-    } else if ( value[0] === "=" ) input.value = value.slice(1);
+    return classItem.update({"system.levels": classItem.system.levels + delta});
   }
 
   /* -------------------------------------------- */
@@ -867,7 +721,7 @@ export default class ActorSheetRelics extends ActorSheet {
   /**
    * Handle spawning the TraitSelector application which allows a checkbox of multiple trait options.
    * @param {Event} event   The click event which originated the selection.
-   * @private
+   * @protected
    */
   _onConfigMenu(event) {
     event.preventDefault();
@@ -878,10 +732,10 @@ export default class ActorSheetRelics extends ActorSheet {
       case "armor":
         app = new ActorArmorConfig(this.actor);
         break;
-      case "hit-dice":
+      case "hitDice":
         app = new ActorHitDiceConfig(this.actor);
         break;
-      case "hit-points":
+      case "hitPoints":
         app = new ActorHitPointsConfig(this.actor);
         break;
       case "initiative":
@@ -896,19 +750,31 @@ export default class ActorSheetRelics extends ActorSheet {
       case "senses":
         app = new ActorSensesConfig(this.actor);
         break;
+      case "source":
+        app = new SourceConfig(this.actor);
+        break;
       case "type":
         app = new ActorTypeConfig(this.actor);
         break;
-      case "ability": {
+      case "ability":
         const ability = event.currentTarget.closest("[data-ability]").dataset.ability;
-        app = new ActorAbilityConfig(this.actor, null, ability);
+        if ( ability === "concentration" ) app = new ActorConcentrationConfig(this.actor);
+        else app = new ActorAbilityConfig(this.actor, null, ability);
         break;
-      }
-      case "skill": {
-        const skill = event.currentTarget.closest("[data-skill]").dataset.skill;
-        app = new ActorSkillConfig(this.actor, null, skill);
+      case "skill":
+        const skill = event.currentTarget.closest("[data-key]").dataset.key;
+        app = new ProficiencyConfig(this.actor, {property: "skills", key: skill});
         break;
-      }
+      case "skills":
+        app = new rotv.applications.actor.ActorSkillsConfig(this.actor);
+        break;
+      case "spellSlots":
+        app = new ActorSpellSlotsConfig(this.actor);
+        break;
+      case "tool":
+        const tool = event.currentTarget.closest("[data-key]").dataset.key;
+        app = new ProficiencyConfig(this.actor, {property: "tools", key: tool});
+        break;
     }
     app?.render(true);
   }
@@ -916,26 +782,43 @@ export default class ActorSheetRelics extends ActorSheet {
   /* -------------------------------------------- */
 
   /**
-   * Handle cycling proficiency in a Skill.
-   * @param {Event} event   A click or contextmenu event which triggered the handler.
-   * @returns {Promise}     Updated data for this actor after changes are applied.
-   * @private
+   * Handle cycling proficiency in a skill or tool.
+   * @param {Event} event     A click or contextmenu event which triggered this action.
+   * @returns {Promise|void}  Updated data for this actor after changes are applied.
+   * @protected
    */
-  _onCycleSkillProficiency(event) {
+  _onCycleProficiency(event) {
     if ( event.currentTarget.classList.contains("disabled") ) return;
     event.preventDefault();
-    const parent = event.currentTarget.closest(".skill");
+    const parent = event.currentTarget.closest(".proficiency-row");
     const field = parent.querySelector('[name$=".value"]');
-    const value = this.actor._source.system.skills[parent.dataset.skill]?.value ?? 0;
+    const {property, key} = parent.dataset;
+    const value = this.actor._source.system[property]?.[key]?.value ?? 0;
 
-    // Cycle to the next or previous skill level
-    const levels = [0, 1, 0.5, 2];
-    let idx = levels.indexOf(value);
-    const next = idx + (event.type === "click" ? 1 : 3);
-    field.value = levels[next % 4];
+    // Cycle to the next or previous skill level.
+    const levels = [0, 1, .5, 2];
+    const idx = levels.indexOf(value);
+    const next = idx + (event.type === "contextmenu" ? 3 : 1);
+    field.value = levels[next % levels.length];
 
-    // Update the field value and save the form
+    // Update the field value and save the form.
     return this._onSubmit(event);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  _onDragStart(event) {
+    const li = event.currentTarget;
+    if ( event.target.classList.contains("content-link") ) return;
+
+    if ( li.dataset.effectId && li.dataset.parentId ) {
+      const effect = this.actor.items.get(li.dataset.parentId)?.effects.get(li.dataset.effectId);
+      if ( effect ) event.dataTransfer.setData("text/plain", JSON.stringify(effect.toDragData()));
+      return;
+    }
+
+    super._onDragStart(event);
   }
 
   /* -------------------------------------------- */
@@ -1016,6 +899,58 @@ export default class ActorSheetRelics extends ActorSheet {
   /* -------------------------------------------- */
 
   /** @override */
+  async _onDrop(event) {
+    this._event = event;
+    return super._onDrop(event);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  async _onDropActiveEffect(event, data) {
+    const effect = await ActiveEffect.implementation.fromDropData(data);
+    if ( effect?.target === this.actor ) return false;
+    return super._onDropActiveEffect(event, data);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @override */
+  async _onDropItem(event, data) {
+    if ( !this.actor.isOwner ) return false;
+    const item = await Item.implementation.fromDropData(data);
+
+    // Handle moving out of container & item sorting
+    if ( this.actor.uuid === item.parent?.uuid ) {
+      if ( item.system.container !== null ) await item.update({"system.container": null});
+      return this._onSortItem(event, item.toObject());
+    }
+
+    return this._onDropItemCreate(item);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @override */
+  async _onDropFolder(event, data) {
+    if ( !this.actor.isOwner ) return [];
+    const folder = await Folder.implementation.fromDropData(data);
+    if ( folder.type !== "Item" ) return [];
+    const droppedItemData = await Promise.all(folder.contents.map(async item => {
+      if ( !(item instanceof Item) ) item = await fromUuid(item.uuid);
+      return item;
+    }));
+    return this._onDropItemCreate(droppedItemData);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Handle the final creation of dropped Item data on the Actor.
+   * @param {ItemRotV[]|ItemRotV} itemData     The item or items requested for creation
+   * @returns {Promise<ItemRotV[]>}
+   * @protected
+   */
   async _onDropItemCreate(itemData) {
     let items = itemData instanceof Array ? itemData : [itemData];
     const itemsWithoutAdvancement = items.filter(i => !i.system.advancement?.length);
@@ -1025,14 +960,15 @@ export default class ActorSheetRelics extends ActorSheet {
       items = itemsWithoutAdvancement;
     }
 
-    const toCreate = [];
-    for ( const item of items ) {
-      const result = await this._onDropSingleItem(item);
-      if ( result ) toCreate.push(result);
-    }
+    // Filter out items already in containers to avoid creating duplicates
+    const containers = new Set(items.filter(i => i.type === "container").map(i => i._id));
+    items = items.filter(i => !containers.has(i.system.container));
 
-    // Create the owned items as normal
-    return this.actor.createEmbeddedDocuments("Item", toCreate);
+    // Create the owned items & contents as normal
+    const toCreate = await ItemRotV.createWithContents(items, {
+      transformFirst: item => this._onDropSingleItem(item.toObject())
+    });
+    return ItemRotV.createDocuments(toCreate, {pack: this.actor.pack, parent: this.actor, keepId: true});
   }
 
   /* -------------------------------------------- */
@@ -1045,7 +981,6 @@ export default class ActorSheetRelics extends ActorSheet {
    * @protected
    */
   async _onDropSingleItem(itemData) {
-
     // Check to make sure items of this type are allowed on this actor
     if ( this.constructor.unsupportedItemTypes.has(itemData.type) ) {
       ui.notifications.warn(game.i18n.format("ROTV.ActorWarningInvalidItem", {
@@ -1058,8 +993,8 @@ export default class ActorSheetRelics extends ActorSheet {
     // Create a Consumable spell scroll on the Inventory tab
     if ( (itemData.type === "spell")
       && (this._tabs[0].active === "inventory" || this.actor.type === "vehicle") ) {
-      const scroll = await ItemRelics.createScrollFromSpell(itemData);
-      return scroll.toObject();
+      const scroll = await ItemRotV.createScrollFromSpell(itemData);
+      return scroll?.toObject?.();
     }
 
     // Clean up data
@@ -1070,13 +1005,29 @@ export default class ActorSheetRelics extends ActorSheet {
     if ( stacked ) return false;
 
     // Bypass normal creation flow for any items with advancement
-    if ( itemData.system.advancement?.length && !game.settings.get("rotv", "disableAdvancements") ) {
+    if ( this.actor.system.metadata?.supportsAdvancement && itemData.system.advancement?.length
+        && !game.settings.get("rotv", "disableAdvancements") ) {
+      // Ensure that this item isn't violating the singleton rule
+      const dataModel = CONFIG.Item.dataModels[itemData.type];
+      const singleton = dataModel?.metadata.singleton ?? false;
+      if ( singleton && this.actor.itemTypes[itemData.type].length ) {
+        ui.notifications.error(game.i18n.format("ROTV.ActorWarningSingleton", {
+          itemType: game.i18n.localize(CONFIG.Item.typeLabels[itemData.type]),
+          actorType: game.i18n.localize(CONFIG.Actor.typeLabels[this.actor.type])
+        }));
+        return false;
+      }
+
       const manager = AdvancementManager.forNewItem(this.actor, itemData);
       if ( manager.steps.length ) {
         manager.render(true);
         return false;
       }
     }
+
+    // Adjust the preparation mode of a leveled spell depending on the section on which it is dropped.
+    if ( itemData.type === "spell" ) this._onDropSpell(itemData);
+
     return itemData;
   }
 
@@ -1088,30 +1039,62 @@ export default class ActorSheetRelics extends ActorSheet {
    */
   _onDropResetData(itemData) {
     if ( !itemData.system ) return;
-    ["equipped", "proficient", "prepared"].forEach(k => delete itemData.system[k]);
-    if ( "attunement" in itemData.system ) {
-      itemData.system.attunement = Math.min(itemData.system.attunement, CONFIG.ROTV.attunementTypes.REQUIRED);
-    }
+    ["attuned", "equipped", "proficient", "prepared"].forEach(k => delete itemData.system[k]);
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Stack identical consumables when a new one is dropped rather than creating a duplicate item.
-   * @param {object} itemData         The item data requested for creation.
-   * @returns {Promise<ItemRelics>|null}  If a duplicate was found, returns the adjusted item stack.
+   * Adjust the preparation mode of a dropped spell depending on the drop location on the sheet.
+   * @param {object} itemData    The item data requested for creation. **Will be mutated.**
    */
-  _onDropStackConsumables(itemData) {
-    const droppedSourceId = itemData.flags.core?.sourceId;
-    if ( itemData.type !== "consumable" || !droppedSourceId ) return null;
-    const similarItem = this.actor.items.find(i => {
-      const sourceId = i.getFlag("core", "sourceId");
-      return sourceId && (sourceId === droppedSourceId) && (i.type === "consumable") && (i.name === itemData.name);
-    });
-    if ( !similarItem ) return null;
-    return similarItem.update({
-      "system.quantity": similarItem.system.quantity + Math.max(itemData.system.quantity, 1)
-    });
+  _onDropSpell(itemData) {
+    if ( !["npc", "character"].includes(this.document.type) ) return;
+
+    // Determine the section it is dropped on, if any.
+    let header = this._event.target.closest(".items-header"); // Dropped directly on the header.
+    if ( !header ) {
+      const list = this._event.target.closest(".item-list"); // Dropped inside an existing list.
+      header = list?.previousElementSibling;
+    }
+    const { level, preparationMode } = header?.closest("[data-level]")?.dataset ?? {};
+
+    // Determine the actor's spell slot progressions, if any.
+    const spellcastKeys = Object.keys(CONFIG.ROTV.spellcastingTypes);
+    const progs = Object.values(this.document.classes).reduce((acc, cls) => {
+      const type = cls.spellcasting?.type;
+      if ( spellcastKeys.includes(type) ) acc.add(type);
+      return acc;
+    }, new Set());
+
+    const prep = itemData.system.preparation;
+
+    // Case 1: Drop a cantrip.
+    if ( itemData.system.level === 0 ) {
+      const modes = CONFIG.ROTV.spellPreparationModes;
+      if ( modes[preparationMode]?.cantrips ) {
+        prep.mode = "prepared";
+      } else if ( !preparationMode ) {
+        const isCaster = this.document.system.details.spellLevel || progs.size;
+        prep.mode = isCaster ? "prepared" : "innate";
+      } else {
+        prep.mode = preparationMode;
+      }
+      if ( modes[prep.mode]?.prepares ) prep.prepared = true;
+    }
+
+    // Case 2: Drop a leveled spell in a section without a mode.
+    else if ( (level === "0") || !preparationMode ) {
+      if ( this.document.type === "npc" ) {
+        prep.mode = this.document.system.details.spellLevel ? "prepared" : "innate";
+      } else {
+        const m = progs.has("leveled") ? "prepared" : (progs.first() ?? "innate");
+        prep.mode = progs.has(prep.mode) ? prep.mode : m;
+      }
+    }
+
+    // Case 3: Drop a leveled spell in a specific section.
+    else prep.mode = preparationMode;
   }
 
   /* -------------------------------------------- */
@@ -1119,7 +1102,7 @@ export default class ActorSheetRelics extends ActorSheet {
   /**
    * Handle enabling editing for a spell slot override value.
    * @param {MouseEvent} event    The originating click event.
-   * @private
+   * @protected
    */
   async _onSpellSlotOverride(event) {
     const span = event.currentTarget.parentElement;
@@ -1131,6 +1114,7 @@ export default class ActorSheetRelics extends ActorSheet {
     input.value = override;
     input.placeholder = span.dataset.slots;
     input.dataset.dtype = "Number";
+    input.addEventListener("focus", event => event.currentTarget.select());
 
     // Replace the HTML
     const parent = span.parentElement;
@@ -1141,184 +1125,39 @@ export default class ActorSheetRelics extends ActorSheet {
   /* -------------------------------------------- */
 
   /**
-   * Change the uses amount of an Owned Item within the Actor.
-   * @param {Event} event        The triggering click event.
-   * @returns {Promise<ItemRelics>}  Updated item.
+   * Handle enabling editing for attunement maximum.
+   * @param {MouseEvent} event    The originating click event.
    * @private
    */
-  async _onUsesChange(event) {
-    event.preventDefault();
-    const itemId = event.currentTarget.closest(".item").dataset.itemId;
-    const item = this.actor.items.get(itemId);
-    const uses = Math.clamped(0, parseInt(event.target.value), item.system.uses.max);
-    event.target.value = uses;
-    return item.update({"system.uses.value": uses});
+  async _onAttunementOverride(event) {
+    const span = event.currentTarget.parentElement;
+    const input = document.createElement("INPUT");
+    input.type = "text";
+    input.name = "system.attributes.attunement.max";
+    input.value = this.actor.system.attributes.attunement.max;
+    input.placeholder = 3;
+    input.dataset.dtype = "Number";
+    input.addEventListener("focus", event => event.currentTarget.select());
+
+    // Replace the HTML
+    const parent = span.parentElement;
+    parent.removeChild(span);
+    parent.appendChild(input);
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Handle using an item from the Actor sheet, obtaining the Item instance, and dispatching to its use method.
-   * @param {Event} event  The triggering click event.
-   * @returns {Promise}    Results of the usage.
+   * Initialize attribution tooltips on an element.
+   * @param {HTMLElement} element  The tooltipped element.
    * @protected
    */
-  _onItemUse(event) {
-    event.preventDefault();
-    const itemId = event.currentTarget.closest(".item").dataset.itemId;
-    const item = this.actor.items.get(itemId);
-    return item.use({}, {event});
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Handle attempting to recharge an item usage by rolling a recharge check.
-   * @param {Event} event      The originating click event.
-   * @returns {Promise<Roll>}  The resulting recharge roll.
-   * @private
-   */
-  _onItemRecharge(event) {
-    event.preventDefault();
-    const itemId = event.currentTarget.closest(".item").dataset.itemId;
-    const item = this.actor.items.get(itemId);
-    return item.rollRecharge();
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Handle toggling and items expanded description.
-   * @param {Event} event   Triggering event.
-   * @private
-   */
-  async _onItemSummary(event) {
-    event.preventDefault();
-    const li = $(event.currentTarget).parents(".item");
-    const item = this.actor.items.get(li.data("item-id"));
-    const chatData = await item.getChatData({secrets: this.actor.isOwner});
-
-    // Toggle summary
-    if ( li.hasClass("expanded") ) {
-      const summary = li.children(".item-summary");
-      summary.slideUp(200, () => summary.remove());
-      this._expanded.delete(item.id);
-    } else {
-      const summary = $(await renderTemplate("systems/rotv/templates/items/parts/item-summary.hbs", chatData));
-      li.append(summary.hide());
-      summary.slideDown(200);
-      this._expanded.add(item.id);
-    }
-    li.toggleClass("expanded");
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Handle creating a new Owned Item for the actor using initial data defined in the HTML dataset.
-   * @param {Event} event          The originating click event.
-   * @returns {Promise<ItemRelics[]>}  The newly created item.
-   * @private
-   */
-  _onItemCreate(event) {
-    event.preventDefault();
-    const header = event.currentTarget;
-    const type = header.dataset.type;
-
-    // Check to make sure the newly created class doesn't take player over level cap
-    if ( type === "class" && (this.actor.system.details.level + 1 > CONFIG.ROTV.maxLevel) ) {
-      const err = game.i18n.format("ROTV.MaxCharacterLevelExceededWarn", {max: CONFIG.ROTV.maxLevel});
-      return ui.notifications.error(err);
-    }
-
-    const itemData = {
-      name: game.i18n.format("ROTV.ItemNew", {type: game.i18n.localize(`ITEM.Type${type.capitalize()}`)}),
-      type: type,
-      system: foundry.utils.expandObject({ ...header.dataset })
-    };
-    delete itemData.system.type;
-    return this.actor.createEmbeddedDocuments("Item", [itemData]);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Handle editing an existing Owned Item for the Actor.
-   * @param {Event} event    The originating click event.
-   * @returns {ItemSheetRelics}  The rendered item sheet.
-   * @private
-   */
-  _onItemEdit(event) {
-    event.preventDefault();
-    const li = event.currentTarget.closest(".item");
-    const item = this.actor.items.get(li.dataset.itemId);
-    return item.sheet.render(true);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Handle deleting an existing Owned Item for the Actor.
-   * @param {Event} event  The originating click event.
-   * @returns {Promise<ItemRelics|AdvancementManager>|undefined}  The deleted item if something was deleted or the
-   *                                                          advancement manager if advancements need removing.
-   * @private
-   */
-  async _onItemDelete(event) {
-    event.preventDefault();
-    const li = event.currentTarget.closest(".item");
-    const item = this.actor.items.get(li.dataset.itemId);
-    if ( !item ) return;
-
-    // If item has advancement, handle it separately
-    if ( !game.settings.get("rotv", "disableAdvancements") ) {
-      const manager = AdvancementManager.forDeletedItem(this.actor, item.id);
-      if ( manager.steps.length ) {
-        if ( ["class", "subclass"].includes(item.type) ) {
-          try {
-            const shouldRemoveAdvancements = await AdvancementConfirmationDialog.forDelete(item);
-            if ( shouldRemoveAdvancements ) return manager.render(true);
-          } catch(err) {
-            return;
-          }
-        } else {
-          return manager.render(true);
-        }
-      }
-    }
-
-    return item.deleteDialog();
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Handle displaying the property attribution tooltip when a property is hovered over.
-   * @param {Event} event   The originating mouse event.
-   * @private
-   */
-  async _onPropertyAttribution(event) {
-    const element = event.target;
-    let property = element.dataset.attribution;
-    if ( !property ) {
-      property = element.dataset.property;
-      if ( !property ) return;
-      foundry.utils.logCompatibilityWarning(
-        "Defining attributable properties on sheets with the `.attributable` class and `data-property` value"
-        + " has been deprecated in favor of a single `data-attribution` value.",
-        { since: "RotV 2.1.3", until: "RotV 2.4" }
-      );
-    }
-
-    const rollData = this.actor.getRollData({ deterministic: true });
-    const title = game.i18n.localize(element.dataset.attributionCaption);
-    let attributions;
-    switch ( property ) {
-      case "attributes.ac":
-        attributions = this._prepareArmorClassAttribution(rollData); break;
-    }
-    if ( !attributions ) return;
-    new PropertyAttribution(this.actor, attributions, property, {title}).renderTooltip(element);
+  _applyAttributionTooltips(element) {
+    if ( "tooltip" in element.dataset ) return;
+    element.dataset.tooltip = `
+      <section class="loading" data-uuid="${this.actor.uuid}"><i class="fas fa-spinner fa-spin-pulse"></i></section>
+    `;
+    element.dataset.tooltipClass = "property-attribution";
   }
 
   /* -------------------------------------------- */
@@ -1344,16 +1183,24 @@ export default class ActorSheetRelics extends ActorSheet {
    */
   _onRollSkillCheck(event) {
     event.preventDefault();
-    const skill = event.currentTarget.closest("[data-skill]").dataset.skill;
+    const skill = event.currentTarget.closest("[data-key]").dataset.key;
     return this.actor.rollSkill(skill, {event: event});
+  }
+
+  /* -------------------------------------------- */
+
+  _onRollToolCheck(event) {
+    event.preventDefault();
+    const tool = event.currentTarget.closest("[data-key]").dataset.key;
+    return this.actor.rollToolCheck(tool, {event});
   }
 
   /* -------------------------------------------- */
 
   /**
    * Handle toggling Ability score proficiency level.
-   * @param {Event} event         The originating click event.
-   * @returns {Promise<ActorRelics>}  Updated actor instance.
+   * @param {Event} event              The originating click event.
+   * @returns {Promise<ActorRotV>|void}  Updated actor instance.
    * @private
    */
   _onToggleAbilityProficiency(event) {
@@ -1366,24 +1213,6 @@ export default class ActorSheetRelics extends ActorSheet {
   /* -------------------------------------------- */
 
   /**
-   * Handle toggling of filters to display a different set of owned items.
-   * @param {Event} event     The click event which triggered the toggle.
-   * @returns {ActorSheetRelics}  This actor sheet with toggled filters.
-   * @private
-   */
-  _onToggleFilter(event) {
-    event.preventDefault();
-    const li = event.currentTarget;
-    const set = this._filters[li.parentElement.dataset.filter];
-    const filter = li.dataset.filter;
-    if ( set.has(filter) ) set.delete(filter);
-    else set.add(filter);
-    return this.render();
-  }
-
-  /* -------------------------------------------- */
-
-  /**
    * Handle spawning the TraitSelector application which allows a checkbox of multiple trait options.
    * @param {Event} event      The click event which originated the selection.
    * @returns {TraitSelector}  Newly displayed application.
@@ -1391,7 +1220,10 @@ export default class ActorSheetRelics extends ActorSheet {
    */
   _onTraitSelector(event) {
     event.preventDefault();
-    return new TraitSelector(this.actor, event.currentTarget.dataset.trait).render(true);
+    const trait = event.currentTarget.dataset.trait;
+    if ( trait === "tool" ) return new ToolSelector(this.actor, trait).render(true);
+    else if ( trait === "dm" ) return new DamageModificationConfig(this.actor).render(true);
+    return new TraitSelector(this.actor, trait).render(true);
   }
 
   /* -------------------------------------------- */

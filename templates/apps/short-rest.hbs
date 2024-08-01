@@ -1,5 +1,10 @@
 <form id="short-rest-hd" class="dialog-content" onsubmit="event.preventDefault();">
-    <p>{{ localize "ROTV.ShortRestHint" }}</p>
+    <p>
+        {{#if isGroup}}{{ localize "ROTV.ShortRestHintGroup" }}
+        {{else}}{{ localize "ROTV.ShortRestHint" }}{{/if}}
+    </p>
+
+    {{#if availableHD}}
     <div class="form-group">
         <label>{{ localize "ROTV.ShortRestSelect" }}</label>
         <div class="form-fields">
@@ -18,11 +23,18 @@
         <p class="notes">{{ localize "ROTV.ShortRestNoHD" }}</p>
         {{/unless}}
     </div>
+    {{else}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.HitDiceAutoSpend.Label" }}</label>
+        <input type="checkbox" name="autoHD">
+        <p class="hint">{{localize "ROTV.HitDiceAutoSpend.Hint" }}</p>
+    </div>
+    {{/if}}
 
     {{#if promptNewDay}}
     <div class="form-group">
         <label>{{ localize "ROTV.NewDay" }}</label>
-        <input type="checkbox" name="newDay" {{checked newDay}}/>
+        <input type="checkbox" name="newDay" {{checked newDay}}>
         <p class="hint">{{ localize "ROTV.NewDayHint" }}</p>
     </div>
     {{/if}}

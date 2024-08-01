@@ -28,10 +28,10 @@
 
             {{!-- Character Summary --}}
             <ul class="summary flexrow">
-                <li>
-                    <span>{{lookup config.actorSizes system.traits.size}}</span>
+                <li class="size">
+                    <span>{{lookup (lookup config.actorSizes system.traits.size) "label"}}</span>
                 </li>
-                <li>
+                <li class="alignment">
                     <input type="text" name="system.details.alignment" value="{{system.details.alignment}}" placeholder="{{ localize 'ROTV.Alignment' }}"/>
                 </li>
                 <li class="creature-type">
@@ -40,9 +40,18 @@
                         <i class="fas fa-cog"></i>
                     </a>
                 </li>
-                <li>
-                    <input type="text" name="system.details.source" value="{{system.details.source}}"
-                           placeholder="{{ localize 'ROTV.Source' }}"/>
+                <li class="source">
+                    {{#if system.details.source.directlyEditable}}
+                        <input type="text" name="system.details.source.custom" value="{{ system.details.source.custom }}"
+                                     placeholder="{{ localize 'ROTV.Source' }}">
+                    {{else}}
+                        <span data-tooltip="{{ system.details.source.label }}">{{ system.details.source.label }}</span>
+                    {{/if}}
+                    {{#if editable}}
+                        <a class="config-button" data-action="source" data-tooltip="ROTV.SourceConfig">
+                            <i class="fas fa-cog"></i>
+                        </a>
+                    {{/if}}
                 </li>
             </ul>
 
@@ -50,15 +59,19 @@
             <ul class="attributes flexrow">
                 <li class="attribute health">
                     <h4 class="attribute-name box-title">{{ localize "ROTV.HitPoints" }}</h4>
-                    <a class="config-button" data-action="hit-points" data-tooltip="ROTV.HitPointsConfig">
+                    <a class="config-button" data-action="hitPoints" data-tooltip="ROTV.HitPointsConfig">
                         <i class="fas fa-cog"></i>
                     </a>
                     <div class="attribute-value multiple">
                         <input name="system.attributes.hp.value" type="text" value="{{hp.value}}" placeholder="10"
                             data-tooltip="ROTV.HitPointsCurrent" data-dtype="Number">
                         <span class="sep"> / </span>
-                        <input name="system.attributes.hp.max" type="text" value="{{hp.max}}" placeholder="10"
-                            data-tooltip="ROTV.HitPointsMax" data-dtype="Number">
+                        {{#if system.details.level}}
+                        <span data-tooltip="ROTV.HitPointsMax">{{ hp.max }}</span>
+                        {{else}}
+                        <input name="system.attributes.hp.max" type="text" value="{{ hp.max }}" placeholder="10"
+                               data-tooltip="ROTV.HitPointsMax" data-dtype="Number">
+                        {{/if}}
                     </div>
                     <footer class="attribute-footer flexrow">
                         <input name="system.attributes.hp.temp" type="text" class="temphp"
@@ -79,9 +92,8 @@
                         data-attribution-caption="ROTV.ArmorClass" data-tooltip-direction="DOWN">
                         <span>{{system.attributes.ac.value}}</span>
                     </div>
-                    <footer class="attribute-footer flexrow">
-                        <span>{{localize "ROTV.DR"}}</span>
-                        <input name="system.attributes.damRed" type="text" data-dtype="Number" value="{{system.attributes.damRed}}" placeholder="0">
+                    <footer class="attribute-footer">
+                        <span>{{labels.armorType}}</span>
                     </footer>
                 </li>
 
@@ -119,7 +131,7 @@
                 <li class="ability {{#if ability.proficient}}proficient{{/if}}" data-ability="{{id}}">
                     <h4 class="ability-name box-title rollable">{{ability.label}}</h4>
                     <input type="text" value="{{ability.value}}" name="{{concat "system.abilities." id ".value"}}"
-                        class="ability-score" placeholder="0" data-dtype="Number">
+                        class="ability-score" placeholder="10" data-dtype="Number">
                     <div class="ability-modifiers flexrow">
                         <span class="ability-mod" data-tooltip="ROTV.Modifier">
                             {{numberFormat ability.mod decimals=0 sign=true}}
@@ -133,7 +145,8 @@
                             {{numberFormat ability.save decimals=0 sign=true}}
                         </span>
                     </div>
-                    <a class="config-button" data-action="ability" data-tooltip="ROTV.AbilityConfigure">
+                    <a class="config-button" data-action="ability"
+                       data-tooltip="{{ localize "ROTV.AbilityConfigure" ability=ability.label }}">
                         <i class="fas fa-cog"></i>
                     </a>
                 </li>
@@ -144,7 +157,8 @@
             <ul class="skills-list">
             {{#each config.skills as |obj s|}}
             {{#with (lookup ../skills s) as |skill|}}
-                <li class="skill flexrow {{#if skill.value}}proficient{{/if}}" data-skill="{{s}}">
+                <li class="skill proficiency-row flexrow {{#if skill.value}}proficient{{/if}}" data-property="skills"
+                    data-key="{{s}}">
                     <input type="hidden" name="system.skills.{{s}}.value"
                            value="{{skill.baseValue}}" data-dtype="Number">
                     <input type="hidden" name="system.skills.{{s}}.ability" value="{{skill.ability}}">
@@ -202,6 +216,17 @@
                             <input name="system.resources.lair.initiative" type="number" step="any"
                                    value="{{system.resources.lair.initiative}}"
                                    placeholder="20" data-tooltip="ROTV.LairActionInitiative">
+                        </div>
+                    </div>
+                    <div class="counter flexrow death-saves">
+                        <h4 class="rollable" data-action="rollDeathSave">{{ localize "ROTV.DeathSave" }}</h4>
+                        <div class="counter-value">
+                            <i class="fa-solid fa-check"></i>
+                            {{ numberInput system.attributes.death.success name="system.attributes.death.success"
+                               min=0 step=1 placeholder=0 }}
+                            <i class="fa-solid fa-times"></i>
+                            {{ numberInput system.attributes.death.failure name="system.attributes.death.failure"
+                               min=0 step=1 placeholder=0 }}
                         </div>
                     </div>
                 </div>

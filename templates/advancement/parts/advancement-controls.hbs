@@ -1,40 +1,45 @@
 <div class="form-group">
-  <label>{{localize "ROTV.AdvancementCustomTitle"}}</label>
-  <div class="form-fields">
-    <input type="text" name="title" value="{{src.title}}" placeholder="{{default.title}}">
-  </div>
+    <label>{{ localize "ROTV.AdvancementCustomTitle" }}</label>
+    <div class="form-fields">
+        <input type="text" name="title" value="{{ src.title }}" placeholder="{{ default.title }}">
+    </div>
 </div>
 
 <div class="form-group">
-  <label>{{localize "ROTV.AdvancementCustomIcon"}}</label>
-  <div class="form-fields">
-    {{filePicker type="image" target="icon"}}
-    <input type="text" name="icon" value="{{src.icon}}" placeholder="{{default.icon}}">
-  </div>
+    <label>{{ localize "ROTV.AdvancementCustomIcon" }}</label>
+    <div class="form-fields">
+        {{ filePicker type="image" target="icon" }}
+        <input type="text" name="icon" value="{{ src.icon }}" placeholder="{{ default.icon }}">
+    </div>
 </div>
 
 {{#if showClassRestrictions}}
-  <div class="form-group">
-    <label>{{localize "ROTV.AdvancementClassRestriction"}}</label>
+<div class="form-group">
+    <label>{{ localize "ROTV.AdvancementClassRestriction" }}</label>
     <div class="form-fields">
-      <select name="classRestriction">
-        {{#select classRestriction}}
-          <option value="">{{localize "ROTV.AdvancementClassRestrictionNone"}}</option>
-          <option value="primary">{{localize "ROTV.AdvancementClassRestrictionPrimary"}}</option>
-          <option value="secondary">{{localize "ROTV.AdvancementClassRestrictionSecondary"}}</option>
-        {{/select}}
-      </select>
+        <select name="classRestriction">
+            {{#select classRestriction}}
+            <option value="">{{ localize "ROTV.AdvancementClassRestrictionNone" }}</option>
+            <option value="primary">{{ localize "ROTV.AdvancementClassRestrictionPrimary" }}</option>
+            <option value="secondary">{{ localize "ROTV.AdvancementClassRestrictionSecondary" }}</option>
+            {{/select}}
+        </select>
     </div>
-  </div>
+</div>
 {{/if}}
 
 {{#if showLevelSelector}}
-  <div class="form-group">
-    <label>{{localize "ROTV.Level"}}</label>
+<div class="form-group">
+    <label>{{ localize "ROTV.Level" }}</label>
     <div class="form-fields">
-      <select name="level" data-dtype="Number">
-        {{selectOptions levels selected=level}}
-      </select>
+        <select name="level" data-dtype="Number">
+            {{ selectOptions levels selected=level }}
+        </select>
     </div>
-  </div>
+</div>
 {{/if}}
+
+<div class="form-group">
+    <label>{{ localize "ROTV.AdvancementHint" }}</label>
+    <textarea name="hint" {{~#if default.hint}} placeholder="{{ default.hint }}"{{/if}}>{{ hint }}</textarea>
+</div>

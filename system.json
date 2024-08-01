@@ -1,15 +1,15 @@
 {
   "id": "rotv",
-  "title": "Relics of the Void",
-  "description": "A system for playing in SPACE.",
-  "version": "0.34",
+  "title": "ROTV",
+  "description": "A system for playing in space.",
+  "version": "0.35",
   "compatibility": {
-    "minimum": "10.291",
-    "verified": "10"
+    "minimum": "12.329",
+    "verified": "12"
   },
-  "url": "https://github.com/Tapkomet/relicsOfTheVoid",
-  "manifest": "https://raw.githubusercontent.com/Tapkomet/relicsOfTheVoid/main/system.json",
-  "download": "https://github.com/Tapkomet/relicsOfTheVoid/archive/refs/heads/main.zip",
+  "url": "https://github.com/foundryvtt/rotv/",
+  "manifest": "https://raw.githubusercontent.com/foundryvtt/rotv/master/system.json",
+  "download": "https://github.com/foundryvtt/rotv/releases/download/release-4.0.0/rotv-release-4.0.0.zip",
   "authors": [
     {
       "name": "Tapkomet",
@@ -39,11 +39,17 @@
     }
   ],
   "socket": true,
-  "gridDistance": 1,
-  "gridUnits": "",
+  "grid": {
+    "distance": 1,
+    "units": ""
+  },
   "primaryTokenAttribute": "attributes.hp",
   "flags": {
-    "needsMigrationVersion": "0.2",
-    "compatibleMigrationVersion": "0.2"
+    "needsMigrationVersion": "0.3",
+    "compatibleMigrationVersion": "0.3",
+    "hotReload": {
+      "extensions": ["css", "hbs", "json"],
+      "paths": ["rotv.css", "templates", "lang"]
+    }
   }
 }

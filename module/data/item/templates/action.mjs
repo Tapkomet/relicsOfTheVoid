@@ -1,71 +1,77 @@
+import { ItemDataModel } from "../../abstract.mjs";
 import { FormulaField } from "../../fields.mjs";
+import {default as EnchantmentField, EnchantmentData} from "../fields/enchantment-field.mjs";
+import SummonsField from "../fields/summons-field.mjs";
+
+const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
 /**
  * Data model template for item actions.
  *
- * @property {string} ability             Ability score to use when determining modifier.
- * @property {string} actionType          Action type as defined in `ROTV.itemActionTypes`.
- * @property {string} attackBonus         Numeric or dice bonus to attack rolls.
- * @property {string} chatFlavor          Extra text displayed in chat.
- * @property {object} critical            Information on how critical hits are handled.
- * @property {number} critical.threshold  Minimum number on the dice to roll a critical hit.
- * @property {string} critical.damage     Extra damage on critical hit.
- * @property {object} damage              Item damage formulas.
- * @property {string[][]} damage.parts    Array of damage formula and types.
- * @property {string} damage.versatile    Special versatile damage formula.
- * @property {string} formula             Other roll formula.
- * @property {object} save                Item saving throw data.
- * @property {string} save.ability        Ability required for the save.
- * @property {number} save.dc             Custom saving throw value.
- * @property {string} save.scaling        Method for automatically determining saving throw DC.
+ * @property {string} ability               Ability score to use when determining modifier.
+ * @property {string} actionType            Action type as defined in `ROTV.itemActionTypes`.
+ * @property {object} attack                Information how attacks are handled.
+ * @property {string} attack.bonus          Numeric or dice bonus to attack rolls.
+ * @property {boolean} attack.flat          Is the attack bonus the only bonus to attack rolls?
+ * @property {string} chatFlavor            Extra text displayed in chat.
+ * @property {object} critical              Information on how critical hits are handled.
+ * @property {number} critical.threshold    Minimum number on the dice to roll a critical hit.
+ * @property {string} critical.damage       Extra damage on critical hit.
+ * @property {object} damage                Item damage formulas.
+ * @property {string[][]} damage.parts      Array of damage formula and types.
+ * @property {string} damage.versatile      Special versatile damage formula.
+ * @property {EnchantmentData} enchantment  Enchantment configuration associated with this type.
+ * @property {string} formula               Other roll formula.
+ * @property {object} save                  Item saving throw data.
+ * @property {string} save.ability          Ability required for the save.
+ * @property {number} save.dc               Custom saving throw value.
+ * @property {string} save.scaling          Method for automatically determining saving throw DC.
+ * @property {SummonsData} summons
  * @mixin
  */
-export default class ActionTemplate extends foundry.abstract.DataModel {
+export default class ActionTemplate extends ItemDataModel {
   /** @inheritdoc */
   static defineSchema() {
     return {
-      ability: new foundry.data.fields.StringField({
-        required: true, nullable: true, initial: null, label: "ROTV.AbilityModifier"
+      ability: new StringField({required: true, nullable: true, initial: null, label: "ROTV.AbilityModifier"}),
+      actionType: new StringField({required: true, nullable: true, initial: null, label: "ROTV.ItemActionType"}),
+      attack: new SchemaField({
+        bonus: new FormulaField({required: true, label: "ROTV.ItemAttackBonus"}),
+        flat: new BooleanField({label: "ROTV.ItemAttackFlat"})
       }),
-      actionType: new foundry.data.fields.StringField({
-        required: true, nullable: true, initial: null, label: "ROTV.ItemActionType"
-      }),
-      attackBonus: new FormulaField({required: true, label: "ROTV.ItemAttackBonus"}),
-      chatFlavor: new foundry.data.fields.StringField({required: true, label: "ROTV.ChatFlavor"}),
-      critical: new foundry.data.fields.SchemaField({
-        threshold: new foundry.data.fields.NumberField({
+      chatFlavor: new StringField({required: true, label: "ROTV.ChatFlavor"}),
+      critical: new SchemaField({
+        threshold: new NumberField({
           required: true, integer: true, initial: null, positive: true, label: "ROTV.ItemCritThreshold"
         }),
         damage: new FormulaField({required: true, label: "ROTV.ItemCritExtraDamage"})
       }),
-      damage: new foundry.data.fields.SchemaField({
-        parts: new foundry.data.fields.ArrayField(new foundry.data.fields.ArrayField(
-          new foundry.data.fields.StringField({nullable: true})
-        ), {required: true}),
+      damage: new SchemaField({
+        parts: new ArrayField(new ArrayField(new StringField({nullable: true})), {required: true}),
         versatile: new FormulaField({required: true, label: "ROTV.VersatileDamage"})
       }, {label: "ROTV.Damage"}),
+      enchantment: new EnchantmentField(),
       formula: new FormulaField({required: true, label: "ROTV.OtherFormula"}),
-      save: new foundry.data.fields.SchemaField({
-        ability: new foundry.data.fields.StringField({required: true, blank: true, label: "ROTV.Ability"}),
-        dc: new foundry.data.fields.NumberField({
-          required: true, min: 0, integer: true, label: "ROTV.AbbreviationDC"
-        }),
-        scaling: new foundry.data.fields.StringField({
-          required: true, blank: false, initial: "spell", label: "ROTV.ScalingFormula"
-        })
-      }, {label: "ROTV.SavingThrow"})
+      save: new SchemaField({
+        ability: new StringField({required: true, blank: true, label: "ROTV.Ability"}),
+        dc: new NumberField({required: true, min: 0, integer: true, label: "ROTV.AbbreviationDC"}),
+        scaling: new StringField({required: true, blank: false, initial: "spell", label: "ROTV.ScalingFormula"})
+      }, {label: "ROTV.SavingThrow"}),
+      summons: new SummonsField()
     };
   }
 
   /* -------------------------------------------- */
+  /*  Migrations                                  */
+  /* -------------------------------------------- */
 
   /** @inheritdoc */
-  static migrateData(source) {
+  static _migrateData(source) {
+    super._migrateData(source);
     ActionTemplate.#migrateAbility(source);
-    ActionTemplate.#migrateAttackBonus(source);
+    ActionTemplate.#migrateAttack(source);
     ActionTemplate.#migrateCritical(source);
     ActionTemplate.#migrateSave(source);
-    ActionTemplate.#migrateDamage(source);
   }
 
   /* -------------------------------------------- */
@@ -81,12 +87,15 @@ export default class ActionTemplate extends foundry.abstract.DataModel {
   /* -------------------------------------------- */
 
   /**
-   * Ensure a 0 or null in attack bonus is converted to an empty string rather than "0".
+   * Move 'attackBonus' to 'attack.bonus' and ensure a 0 or null is converted to an empty string rather than "0".
    * @param {object} source  The candidate source data from which the model will be constructed.
    */
-  static #migrateAttackBonus(source) {
-    if ( [0, "0", null].includes(source.attackBonus) ) source.attackBonus = "";
-    else if ( typeof source.attackBonus === "number" ) source.attackBonus = source.attackBonus.toString();
+  static #migrateAttack(source) {
+    if ( "attackBonus" in source ) {
+      source.attack ??= {};
+      source.attack.bonus ??= source.attackBonus;
+    }
+    if ( [0, "0", null].includes(source.attack?.bonus) ) source.attack.bonus = "";
   }
 
   /* -------------------------------------------- */
@@ -97,11 +106,11 @@ export default class ActionTemplate extends foundry.abstract.DataModel {
    */
   static #migrateCritical(source) {
     if ( !("critical" in source) ) return;
-    if ( source.critical?.damage === null ) source.critical.damage = "";
     if ( (typeof source.critical !== "object") || (source.critical === null) ) source.critical = {
       threshold: null,
       damage: ""
     };
+    if ( source.critical.damage === null ) source.critical.damage = "";
   }
 
   /* -------------------------------------------- */
@@ -111,22 +120,167 @@ export default class ActionTemplate extends foundry.abstract.DataModel {
    * @param {object} source  The candidate source data from which the model will be constructed.
    */
   static #migrateSave(source) {
-    if ( source.save?.scaling === "" ) source.save.scaling = "spell";
-    if ( source.save?.ability === null ) source.save.ability = "";
-    if ( typeof source.save?.dc === "string" ) {
+    if ( !("save" in source) ) return;
+    source.save ??= {};
+    if ( source.save.scaling === "" ) source.save.scaling = "spell";
+    if ( source.save.ability === null ) source.save.ability = "";
+    if ( typeof source.save.dc === "string" ) {
       if ( source.save.dc === "" ) source.save.dc = null;
       else if ( Number.isNumeric(source.save.dc) ) source.save.dc = Number(source.save.dc);
     }
   }
 
   /* -------------------------------------------- */
+  /*  Getters                                     */
+  /* -------------------------------------------- */
 
   /**
-   * Migrate damage parts.
-   * @param {object} source  The candidate source data from which the model will be constructed.
+   * Which ability score modifier is used by this item?
+   * @type {string|null}
    */
-  static #migrateDamage(source) {
-    if ( !("damage" in source) ) return;
-    source.damage.parts ??= [];
+  get abilityMod() {
+    if ( this.ability === "none" ) return null;
+    return this.ability || this._typeAbilityMod || {
+      mwak: "str",
+      rwak: "dex",
+      msak: this.parent?.actor?.system.attributes.spellcasting || "int",
+      rsak: this.parent?.actor?.system.attributes.spellcasting || "int"
+    }[this.actionType] || null;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Default ability key defined for this type.
+   * @type {string|null}
+   * @internal
+   */
+  get _typeAbilityMod() {
+    return null;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * What is the critical hit threshold for this item? Uses the smallest value from among the following sources:
+   *  - `critical.threshold` defined on the item
+   *  - `critical.threshold` defined on ammunition, if consumption mode is set to ammo
+   *  - Type-specific critical threshold
+   * @type {number|null}
+   */
+  get criticalThreshold() {
+    if ( !this.hasAttack ) return null;
+    let ammoThreshold = Infinity;
+    if ( this.hasAmmo ) {
+      ammoThreshold = this.parent?.actor?.items.get(this.consume.target)?.system.critical.threshold ?? Infinity;
+    }
+    const threshold = Math.min(this.critical.threshold ?? Infinity, this._typeCriticalThreshold, ammoThreshold);
+    return threshold < Infinity ? threshold : 20;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Default critical threshold for this type.
+   * @type {number}
+   * @internal
+   */
+  get _typeCriticalThreshold() {
+    return Infinity;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item implement an ability check as part of its usage?
+   * @type {boolean}
+   */
+  get hasAbilityCheck() {
+    return (this.actionType === "abil") && !!this.ability;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item implement an attack roll as part of its usage?
+   * @type {boolean}
+   */
+  get hasAttack() {
+    return ["mwak", "rwak", "msak", "rsak"].includes(this.actionType);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item implement a damage roll as part of its usage?
+   * @type {boolean}
+   */
+  get hasDamage() {
+    return this.actionType && (this.damage.parts.length > 0);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item implement a saving throw as part of its usage?
+   * @type {boolean}
+   */
+  get hasSave() {
+    return this.actionType && !!(this.save.ability && this.save.scaling);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does this Item implement summoning as part of its usage?
+   * @type {boolean}
+   */
+  get hasSummoning() {
+    return (this.actionType === "summ") && !!this.summons?.profiles.length;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Can this item enchant other items?
+   * @type {boolean}
+   */
+  get isEnchantment() {
+    return EnchantmentData.isEnchantment(this);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item provide an amount of healing instead of conventional damage?
+   * @type {boolean}
+   */
+  get isHealing() {
+    return (this.actionType === "heal") && this.hasDamage;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item implement a versatile damage roll as part of its usage?
+   * @type {boolean}
+   */
+  get isVersatile() {
+    return this.actionType && !!(this.hasDamage && this.damage.versatile);
+  }
+
+  /* -------------------------------------------- */
+  /*  Helpers                                     */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  getRollData(options) {
+    const data = super.getRollData(options);
+    const key = this.abilityMod;
+    if ( data && key && ("abilities" in data) ) {
+      const ability = data.abilities[key];
+      data.mod = ability?.mod ?? 0;
+    }
+    return data;
   }
 }

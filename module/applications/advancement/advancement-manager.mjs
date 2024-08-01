@@ -6,9 +6,9 @@ import Advancement from "../../documents/advancement/advancement.mjs";
  * @typedef {object} AdvancementStep
  * @property {string} type                Step type from "forward", "reverse", "restore", or "delete".
  * @property {AdvancementFlow} [flow]     Flow object for the advancement being applied by this step.
- * @property {ItemRelics} [item]              For "delete" steps only, the item to be removed.
+ * @property {ItemRotV} [item]              For "delete" steps only, the item to be removed.
  * @property {object} [class]             Contains data on class if step was triggered by class level change.
- * @property {ItemRelics} [class.item]        Class item that caused this advancement step.
+ * @property {ItemRotV} [class.item]        Class item that caused this advancement step.
  * @property {number} [class.level]       Level the class should be during this step.
  * @property {boolean} [automatic=false]  Should the manager attempt to apply this step without user interaction?
  */
@@ -16,7 +16,7 @@ import Advancement from "../../documents/advancement/advancement.mjs";
 /**
  * Application for controlling the advancement workflow and displaying the interface.
  *
- * @param {ActorRelics} actor        Actor on which this advancement is being performed.
+ * @param {ActorRotV} actor        Actor on which this advancement is being performed.
  * @param {object} [options={}]  Additional application options.
  */
 export default class AdvancementManager extends Application {
@@ -25,13 +25,13 @@ export default class AdvancementManager extends Application {
 
     /**
      * The original actor to which changes will be applied when the process is complete.
-     * @type {ActorRelics}
+     * @type {ActorRotV}
      */
     this.actor = actor;
 
     /**
      * A clone of the original actor to which the changes can be applied during the advancement process.
-     * @type {ActorRelics}
+     * @type {ActorRotV}
      */
     this.clone = actor.clone();
 
@@ -125,7 +125,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for a newly added advancement from drag-drop.
-   * @param {ActorRelics} actor               Actor from which the advancement should be updated.
+   * @param {ActorRotV} actor               Actor from which the advancement should be updated.
    * @param {string} itemId               ID of the item to which the advancements are being dropped.
    * @param {Advancement[]} advancements  Dropped advancements to add.
    * @param {object} options              Rendering options passed to the application.
@@ -173,7 +173,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for a newly added item.
-   * @param {ActorRelics} actor         Actor to which the item is being added.
+   * @param {ActorRotV} actor         Actor to which the item is being added.
    * @param {object} itemData       Data for the item being added.
    * @param {object} options        Rendering options passed to the application.
    * @returns {AdvancementManager}  Prepared manager. Steps count can be used to determine if advancements are needed.
@@ -201,7 +201,7 @@ export default class AdvancementManager extends Application {
     }
 
     // All other items, just create some flows up to current character level (or class level for subclasses)
-    let targetLevel = manager.clone.system.details.level;
+    let targetLevel = manager.clone.system.details.level ?? 0;
     if ( clonedItem.type === "subclass" ) targetLevel = clonedItem.class?.system.levels ?? 0;
     Array.fromRange(targetLevel + 1)
       .flatMap(l => this.flowsForLevel(clonedItem, l))
@@ -214,7 +214,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for modifying choices on an item at a specific level.
-   * @param {ActorRelics} actor         Actor from which the choices should be modified.
+   * @param {ActorRotV} actor         Actor from which the choices should be modified.
    * @param {object} itemId         ID of the item whose choices are to be changed.
    * @param {number} level          Level at which the choices are being changed.
    * @param {object} options        Rendering options passed to the application.
@@ -244,7 +244,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for an advancement that needs to be deleted.
-   * @param {ActorRelics} actor         Actor from which the advancement should be unapplied.
+   * @param {ActorRotV} actor         Actor from which the advancement should be unapplied.
    * @param {string} itemId         ID of the item from which the advancement should be deleted.
    * @param {string} advancementId  ID of the advancement to delete.
    * @param {object} options        Rendering options passed to the application.
@@ -277,7 +277,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for an item that needs to be deleted.
-   * @param {ActorRelics} actor         Actor from which the item should be deleted.
+   * @param {ActorRotV} actor         Actor from which the item should be deleted.
    * @param {string} itemId         ID of the item to be deleted.
    * @param {object} options        Rendering options passed to the application.
    * @returns {AdvancementManager}  Prepared manager. Steps count can be used to determine if advancements are needed.
@@ -293,7 +293,7 @@ export default class AdvancementManager extends Application {
     }
 
     // All other items, just create some flows down from current character level
-    Array.fromRange(manager.clone.system.details.level + 1)
+    Array.fromRange((manager.clone.system.details.level ?? 0) + 1)
       .flatMap(l => this.flowsForLevel(clonedItem, l))
       .reverse()
       .forEach(flow => manager.steps.push({ type: "reverse", flow, automatic: true }));
@@ -307,7 +307,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Construct a manager for a change in a class's levels.
-   * @param {ActorRelics} actor         Actor whose level has changed.
+   * @param {ActorRotV} actor         Actor whose level has changed.
    * @param {string} classId        ID of the class being changed.
    * @param {number} levelDelta     Levels by which to increase or decrease the class.
    * @param {object} options        Rendering options passed to the application.
@@ -330,17 +330,19 @@ export default class AdvancementManager extends Application {
    * @private
    */
   createLevelChangeSteps(classItem, levelDelta) {
+    const raceItem = this.clone.system?.details?.race instanceof Item ? this.clone.system.details.race : null;
     const pushSteps = (flows, data) => this.steps.push(...flows.map(flow => ({ flow, ...data })));
     const getItemFlows = characterLevel => this.clone.items.contents.flatMap(i => {
-      if ( ["class", "subclass"].includes(i.type) ) return [];
+      if ( ["class", "subclass", "race"].includes(i.type) ) return [];
       return this.constructor.flowsForLevel(i, characterLevel);
     });
 
     // Level increased
     for ( let offset = 1; offset <= levelDelta; offset++ ) {
       const classLevel = classItem.system.levels + offset;
-      const characterLevel = this.actor.system.details.level + offset;
+      const characterLevel = (this.actor.system.details.level ?? 0) + offset;
       const stepData = { type: "forward", class: {item: classItem, level: classLevel} };
+      pushSteps(this.constructor.flowsForLevel(raceItem, characterLevel), stepData);
       pushSteps(this.constructor.flowsForLevel(classItem, classLevel), stepData);
       pushSteps(this.constructor.flowsForLevel(classItem.subclass, classLevel), stepData);
       pushSteps(getItemFlows(characterLevel), stepData);
@@ -349,11 +351,12 @@ export default class AdvancementManager extends Application {
     // Level decreased
     for ( let offset = 0; offset > levelDelta; offset-- ) {
       const classLevel = classItem.system.levels + offset;
-      const characterLevel = this.actor.system.details.level + offset;
+      const characterLevel = (this.actor.system.details.level ?? 0) + offset;
       const stepData = { type: "reverse", class: {item: classItem, level: classLevel}, automatic: true };
       pushSteps(getItemFlows(characterLevel).reverse(), stepData);
       pushSteps(this.constructor.flowsForLevel(classItem.subclass, classLevel).reverse(), stepData);
       pushSteps(this.constructor.flowsForLevel(classItem, classLevel).reverse(), stepData);
+      pushSteps(this.constructor.flowsForLevel(raceItem, characterLevel).reverse(), stepData);
       if ( classLevel === 1 ) this.steps.push({ type: "delete", item: classItem, automatic: true });
     }
 
@@ -370,7 +373,7 @@ export default class AdvancementManager extends Application {
 
   /**
    * Creates advancement flows for all advancements at a specific level.
-   * @param {ItemRelics} item          Item that has advancement.
+   * @param {ItemRotV} item          Item that has advancement.
    * @param {number} level         Level in question.
    * @returns {AdvancementFlow[]}  Created flow applications.
    * @protected
@@ -385,12 +388,12 @@ export default class AdvancementManager extends Application {
 
   /**
    * Determine the proper working level either from the provided item or from the cloned actor.
-   * @param {ItemRelics} item    Item being advanced. If class or subclass, its level will be used.
-   * @param {ActorRelics} actor  Actor being advanced.
+   * @param {ItemRotV} item    Item being advanced. If class or subclass, its level will be used.
+   * @param {ActorRotV} actor  Actor being advanced.
    * @returns {number}       Working level.
    */
   static currentLevel(item, actor) {
-    return item.system.levels ?? item.class?.system.levels ?? actor.system.details.level;
+    return item.system.levels ?? item.class?.system.levels ?? actor.system.details.level ?? 0;
   }
 
   /* -------------------------------------------- */
@@ -466,6 +469,7 @@ export default class AdvancementManager extends Application {
 
     // Render the step
     this.step.flow._element = null;
+    this.step.flow.options.manager ??= this;
     await this.step.flow._render(force, options);
     this.setPosition();
   }
@@ -537,14 +541,15 @@ export default class AdvancementManager extends Application {
     try {
       do {
         const flow = this.step.flow;
+        const type = this.step.type;
 
         // Apply changes based on step type
-        if ( (this.step.type === "delete") && this.step.item ) this.clone.items.delete(this.step.item.id);
-        else if ( (this.step.type === "delete") && this.step.advancement ) {
+        if ( (type === "delete") && this.step.item ) this.clone.items.delete(this.step.item.id);
+        else if ( (type === "delete") && this.step.advancement ) {
           this.step.advancement.item.deleteAdvancement(this.step.advancement.id, { source: true });
         }
-        else if ( this.step.type === "restore" ) await flow.advancement.restore(flow.level, flow.retainedData);
-        else if ( this.step.type === "reverse" ) flow.retainedData = await flow.advancement.reverse(flow.level);
+        else if ( type === "restore" ) await flow.advancement.restore(flow.level, flow.retainedData);
+        else if ( type === "reverse" ) await flow.retainData(await flow.advancement.reverse(flow.level));
         else if ( flow ) await flow._updateObject(event, flow._getSubmitData());
 
         this._stepIndex++;
@@ -588,14 +593,15 @@ export default class AdvancementManager extends Application {
         this._stepIndex--;
         if ( !this.step ) break;
         const flow = this.step.flow;
+        const type = this.step.type;
 
         // Reverse step based on step type
-        if ( (this.step.type === "delete") && this.step.item ) this.clone.updateSource({items: [this.step.item]});
-        else if ( (this.step.type === "delete") && this.step.advancement ) this.advancement.item.createAdvancement(
+        if ( (type === "delete") && this.step.item ) this.clone.updateSource({items: [this.step.item]});
+        else if ( (type === "delete") && this.step.advancement ) this.advancement.item.createAdvancement(
           this.advancement.typeName, this.advancement._source, { source: true }
         );
-        else if ( this.step.type === "reverse" ) await flow.advancement.restore(flow.level, flow.retainedData);
-        else if ( flow ) flow.retainedData = await flow.advancement.reverse(flow.level);
+        else if ( type === "reverse" ) await flow.advancement.restore(flow.level, flow.retainedData);
+        else if ( flow ) await flow.retainData(await flow.advancement.reverse(flow.level));
         this.clone.reset();
       } while ( this.step?.automatic );
     } catch(error) {

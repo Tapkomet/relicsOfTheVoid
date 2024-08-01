@@ -4,7 +4,7 @@
  */
 export const migrateWorld = async function() {
   const version = game.system.version;
-  ui.notifications.info(game.i18n.format("MIGRATION.RelicsBegin", {version}), {permanent: true});
+  ui.notifications.info(game.i18n.format("MIGRATION.RotVBegin", {version}), {permanent: true});
 
   const migrationData = await getMigrationData();
 
@@ -13,11 +13,24 @@ export const migrateWorld = async function() {
     .concat(Array.from(game.actors.invalidDocumentIds).map(id => [game.actors.getInvalid(id), false]));
   for ( const [actor, valid] of actors ) {
     try {
+      const flags = { persistSourceMigration: false };
       const source = valid ? actor.toObject() : game.data.actors.find(a => a._id === actor.id);
-      const updateData = migrateActorData(source, migrationData);
+      const version = actor._stats.systemVersion;
+      let updateData = migrateActorData(source, migrationData, flags, { actorUuid: actor.uuid });
       if ( !foundry.utils.isEmpty(updateData) ) {
         console.log(`Migrating Actor document ${actor.name}`);
-        await actor.update(updateData, {enforceTypes: false, diff: valid});
+        if ( flags.persistSourceMigration ) {
+          updateData = foundry.utils.mergeObject(source, updateData, {inplace: false});
+        }
+        await actor.update(updateData, {
+          enforceTypes: false, diff: valid && !flags.persistSourceMigration, render: false
+        });
+      }
+      if ( actor.effects && actor.items && foundry.utils.isNewerVersion("3.0.3", version) ) {
+        const deleteIds = _duplicatedEffects(actor);
+        if ( deleteIds.size ) await actor.deleteEmbeddedDocuments("ActiveEffect", Array.from(deleteIds), {
+          render: false
+        });
       }
     } catch(err) {
       err.message = `Failed rotv system migration for Actor ${actor.name}: ${err.message}`;
@@ -30,11 +43,17 @@ export const migrateWorld = async function() {
     .concat(Array.from(game.items.invalidDocumentIds).map(id => [game.items.getInvalid(id), false]));
   for ( const [item, valid] of items ) {
     try {
+      const flags = { persistSourceMigration: false };
       const source = valid ? item.toObject() : game.data.items.find(i => i._id === item.id);
-      const updateData = migrateItemData(source, migrationData);
+      let updateData = migrateItemData(source, migrationData, flags);
       if ( !foundry.utils.isEmpty(updateData) ) {
         console.log(`Migrating Item document ${item.name}`);
-        await item.update(updateData, {enforceTypes: false, diff: valid});
+        if ( flags.persistSourceMigration ) {
+          updateData = foundry.utils.mergeObject(source, updateData, {inplace: false});
+        }
+        await item.update(updateData, {
+          enforceTypes: false, diff: valid && !flags.persistSourceMigration, render: false
+        });
       }
     } catch(err) {
       err.message = `Failed rotv system migration for Item ${item.name}: ${err.message}`;
@@ -48,7 +67,7 @@ export const migrateWorld = async function() {
       const updateData = migrateMacroData(m.toObject(), migrationData);
       if ( !foundry.utils.isEmpty(updateData) ) {
         console.log(`Migrating Macro document ${m.name}`);
-        await m.update(updateData, {enforceTypes: false});
+        await m.update(updateData, {enforceTypes: false, render: false});
       }
     } catch(err) {
       err.message = `Failed rotv system migration for Macro ${m.name}: ${err.message}`;
@@ -56,20 +75,61 @@ export const migrateWorld = async function() {
     }
   }
 
+  // Migrate World Roll Tables
+  for ( const table of game.tables ) {
+    try {
+      const updateData = migrateRollTableData(table.toObject(), migrationData);
+      if ( !foundry.utils.isEmpty(updateData) ) {
+        console.log(`Migrating RollTable document ${table.name}`);
+        await table.update(updateData, { enforceTypes: false, render: false });
+      }
+    } catch(err) {
+      err.message = `Failed rotv system migration for RollTable ${table.name}: ${err.message}`;
+      console.error(err);
+    }
+  }
+
   // Migrate Actor Override Tokens
-  for ( let s of game.scenes ) {
+  for ( const s of game.scenes ) {
     try {
       const updateData = migrateSceneData(s, migrationData);
       if ( !foundry.utils.isEmpty(updateData) ) {
         console.log(`Migrating Scene document ${s.name}`);
-        await s.update(updateData, {enforceTypes: false});
-        // If we do not do this, then synthetic token actors remain in cache
-        // with the un-updated actorData.
-        s.tokens.forEach(t => t._actor = null);
+        await s.update(updateData, {enforceTypes: false, render: false});
       }
     } catch(err) {
       err.message = `Failed rotv system migration for Scene ${s.name}: ${err.message}`;
       console.error(err);
+    }
+
+    // Migrate ActorDeltas individually in order to avoid issues with ActorDelta bulk updates.
+    for ( const token of s.tokens ) {
+      if ( token.actorLink || !token.actor ) continue;
+      try {
+        const flags = { persistSourceMigration: false };
+        const source = token.actor.toObject();
+        let updateData = migrateActorData(source, migrationData, flags, { actorUuid: token.actor.uuid });
+        if ( !foundry.utils.isEmpty(updateData) ) {
+          console.log(`Migrating ActorDelta document ${token.actor.name} [${token.delta.id}] in Scene ${s.name}`);
+          if ( flags.persistSourceMigration ) {
+            updateData = foundry.utils.mergeObject(source, updateData, { inplace: false });
+          } else {
+            // Workaround for core issue of bulk updating ActorDelta collections.
+            ["items", "effects"].forEach(col => {
+              for ( const [i, update] of (updateData[col] ?? []).entries() ) {
+                const original = token.actor[col].get(update._id);
+                updateData[col][i] = foundry.utils.mergeObject(original.toObject(), update, { inplace: false });
+              }
+            });
+          }
+          await token.actor.update(updateData, {
+            enforceTypes: false, diff: !flags.persistSourceMigration, render: false
+          });
+        }
+      } catch(err) {
+        err.message = `Failed rotv system migration for ActorDelta [${token.id}]: ${err.message}`;
+        console.error(err);
+      }
     }
   }
 
@@ -82,7 +142,7 @@ export const migrateWorld = async function() {
 
   // Set the migration as complete
   game.settings.set("rotv", "systemMigrationVersion", game.system.version);
-  ui.notifications.info(game.i18n.format("MIGRATION.RelicsComplete", {version}), {permanent: true});
+  ui.notifications.info(game.i18n.format("MIGRATION.RotVComplete", {version}), {permanent: true});
 };
 
 /* -------------------------------------------- */
@@ -101,6 +161,7 @@ export const migrateCompendium = async function(pack) {
   // Unlock the pack for editing
   const wasLocked = pack.locked;
   await pack.configure({locked: false});
+  rotv.moduleArt.suppressArt = true;
 
   // Begin by requesting server-side data model migration and get the migrated content
   await pack.migrate();
@@ -110,21 +171,32 @@ export const migrateCompendium = async function(pack) {
   for ( let doc of documents ) {
     let updateData = {};
     try {
-      switch (documentName) {
+      const flags = { persistSourceMigration: false };
+      const source = doc.toObject();
+      switch ( documentName ) {
         case "Actor":
-          updateData = migrateActorData(doc.toObject(), migrationData);
+          updateData = migrateActorData(source, migrationData, flags, { actorUuid: doc.uuid });
+          if ( (documentName === "Actor") && source.effects && source.items
+            && foundry.utils.isNewerVersion("3.0.3", source._stats.systemVersion) ) {
+            const deleteIds = _duplicatedEffects(source);
+            if ( deleteIds.size ) {
+              if ( flags.persistSourceMigration ) source.effects = source.effects.filter(e => !deleteIds.has(e._id));
+              else await doc.deleteEmbeddedDocuments("ActiveEffect", Array.from(deleteIds));
+            }
+          }
           break;
         case "Item":
-          updateData = migrateItemData(doc.toObject(), migrationData);
+          updateData = migrateItemData(source, migrationData, flags);
           break;
         case "Scene":
-          updateData = migrateSceneData(doc.toObject(), migrationData);
+          updateData = migrateSceneData(source, migrationData, flags);
           break;
       }
 
       // Save the entry, if data was changed
       if ( foundry.utils.isEmpty(updateData) ) continue;
-      await doc.update(updateData);
+      if ( flags.persistSourceMigration ) updateData = foundry.utils.mergeObject(source, updateData);
+      await doc.update(updateData, { diff: !flags.persistSourceMigration });
       console.log(`Migrated ${documentName} document ${doc.name} in Compendium ${pack.collection}`);
     }
 
@@ -137,8 +209,47 @@ export const migrateCompendium = async function(pack) {
 
   // Apply the original locked status for the pack
   await pack.configure({locked: wasLocked});
+  rotv.moduleArt.suppressArt = false;
   console.log(`Migrated all ${documentName} documents from Compendium ${pack.collection}`);
 };
+
+/* -------------------------------------------- */
+
+/**
+ * Re-parents compendia from one top-level folder to another.
+ * @param {string} from  The name of the source folder.
+ * @param {string} to    The name of the destination folder.
+ * @returns {Promise<Folder[]> | undefined}
+ */
+export function reparentCompendiums(from, to) {
+  const compendiumFolders = new Map();
+  for ( const folder of game.folders ) {
+    if ( folder.type !== "Compendium" ) continue;
+    if ( folder.folder ) {
+      let folders = compendiumFolders.get(folder.folder);
+      if ( !folders ) {
+        folders = [];
+        compendiumFolders.set(folder.folder, folders);
+      }
+      folders.push(folder);
+    }
+    if ( folder.name === from ) from = folder;
+    else if ( folder.name === to ) to = folder;
+  }
+  if ( !(from instanceof Folder) || !(to instanceof Folder) ) return;
+  const config = game.settings.get("core", "compendiumConfiguration");
+
+  // Re-parent packs directly under the source folder.
+  Object.values(config).forEach(conf => {
+    if ( conf.folder === from.id ) conf.folder = to.id;
+  });
+
+  game.settings.set("core", "compendiumConfiguration", config);
+
+  // Re-parent folders directly under the source folder.
+  const updates = (compendiumFolders.get(from) ?? []).map(f => ({ _id: f.id, folder: to.id }));
+  return Folder.implementation.updateDocuments(updates).then(() => from.delete());
+}
 
 /* -------------------------------------------- */
 
@@ -207,7 +318,7 @@ export const migrateArmorClass = async function(pack) {
 
       // CASE 1: Armor is equipped
       const hasArmorEquipped = actor.itemTypes.equipment.some(e => {
-        return armor.has(e.system.armor?.type) && e.system.equipped;
+        return armor.has(e.system.type.value) && e.system.equipped;
       });
       if ( hasArmorEquipped ) update["system.attributes.ac.calc"] = "default";
 
@@ -231,18 +342,25 @@ export const migrateArmorClass = async function(pack) {
 /**
  * Migrate a single Actor document to incorporate latest data model changes
  * Return an Object of updateData to be applied
- * @param {object} actor            The actor data object to update
- * @param {object} [migrationData]  Additional data to perform the migration
- * @returns {object}                The updateData to apply
+ * @param {object} actor                The actor data object to update
+ * @param {object} [migrationData]      Additional data to perform the migration
+ * @param {object} [flags={}]           Track the needs migration flag.
+ * @param {object} [options]
+ * @param {string} [options.actorUuid]  The UUID of the actor.
+ * @returns {object}                    The updateData to apply
  */
-export const migrateActorData = function(actor, migrationData) {
+export const migrateActorData = function(actor, migrationData, flags={}, { actorUuid }={}) {
   const updateData = {};
   _migrateTokenImage(actor, updateData);
   _migrateActorAC(actor, updateData);
+  _migrateActorMovementSenses(actor, updateData);
 
   // Migrate embedded effects
   if ( actor.effects ) {
     const effects = migrateEffects(actor, migrationData);
+    if ( foundry.utils.isNewerVersion("3.1.0", actor._stats?.systemVersion) ) {
+      migrateCopyActorTransferEffects(actor, effects, { actorUuid });
+    }
     if ( effects.length > 0 ) updateData.effects = effects;
   }
 
@@ -251,19 +369,34 @@ export const migrateActorData = function(actor, migrationData) {
   const items = actor.items.reduce((arr, i) => {
     // Migrate the Owned Item
     const itemData = i instanceof CONFIG.Item.documentClass ? i.toObject() : i;
-    let itemUpdate = migrateItemData(itemData, migrationData);
+    const itemFlags = { persistSourceMigration: false };
+    let itemUpdate = migrateItemData(itemData, migrationData, itemFlags);
+
+    if ( (itemData.type === "background") && (actor.system?.details?.background !== itemData._id) ) {
+      updateData["system.details.background"] = itemData._id;
+    }
 
     // Prepared, Equipped, and Proficient for NPC actors
     if ( actor.type === "npc" ) {
       if (foundry.utils.getProperty(itemData.system, "preparation.prepared") === false) itemUpdate["system.preparation.prepared"] = true;
       if (foundry.utils.getProperty(itemData.system, "equipped") === false) itemUpdate["system.equipped"] = true;
-      if (foundry.utils.getProperty(itemData.system, "proficient") === false) itemUpdate["system.proficient"] = true;
     }
 
     // Update the Owned Item
     if ( !foundry.utils.isEmpty(itemUpdate) ) {
-      itemUpdate._id = itemData._id;
-      arr.push(foundry.utils.expandObject(itemUpdate));
+      if ( itemFlags.persistSourceMigration ) {
+        itemUpdate = foundry.utils.mergeObject(itemData, itemUpdate, {inplace: false});
+        flags.persistSourceMigration = true;
+      }
+      arr.push({ ...itemUpdate, _id: itemData._id });
+    }
+
+    // Update tool expertise.
+    if ( actor.system.tools ) {
+      const hasToolProf = itemData.system.type?.baseItem in actor.system.tools;
+      if ( (itemData.type === "tool") && (itemData.system.proficient > 1) && hasToolProf ) {
+        updateData[`system.tools.${itemData.system.type.baseItem}.value`] = itemData.system.proficient;
+      }
     }
 
     return arr;
@@ -280,9 +413,10 @@ export const migrateActorData = function(actor, migrationData) {
  *
  * @param {object} item             Item data to migrate
  * @param {object} [migrationData]  Additional data to perform the migration
+ * @param {object} [flags={}]       Track the needs migration flag.
  * @returns {object}                The updateData to apply
  */
-export function migrateItemData(item, migrationData) {
+export function migrateItemData(item, migrationData, flags={}) {
   const updateData = {};
   _migrateDocumentIcon(item, updateData, migrationData);
 
@@ -290,6 +424,21 @@ export function migrateItemData(item, migrationData) {
   if ( item.effects ) {
     const effects = migrateEffects(item, migrationData);
     if ( effects.length > 0 ) updateData.effects = effects;
+  }
+
+  // Migrate properties
+  const migratedProperties = foundry.utils.getProperty(item, "flags.rotv.migratedProperties");
+  if ( migratedProperties?.length ) {
+    flags.persistSourceMigration = true;
+    const properties = new Set(foundry.utils.getProperty(item, "system.properties") ?? [])
+      .union(new Set(migratedProperties));
+    updateData["system.properties"] = Array.from(properties);
+    updateData["flags.rotv.-=migratedProperties"] = null;
+  }
+
+  if ( foundry.utils.getProperty(item, "flags.rotv.persistSourceMigration") ) {
+    flags.persistSourceMigration = true;
+    updateData["flags.rotv.-=persistSourceMigration"] = null;
   }
 
   return updateData;
@@ -304,10 +453,10 @@ export function migrateItemData(item, migrationData) {
  * @returns {object[]}              Updates to apply on the embedded effects.
  */
 export const migrateEffects = function(parent, migrationData) {
-  if ( !parent.effects ) return {};
+  if ( !parent.effects ) return [];
   return parent.effects.reduce((arr, e) => {
     const effectData = e instanceof CONFIG.ActiveEffect.documentClass ? e.toObject() : e;
-    let effectUpdate = migrateEffectData(effectData, migrationData);
+    let effectUpdate = migrateEffectData(effectData, migrationData, { parent });
     if ( !foundry.utils.isEmpty(effectUpdate) ) {
       effectUpdate._id = effectData._id;
       arr.push(foundry.utils.expandObject(effectUpdate));
@@ -319,15 +468,47 @@ export const migrateEffects = function(parent, migrationData) {
 /* -------------------------------------------- */
 
 /**
- * Migrate the provided active effect data.
- * @param {object} effect           Effect data to migrate.
- * @param {object} [migrationData]  Additional data to perform the migration.
- * @returns {object}                The updateData to apply.
+ * Migrates transfer effects on items belonging to this actor to "real" effects on the actor.
+ * @param {object} actor                 The parent actor.
+ * @param {object[]} effects             An array of new effects to add.
+ * @param {object} [options]             Additional options.
+ * @param {string} [options.actorUuid]   UUID of the parent actor
  */
-export const migrateEffectData = function(effect, migrationData) {
+export const migrateCopyActorTransferEffects = function(actor, effects, { actorUuid }={}) {
+  if ( !actor.items ) return;
+
+  for ( const item of actor.items ) {
+    for ( const effect of item.effects ) {
+      if ( !effect.transfer ) continue;
+      if ( !isSpellOrScroll(item) ) continue;
+      if ( effect.disabled ) continue;
+
+      const newEffect = foundry.utils.deepClone(effect);
+      newEffect.transfer = false;
+      if ( actorUuid ) newEffect.origin = `${actorUuid}.Item.${item._id}.ActiveEffect.${effect._id}`;
+      delete newEffect._id;
+      effects.push(newEffect);
+    }
+  }
+};
+
+/* -------------------------------------------- */
+
+/**
+ * Migrate the provided active effect data.
+ * @param {object} effect            Effect data to migrate.
+ * @param {object} [migrationData]   Additional data to perform the migration.
+ * @param {object} [options]         Additional options.
+ * @param {object} [options.parent]  Parent of this effect.
+ * @returns {object}                 The updateData to apply.
+ */
+export const migrateEffectData = function(effect, migrationData, { parent }={}) {
   const updateData = {};
-  _migrateDocumentIcon(effect, updateData, {...migrationData, field: "icon"});
+  _migrateDocumentIcon(effect, updateData, {...migrationData, field: "img"});
   _migrateEffectArmorClass(effect, updateData);
+  if ( foundry.utils.isNewerVersion("3.1.0", effect._stats?.systemVersion ?? parent?._stats?.systemVersion) ) {
+    _migrateTransferEffect(effect, parent, updateData);
+  }
   return updateData;
 };
 
@@ -349,44 +530,48 @@ export const migrateMacroData = function(macro, migrationData) {
 /* -------------------------------------------- */
 
 /**
- * Migrate a single Scene document to incorporate changes to the data model of it's actor data overrides
+ * Migrate a single RollTable document to incorporate the latest data model changes.
+ * @param {object} table            Roll table data to migrate.
+ * @param {object} [migrationData]  Additional data to perform the migration.
+ * @returns {object}                The update delta to apply.
+ */
+export function migrateRollTableData(table, migrationData) {
+  const updateData = {};
+  _migrateDocumentIcon(table, updateData, migrationData);
+  if ( !table.results?.length ) return updateData;
+  const results = table.results.reduce((arr, result) => {
+    const resultUpdate = {};
+    _migrateDocumentIcon(result, resultUpdate, migrationData);
+    if ( !foundry.utils.isEmpty(resultUpdate) ) {
+      resultUpdate._id = result._id;
+      arr.push(foundry.utils.expandObject(resultUpdate));
+    }
+    return arr;
+  }, []);
+  if ( results.length ) updateData.results = results;
+  return updateData;
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Migrate a single Scene document to incorporate changes to the data model of its actor data overrides
  * Return an Object of updateData to be applied
  * @param {object} scene            The Scene data to Update
  * @param {object} [migrationData]  Additional data to perform the migration
  * @returns {object}                The updateData to apply
  */
 export const migrateSceneData = function(scene, migrationData) {
-  const tokens = scene.tokens.map(token => {
+  const tokens = scene.tokens.reduce((arr, token) => {
     const t = token instanceof foundry.abstract.DataModel ? token.toObject() : token;
     const update = {};
     _migrateTokenImage(t, update);
-    if ( Object.keys(update).length ) foundry.utils.mergeObject(t, update);
-    if ( !t.actorId || t.actorLink ) {
-      t.actorData = {};
-    }
-    else if ( !game.actors.has(t.actorId) ) {
-      t.actorId = null;
-      t.actorData = {};
-    }
-    else if ( !t.actorLink ) {
-      const actorData = duplicate(t.actorData);
-      actorData.type = token.actor?.type;
-      const update = migrateActorData(actorData, migrationData);
-      ["items", "effects"].forEach(embeddedName => {
-        if (!update[embeddedName]?.length) return;
-        const updates = new Map(update[embeddedName].map(u => [u._id, u]));
-        t.actorData[embeddedName].forEach(original => {
-          const update = updates.get(original._id);
-          if (update) foundry.utils.mergeObject(original, update);
-        });
-        delete update[embeddedName];
-      });
-
-      foundry.utils.mergeObject(t.actorData, update);
-    }
-    return t;
-  });
-  return {tokens};
+    if ( !game.actors.has(t.actorId) ) update.actorId = null;
+    if ( !foundry.utils.isEmpty(update) ) arr.push({ ...update, _id: t._id });
+    return arr;
+  }, []);
+  if ( tokens.length ) return { tokens };
+  return {};
 };
 
 /* -------------------------------------------- */
@@ -409,6 +594,29 @@ export const getMigrationData = async function() {
 
 /* -------------------------------------------- */
 /*  Low level migration utilities
+/* -------------------------------------------- */
+
+/**
+ * Identify effects that might have been duplicated when legacyTransferral was disabled.
+ * @param {object} parent   Data of the actor being migrated.
+ * @returns {Set<string>}   IDs of effects to delete from the actor.
+ * @private
+ */
+function _duplicatedEffects(parent) {
+  const deleteIds = new Set();
+  for ( const item of parent.items ) {
+    for ( const effect of item.effects ?? [] ) {
+      if ( !effect.transfer ) continue;
+      const match = parent.effects.find(t => {
+        const diff = foundry.utils.diffObject(t, effect);
+        return t.origin?.endsWith(`Item.${item._id}`) && !("changes" in diff) && !deleteIds.has(t._id);
+      });
+      if ( match ) deleteIds.add(match._id);
+    }
+  }
+  return deleteIds;
+}
+
 /* -------------------------------------------- */
 
 /**
@@ -442,12 +650,35 @@ function _migrateActorAC(actorData, updateData) {
   if ( ac?.formula ) {
     try {
       const roll = new Roll(ac.formula);
-      Roll.safeEval(roll.formula);
+      roll.evaluateSync();
     } catch( e ) {
       updateData["system.attributes.ac.formula"] = "";
     }
   }
 
+  return updateData;
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Migrate the actor movement & senses to replace `0` with `null`.
+ * @param {object} actorData   Actor data being migrated.
+ * @param {object} updateData  Existing updates being applied to actor. *Will be mutated.*
+ * @returns {object}           Modified version of update data.
+ * @private
+ */
+function _migrateActorMovementSenses(actorData, updateData) {
+  if ( actorData._stats?.systemVersion && foundry.utils.isNewerVersion("2.4.0", actorData._stats.systemVersion) ) {
+    for ( const key of Object.keys(CONFIG.ROTV.movementTypes) ) {
+      const keyPath = `system.attributes.movement.${key}`;
+      if ( foundry.utils.getProperty(actorData, keyPath) === 0 ) updateData[keyPath] = null;
+    }
+    for ( const key of Object.keys(CONFIG.ROTV.senses) ) {
+      const keyPath = `system.attributes.senses.${key}`;
+      if ( foundry.utils.getProperty(actorData, keyPath) === 0 ) updateData[keyPath] = null;
+    }
+  }
   return updateData;
 }
 
@@ -517,6 +748,28 @@ function _migrateEffectArmorClass(effect, updateData) {
 /* -------------------------------------------- */
 
 /**
+ * Disable transfer on effects on spell items
+ * @param {object} effect      Effect data to migrate.
+ * @param {object} parent      The parent of this effect.
+ * @param {object} updateData  Existing update to expand upon.
+ * @returns {object}           The updateData to apply.
+ */
+function _migrateTransferEffect(effect, parent, updateData) {
+  if ( !effect.transfer ) return updateData;
+  if ( !isSpellOrScroll(parent) ) return updateData;
+
+  updateData.transfer = false;
+  updateData.disabled = true;
+  updateData["duration.startTime"] = null;
+  updateData["duration.startRound"] = null;
+  updateData["duration.startTurn"] = null;
+
+  return updateData;
+}
+
+/* -------------------------------------------- */
+
+/**
  * Migrate macros from the old 'rotv.rollItemMacro' and 'rotv.macros' commands to the new location.
  * @param {object} macro       Macro data to migrate.
  * @param {object} updateData  Existing update to expand upon.
@@ -540,8 +793,8 @@ function _migrateMacroCommands(macro, updateData) {
  */
 export async function purgeFlags(pack) {
   const cleanFlags = flags => {
-    const flagsRelics = flags.rotv || null;
-    return flagsRelics ? {rotv: flagsRelics} : {};
+    const flagsRotV = flags.rotv || null;
+    return flagsRotV ? {rotv: flagsRotV} : {};
   };
   await pack.configure({locked: false});
   const content = await pack.getDocuments();
@@ -557,4 +810,16 @@ export async function purgeFlags(pack) {
     console.log(`Purged flags from ${doc.name}`);
   }
   await pack.configure({locked: true});
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Returns whether given item data represents either a spell item or a spell scroll consumable
+ * @param {object} item  The item data.
+ * @returns {boolean}
+ */
+function isSpellOrScroll(item) {
+  if ( (item.type === "consumable") && (item.system.type.value === "scroll") ) return true;
+  return item.type === "spell";
 }

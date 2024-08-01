@@ -2,12 +2,7 @@
 <div class="form-group select">
     <label>{{ localize "ROTV.ItemActionType" }}</label>
     <select name="system.actionType">
-        {{#select system.actionType}}
-        <option value=""></option>
-        {{#each config.itemActionTypes as |name type|}}
-        <option value="{{type}}">{{name}}</option>
-        {{/each}}
-        {{/select}}
+        {{ selectOptions config.itemActionTypes selected=system.actionType blank="" }}
     </select>
 </div>
 {{#if system.actionType}}
@@ -18,35 +13,38 @@
     <select name="system.ability">
         {{#select system.ability}}
         <option value="">{{ localize "ROTV.Default" }}</option>
-        {{#each config.abilities as |ability a|}}
-        <option value="{{a}}">{{ability}}</option>
-        {{/each}}
+        <option value="none">{{ localize "ROTV.None" }}</option>
+        <optgroup label="{{ localize 'ROTV.Ability' }}">
+            {{#each config.abilities as |ability a|}}
+            <option value="{{a}}">{{ability.label}}</option>
+            {{/each}}
+        </optgroup>
         {{/select}}
     </select>
 </div>
 
+{{#if system.hasAttack}}
 {{!-- Attack Roll Bonus --}}
-{{#if hasAttackRoll }}
 <div class="form-group">
     <label>{{ localize "ROTV.ItemAttackBonus" }}</label>
     <div class="form-fields">
-        <input type="text" name="system.attackBonus" value="{{system.attackBonus}}" data-formula-editor/>
+        <input type="text" name="system.attack.bonus" value="{{system.attack.bonus}}" data-formula-editor>
+        <label class="checkbox" data-tooltip="ROTV.ItemAttackFlatHint">
+          <input type="checkbox" name="system.attack.flat" {{checked system.attack.flat}}>
+          {{localize "ROTV.ItemAttackFlat"}}
+        </label>
     </div>
 </div>
-{{/if}}
 
 {{!-- Critical Hit Threshold --}}
-{{#if hasAttackRoll }}
 <div class="form-group">
     <label>{{ localize "ROTV.ItemCritThreshold" }}</label>
     <div class="form-fields">
-        {{ numberInput system.critical.threshold name="system.critical.threshold" placeholder="20" max=20 min=1 step=1 }}
+        {{numberInput system.critical.threshold name="system.critical.threshold" placeholder="20" max=20 min=1 step=1}}
     </div>
 </div>
-{{/if}}
 
 {{!-- Critical Hit Damage --}}
-{{#if hasAttackRoll }}
 <div class="form-group">
     <label>{{ localize "ROTV.ItemCritExtraDamage" }}</label>
     <div class="form-fields">
@@ -57,7 +55,8 @@
 
 {{!-- Damage Formula --}}
 <h4 class="damage-header">
-    {{#unless isHealing }}{{ localize "ROTV.Damage" }}{{ else }}{{ localize "ROTV.Healing" }}{{/unless}} {{ localize "ROTV.Formula" }}
+    {{#unless isHealing}}{{ localize "ROTV.Damage" }}{{ else }}{{ localize "ROTV.Healing" }}{{/unless}}
+    {{ localize "ROTV.Formula" }}
     <a class="damage-control add-damage"><i class="fas fa-plus"></i></a>
 </h4>
 <ol class="damage-parts form-group">
@@ -65,14 +64,14 @@
     <li class="damage-part flexrow" data-damage-part="{{i}}">
         <input type="text" name="system.damage.parts.{{i}}.0" value="{{lookup this "0"}}" data-formula-editor/>
         <select name="system.damage.parts.{{i}}.1">
-            {{#select (lookup this "1") }}
-            <option value="">{{ localize "ROTV.None" }}</option>
-            {{#each ../config.damageTypes as |name type|}}
-            <option value="{{type}}">{{name}}</option>
-            {{/each}}
-            {{#each ../config.healingTypes as |name type|}}
-            <option value="{{type}}">{{name}}</option>
-            {{/each}}
+            {{#select (lookup this "1")}}
+                <option value="">{{ localize "ROTV.None" }}</option>
+                <optgroup label="{{localize 'ROTV.Damage'}}">
+                    {{selectOptions @root.config.damageTypes labelAttr="label"}}
+                </optgroup>
+                <optgroup label="{{localize 'ROTV.Healing'}}">
+                    {{selectOptions @root.config.healingTypes labelAttr="label"}}
+                </optgroup>
             {{/select}}
         </select>
         <a class="damage-control delete-damage"><i class="fas fa-minus"></i></a>
@@ -86,7 +85,7 @@
     <label>{{ localize "ROTV.VersatileDamage" }}</label>
     <div class="form-fields">
         <input type="text" name="system.damage.versatile" value="{{system.damage.versatile}}"
-               placeholder="{{ localize 'ROTV.Formula' }}" data-formula-editor/>
+               placeholder="{{ localize 'ROTV.Formula' }}" data-formula-editor>
     </div>
 </div>
 {{/if}}
@@ -95,8 +94,8 @@
 <div class="form-group">
     <label>{{ localize "ROTV.OtherFormula" }}</label>
     <div class="form-fields">
-        <input type="text" name="system.formula" value="{{system.formula}}" placeholder="{{ localize 'ROTV.Formula' }}"
-        data-formula-editor/>
+        <input type="text" name="system.formula" value="{{system.formula}}"
+               placeholder="{{ localize 'ROTV.Formula' }}" data-formula-editor>
     </div>
 </div>
 
@@ -105,12 +104,7 @@
     <label>{{ localize "ROTV.ActionSave" }}</label>
     <div class="form-fields">
         <select name="system.save.ability">
-            {{#select system.save.ability}}
-            <option value=""></option>
-            {{#each config.abilities as |ability a|}}
-            <option value="{{a}}">{{ability}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions config.abilities selected=system.save.ability labelAttr="label" blank=""}}
         </select>
         <span>{{ localize "ROTV.VsDC" }}</span>
         <input type="number" step="any" name="system.save.dc"
@@ -118,15 +112,95 @@
             placeholder="{{ localize 'ROTV.AbbreviationDC' }}" {{#unless isFlatDC}}disabled{{/unless}}>
         <select name="system.save.scaling">
             {{#select system.save.scaling}}
-            <option value="spell">{{ localize "ROTV.Spellcasting" }}</option>
-            {{#each config.abilities as |ability a|}}
-            <option value="{{a}}">{{ability}}</option>
-            {{/each}}
-            <option value="flat">{{ localize "ROTV.Flat" }}</option>
+                <option value="spell">{{ localize "ROTV.Spellcasting" }}</option>
+                {{selectOptions config.abilities labelAttr="label"}}
+                <option value="flat">{{ localize "ROTV.Flat" }}</option>
             {{/select}}
         </select>
     </div>
 </div>
+
+{{!-- Enchantment --}}
+{{#if system.isEnchantment}}
+<div class="form-group enchantment">
+    <label>{{ localize "ROTV.Enchantment.Label" }}</label>
+    <div class="form-fields">
+        <a class="config-button" data-action="enchantment">
+            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+            {{ localize "ROTV.Enchantment.Action.Configure" }}
+        </a>
+    </div>
+    {{#if appliedEnchantments.length}}
+    <ul class="separated-list rotv2">
+        {{#each appliedEnchantments}}
+        <li class="item" data-enchantment-uuid="{{ enchantment.uuid }}">
+            <div class="details flexrow">
+                <img class="gold-icon" src="{{ item.img }}" alt="{{ name }}">
+                <span class="name">
+                    {{#if actor}}
+                    {{{ localize "ROTV.Enchantment.Items.Entry" item=name actor=actor.name }}}
+                    {{else}}
+                    {{ name }}
+                    {{/if}}
+                </span>
+                <div class="list-controls flexrow">
+                    {{#if item.isOwner}}
+                    <button type="button" class="unbutton" data-action="view" data-uuid="{{ item.uuid }}"
+                            data-tooltip="ROTV.ItemView" aria-label="{{ localize 'ROTV.ItemView' }}">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="enchantment-button unbutton" data-action="removeEnchantment"
+                            data-tooltip="ROTV.Enchantment.Action.Remove"
+                            aria-label="{{ localize 'ROTV.Enchantment.Action.Remove' }}">
+                        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                    </button>
+                    {{/if}}
+                </div>
+            </div>
+        </li>
+        {{/each}}
+    </ul>
+    {{/if}}
+</div>
+{{/if}}
+
+{{!-- Summoning --}}
+{{#if (eq system.actionType "summ")}}
+<div class="form-group summoning">
+    <label>{{ localize "ROTV.Summoning.Label" }}</label>
+    <div class="form-fields">
+        <a class="config-button" data-action="summoning">
+            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+            {{ localize "ROTV.Summoning.Action.Configure" }}
+        </a>
+        <label class="checkbox" data-tooltip="ROTV.Summoning.Prompt.Hint">
+            <input type="checkbox" name="system.summons.prompt" {{ checked system.summons.prompt }}>
+            {{ localize "ROTV.Summoning.Prompt.Label" }}
+        </label>
+    </div>
+    {{#with system.summons.summonedCreatures as |summonedCreatures|}}
+    {{#if summonedCreatures.length}}
+    <ul class="separated-list rotv2">
+        {{#each summonedCreatures}}
+        <li class="item" data-summon-uuid="{{ uuid }}">
+            <div class="details flexrow">
+                <img class="gold-icon" src="{{ img }}" alt="{{ name }}">
+                <span class="name">{{ name }}</span>
+                <div class="list-controls flexrow">
+                    <button type="button" class="unbutton" data-action="view" data-uuid="{{ uuid }}"
+                            data-tooltip="ROTV.Summoning.Action.View"
+                            aria-label="{{ localize 'ROTV.Summoning.Action.View' }}">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+        </li>
+        {{/each}}
+    </ul>
+    {{/if}}
+    {{/with}}
+</div>
+{{/if}}
 
 {{!-- Chat Message Flavor --}}
 <div class="form-group stacked">

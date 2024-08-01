@@ -2,33 +2,55 @@
 
     {{!-- Item Sheet Header --}}
     <header class="sheet-header flexrow">
-        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img"/>
+        <img class="profile" src="{{item.img}}" data-tooltip="{{item.name}}" data-edit="img">
 
         <div class="header-details flexrow">
             <h1 class="charname">
-                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}"/>
+                {{#if system.identified}}
+                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}">
+                {{else}}
+                <input name="system.unidentified.name" type="text" value="{{system.unidentified.name}}"
+                       placeholder="{{ localize 'ROTV.NameUnidentified' }}">
+                {{/if}}
             </h1>
 
             <div class="item-subtitle">
                 <h4 class="item-type">{{itemType}}</h4>
-                <span class="item-status">{{itemStatus}}</span>
+                <label class="equipped">
+                    <input type="checkbox" name="system.equipped" {{checked system.equipped}}>
+                    {{#if system.equipped}}
+                        {{ localize "ROTV.Equipped" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
+                    {{else}}
+                        {{ localize "ROTV.Unequipped" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
+                    {{/if}}
+                </label>
+                <label class="identified">
+                    <input type="checkbox" name="system.identified" {{checked system.identified}}>
+                    {{#if system.identified}}
+                        {{ localize "ROTV.Identified" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
+                    {{else}}
+                        {{ localize "ROTV.Unidentified.Title" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
+                    {{/if}}
+                </label>
             </div>
 
             <ul class="summary flexrow">
+                <li>{{ system.type.label }}</li>
                 <li>
-                    {{#if system.toolType}}
-                      {{lookup config.toolTypes system.toolType}}
+                    {{#if concealDetails}}
+                    <span>{{ localize "ROTV.Unidentified.Title" }}</span>
                     {{else}}
-                      {{localize "ITEM.TypeTool"}}
+                    <select name="system.rarity" {{~#if concealDetails}} inert{{/if}}>
+                        {{selectOptions config.itemRarity selected=system.rarity blank=""}}
+                    </select>
                     {{/if}}
                 </li>
                 <li>
-                    <select name="system.rarity">
-                        {{selectOptions config.itemRarity selected=system.rarity blank=""}}
-                    </select>
-                </li>
-                <li>
-                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'ROTV.Source' }}"/>
+                    {{> "rotv.item-source"}}
                 </li>
             </ul>
         </div>
@@ -49,27 +71,43 @@
 
         {{!-- Details Tab --}}
         <div class="tab details" data-group="primary" data-tab="details">
+            {{#rotv-concealSection concealDetails}}
+
+            <h3 class="form-header">{{ localize "ROTV.ItemToolDetails" }}</h3>
 
             {{!-- Tool Type --}}
             <div class="form-group">
                 <label>{{ localize "ROTV.ItemToolType" }}</label>
-                <select name="system.toolType">
-                    {{selectOptions config.toolTypes selected=system.toolType blank=""}}
+                <select name="system.type.value">
+                    {{selectOptions config.toolTypes selected=system.type.value blank=""}}
                 </select>
             </div>
 
             <div class="form-group">
                 <label>{{ localize "ROTV.ItemToolBase" }}</label>
-                <select name="system.baseItem">
-                    {{selectOptions baseItems selected=system.baseItem blank=""}}
+                <select name="system.type.baseItem">
+                    {{selectOptions baseItems selected=system.type.baseItem blank=""}}
                 </select>
             </div>
+
+            {{!-- Tool Properties --}}
+            <div class="form-group stacked tool-properties">
+                <label>{{ localize "ROTV.ItemToolProperties" }}</label>
+                {{#each properties}}
+                <label class="checkbox">
+                    <input type="checkbox" name="system.properties.{{ @key }}" {{ checked selected }}>
+                    {{ label }}
+                </label>
+                {{/each}}
+            </div>
+
 
             {{!-- Tool Proficiency --}}
             <div class="form-group">
                 <label>{{ localize "ROTV.ItemToolProficiency" }}</label>
                 <select name="system.proficient" data-dtype="Number">
-                    {{selectOptions config.proficiencyLevels selected=system.proficient}}
+                    {{selectOptions config.proficiencyLevels selected=system.proficient
+                                    blank=(localize "ROTV.Automatic")}}
                 </select>
             </div>
 
@@ -77,7 +115,8 @@
             <div class="form-group">
                 <label>{{ localize "ROTV.DefaultAbilityCheck" }}</label>
                 <select name="system.ability">
-                    {{selectOptions config.abilities selected=system.ability}}
+                    {{selectOptions config.abilities selected=system.ability labelAttr="label"
+                                    blank=(localize "ROTV.Default")}}
                 </select>
             </div>
 
@@ -87,11 +126,18 @@
                 <input type="text" name="system.bonus" value="{{system.bonus}}" data-formula-editor/>
             </div>
 
+            <h3 class="form-header">{{ localize "ROTV.ItemToolUsage" }}</h3>
+
+            {{!-- Item Activation Template --}}
+            {{> "rotv.item-activation"}}
+
             {{!-- Chat Message Flavor --}}
             <div class="form-group stacked">
                 <label>{{ localize "ROTV.ChatFlavor" }}</label>
                 <input type="text" name="system.chatFlavor" value="{{system.chatFlavor}}"/>
             </div>
+
+            {{/rotv-concealSection}}
         </div>
 
         {{!-- Effects Tab --}}

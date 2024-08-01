@@ -9,21 +9,30 @@
                 <input name="name" type="text" value="{{actor.name}}" placeholder="{{localize 'ROTV.Name'}}">
             </h1>
             <ul class="summary flexrow">
-                <li>
-                    <span>{{lookup config.actorSizes system.traits.size}}</span>
+                <li class="size">
+                    <span>{{lookup (lookup config.actorSizes system.traits.size) "label"}}</span>
                 </li>
-                <li>
+                <li class="vehicle-type">
                     <select name="system.vehicleType">
                       {{selectOptions config.vehicleTypes selected=system.vehicleType}}
                     </select>
                 </li>
-                <li>
+                <li class="dimensions">
                     <input type="text" name="system.traits.dimensions" value="{{system.traits.dimensions}}"
                            placeholder="{{localize 'ROTV.Dimensions'}}">
                 </li>
-                <li>
-                    <input type="text" name="system.details.source" value="{{system.details.source}}"
-                           placeholder="{{localize 'ROTV.Source'}}">
+                <li class="source">
+                    {{#if (eq system.details.source.custom system.details.source.label)}}
+                        <input type="text" name="system.details.source.custom" value="{{system.details.source.custom}}"
+                                     placeholder="{{ localize 'ROTV.Source' }}">
+                    {{else}}
+                        <span data-tooltip="{{system.details.source.label}}">{{system.details.source.label}}</span>
+                    {{/if}}
+                    {{#if editable}}
+                        <a class="config-button" data-action="source" data-tooltip="ROTV.SourceConfig">
+                            <i class="fas fa-cog"></i>
+                        </a>
+                    {{/if}}
                 </li>
             </ul>
             <ul class="attributes flexrow">
@@ -49,11 +58,12 @@
                     <h4 class="attribute-name box-title">{{localize 'ROTV.ArmorClass'}}</h4>
                     <div class="attribute-value">
                         {{numberInput system.attributes.ac.flat name="system.attributes.ac.flat" min=0 step=1
-                                      placeholder="&mdash;"}}
+                                      placeholder="—"}}
                     </div>
-                    <footer class="attribute-footer flexrow">
-                        <span>{{localize "ROTV.DR"}}</span>
-                        <input name="system.attributes.damRed" type="text" data-dtype="Number" value="{{system.attributes.damRed}}" placeholder="0">
+                    <footer class="attribute-footer">
+                        <input type="text" name="system.attributes.ac.motionless"
+                               placeholder="&mdash;" value="{{system.attributes.ac.motionless}}"
+                               data-tooltip="ROTV.ArmorClassMotionless">
                     </footer>
                 </li>
                 <li class="attribute movement">
@@ -132,15 +142,15 @@
                         <h4>{{localize 'ROTV.VehicleActionThresholds'}}</h4>
                         <div class="counter-value">
                             <span class="sep">&lt;</span>
-                            {{numberInput system.attributes.actions.thresholds.[2] min=0 step=1 placeholder="&mdash;"
+                            {{numberInput system.attributes.actions.thresholds.[2] min=0 step=1 placeholder="—"
                                           name="system.attributes.actions.thresholds.2"
                                           title=(localize "ROTV.VehicleActionThresholdsFull")}}
                             <span class="sep">&lt;</span>
-                            {{numberInput system.attributes.actions.thresholds.[1] min=0 step=1 placeholder="&mdash;"
+                            {{numberInput system.attributes.actions.thresholds.[1] min=0 step=1 placeholder="—"
                                           name="system.attributes.actions.thresholds.1"
                                           title=(localize "ROTV.VehicleActionThresholdsMid")}}
                             <span class="sep">&lt;</span>
-                            {{numberInput system.attributes.actions.thresholds.[0] min=0 step=1 placeholder="&mdash;"
+                            {{numberInput system.attributes.actions.thresholds.[0] min=0 step=1 placeholder="—"
                                           name="system.attributes.actions.thresholds.0"
                                           title=(localize "ROTV.VehicleActionThresholdsMin")}}
                         </div>
@@ -155,7 +165,7 @@
         </div>
 
         <div class="tab cargo flexcol" data-group="primary" data-tab="cargo">
-            {{> "rotv.actor-inventory" sections=cargo}}
+            {{> "rotv.inventory" sections=cargo}}
         </div>
         <div class="tab effects flexcol" data-group="primary" data-tab="effects">
             {{> "rotv.active-effects"}}

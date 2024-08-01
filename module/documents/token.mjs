@@ -1,64 +1,58 @@
-import { MappingField } from "../data/fields.mjs";
+import { SummonsData } from "../data/item/fields/summons-field.mjs";
+import SystemFlagsMixin from "./mixins/flags.mjs";
 
 /**
  * Extend the base TokenDocument class to implement system-specific HP bar logic.
  */
-export default class TokenDocumentRelics extends TokenDocument {
+export default class TokenDocumeetRotV extends SystemFlagsMixin(TokenDocument) {
+
+  /* -------------------------------------------- */
+  /*  Properties                                  */
+  /* -------------------------------------------- */
+
+  /**
+   * Is the dynamic token ring enabled?
+   * @type {boolean}
+   */
+  get hasDynamicRing() {
+    return this.ring.enabled;
+  }
+
+  /* -------------------------------------------- */
+  /*  Migrations                                  */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  _initializeSource(data, options={}) {
+    // Migrate backpack -> container.
+    for ( const item of data.delta?.items ?? [] ) {
+      // This will be correctly flagged as needing a source migration when the synthetic actor is created, but we need
+      // to also change the type in the raw ActorDelta to avoid spurious console warnings.
+      if ( item.type === "backpack" ) item.type = "container";
+    }
+    return super._initializeSource(data, options);
+  }
+
+  /* -------------------------------------------- */
+  /*  Methods                                     */
+  /* -------------------------------------------- */
 
   /** @inheritdoc */
-  getBarAttribute(...args) {
-    const data = super.getBarAttribute(...args);
-    if ( data && (data.attribute === "attributes.hp") ) {
+  getBarAttribute(barName, options={}) {
+    const attribute = options.alternative || this[barName]?.attribute;
+    if ( attribute?.startsWith(".") ) {
+      const item = fromUuidSync(attribute, { relative: this.actor });
+      const { value, max } = item?.system.uses ?? { value: 0, max: 0 };
+      if ( max ) return { attribute, value, max, type: "bar", editable: true };
+    }
+
+    const data = super.getBarAttribute(barName, options);
+    if ( data?.attribute === "attributes.hp" ) {
       const hp = this.actor.system.attributes.hp || {};
       data.value += (hp.temp || 0);
-      data.max += (hp.tempmax || 0);
+      data.max = Math.max(0, hp.effectiveMax);
     }
     return data;
-  }
-
-  /* -------------------------------------------- */
-
-  /** @inheritdoc */
-  static getTrackedAttributes(data, _path=[]) {
-    if ( data instanceof foundry.abstract.DataModel ) return this._getTrackedAttributesFromSchema(data.schema, _path);
-    const attributes = super.getTrackedAttributes(data, _path);
-    if ( _path.length ) return attributes;
-    const allowed = CONFIG.ROTV.trackableAttributes;
-    attributes.value = attributes.value.filter(attrs => this._isAllowedAttribute(allowed, attrs));
-    return attributes;
-  }
-
-  /* -------------------------------------------- */
-
-  /** @inheritdoc */
-  static _getTrackedAttributesFromSchema(schema, _path=[]) {
-    const isSchema = field => field instanceof foundry.data.fields.SchemaField;
-    const isModel = field => field instanceof foundry.data.fields.EmbeddedDataField;
-    const attributes = {bar: [], value: []};
-    for ( const [name, field] of Object.entries(schema.fields) ) {
-      const p = _path.concat([name]);
-      if ( field instanceof foundry.data.fields.NumberField ) attributes.value.push(p);
-      if ( isSchema(field) || isModel(field) ) {
-        const schema = isModel(field) ? field.model.schema : field;
-        const isBar = schema.has("value") && schema.has("max");
-        if ( isBar ) attributes.bar.push(p);
-        else {
-          const inner = this._getTrackedAttributesFromSchema(schema, p);
-          attributes.bar.push(...inner.bar);
-          attributes.value.push(...inner.value);
-        }
-      }
-      if ( !(field instanceof MappingField) ) continue;
-      if ( foundry.utils.isEmpty(field.initialKeys) ) continue;
-      if ( !isSchema(field.model) && !isModel(field.model) ) continue;
-      const keys = Array.isArray(field.initialKeys) ? field.initialKeys : Object.keys(field.initialKeys);
-      for ( const key of keys ) {
-        const inner = this._getTrackedAttributesFromSchema(field.model, p.concat([key]));
-        attributes.bar.push(...inner.bar);
-        attributes.value.push(...inner.value);
-      }
-    }
-    return attributes;
   }
 
   /* -------------------------------------------- */
@@ -66,32 +60,121 @@ export default class TokenDocumentRelics extends TokenDocument {
   /**
    * Get an Array of attribute choices which are suitable for being consumed by an item usage.
    * @param {object} data  The actor data.
-   * @returns {{bar: string[], value: string[]}}
+   * @returns {string[]}
    */
   static getConsumedAttributes(data) {
-    const attributes = super.getTrackedAttributes(data);
-    const allowed = CONFIG.ROTV.consumableResources;
-    attributes.value = attributes.value.filter(attrs => this._isAllowedAttribute(allowed, attrs));
-    return attributes;
+    return CONFIG.ROTV.consumableResources;
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  static getTrackedAttributeChoices(attributes) {
+    const groups = super.getTrackedAttributeChoices(attributes);
+    const abilities = [];
+    const movement = [];
+    const senses = [];
+    const skills = [];
+    const slots = [];
+
+    // Regroup existing attributes based on their path.
+    for ( const group of Object.values(groups) ) {
+      for ( let i = 0; i < group.length; i++ ) {
+        const attribute = group[i];
+        if ( attribute.startsWith("abilities.") ) abilities.push(attribute);
+        else if ( attribute.startsWith("attributes.movement.") ) movement.push(attribute);
+        else if ( attribute.startsWith("attributes.senses.") ) senses.push(attribute);
+        else if ( attribute.startsWith("skills.") ) skills.push(attribute);
+        else if ( attribute.startsWith("spells.") ) slots.push(attribute);
+        else continue;
+        group.splice(i--, 1);
+      }
+    }
+
+    // Add new groups to choices.
+    if ( abilities.length ) groups[game.i18n.localize("ROTV.AbilityScorePl")] = abilities;
+    if ( movement.length ) groups[game.i18n.localize("ROTV.MovementSpeeds")] = movement;
+    if ( senses.length ) groups[game.i18n.localize("ROTV.Senses")] = senses;
+    if ( skills.length ) groups[game.i18n.localize("ROTV.SkillPassives")] = skills;
+    if ( slots.length ) groups[game.i18n.localize("JOURNALENTRYPAGE.ROTV.Class.SpellSlots")] = slots;
+    return groups;
+  }
+
+  /* -------------------------------------------- */
+
+  /** @override */
+  prepareData() {
+    super.prepareData();
+    if ( !this.hasDynamicRing ) return;
+    let size = this.baseActor?.system.traits?.size;
+    if ( !this.actorLink ) {
+      const deltaSize = this.delta.system.traits?.size;
+      if ( deltaSize ) size = deltaSize;
+    }
+    if ( !size ) return;
+    const dts = CONFIG.ROTV.actorSizes[size].dynamicTokenScale ?? 1;
+    this.texture.scaleX = this._source.texture.scaleX * dts;
+    this.texture.scaleY = this._source.texture.scaleY * dts;
+  }
+
+  /* -------------------------------------------- */
+  /*  Ring Animations                             */
+  /* -------------------------------------------- */
+
+  /**
+   * Determine if any rings colors should be forced based on current status.
+   * @returns {{[ring]: number, [background]: number}}
+   */
+  getRingColors() {
+    const colors = {};
+    if ( this.hasStatusEffect(CONFIG.specialStatusEffects.DEFEATED) ) {
+      colors.ring = CONFIG.ROTV.tokenRingColors.defeated;
+    }
+    return colors;
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Traverse the configured allowed attributes to see if the provided one matches.
-   * @param {object} allowed  The allowed attributes structure.
-   * @param {string[]} attrs  The attributes list to test.
-   * @returns {boolean}       Whether the given attribute is allowed.
-   * @private
+   * Determine what ring effects should be applied on top of any set by flags.
+   * @returns {string[]}
    */
-  static _isAllowedAttribute(allowed, attrs) {
-    let allow = allowed;
-    for ( const attr of attrs ) {
-      if ( allow === undefined ) return false;
-      if ( allow === true ) return true;
-      if ( allow["*"] !== undefined ) allow = allow["*"];
-      else allow = allow[attr];
+  getRingEffects() {
+    const e = foundry.canvas.tokens.TokenRing.effects;
+    const effects = [];
+    if ( this.hasStatusEffect(CONFIG.specialStatusEffects.INVISIBLE) ) effects.push(e.INVISIBILITY);
+    else if ( this === game.combat?.combatant?.token ) effects.push(e.RING_GRADIENT);
+    return effects;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Flash the token ring based on damage, healing, or temp HP.
+   * @param {string} type     The key to determine the type of flashing.
+   */
+  flashRing(type) {
+    if ( !this.rendered ) return;
+    const color = CONFIG.ROTV.tokenRingColors[type];
+    if ( !color ) return;
+    const options = {};
+    if ( type === "damage" ) {
+      options.duration = 500;
+      options.easing = foundry.canvas.tokens.TokenRing.easeTwoPeaks;
     }
-    return allow !== undefined;
+    this.object.ring?.flashColor(Color.from(color), options);
+  }
+
+  /* -------------------------------------------- */
+  /*  Socket Event Handlers                       */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  _onDelete(options, userId) {
+    super._onDelete(options, userId);
+
+    const origin = this.actor?.getFlag("rotv", "summon.origin");
+    // TODO: Replace with parseUuid once V11 support is dropped
+    if ( origin ) SummonsData.untrackSummon(origin.split(".Item.")[0], this.actor.uuid);
   }
 }

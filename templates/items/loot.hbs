@@ -6,29 +6,97 @@
 
         <div class="header-details flexrow">
             <h1 class="charname">
-                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}"/>
+                {{#if system.identified}}
+                <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}">
+                {{else}}
+                <input name="system.unidentified.name" type="text" value="{{system.unidentified.name}}"
+                       placeholder="{{ localize 'ROTV.NameUnidentified' }}">
+                {{/if}}
             </h1>
 
             <div class="item-subtitle">
                 <h4 class="item-type">{{itemType}}</h4>
                 <span class="item-status">{{itemStatus}}</span>
+                <label class="identified">
+                    <input type="checkbox" name="system.identified" {{checked system.identified}}>
+                    {{#if system.identified}}
+                        {{ localize "ROTV.Identified" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
+                    {{else}}
+                        {{ localize "ROTV.Unidentified.Title" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
+                    {{/if}}
+                </label>
             </div>
 
             <ul class="summary flexrow">
                 <li>
-                    <select name="system.rarity">
+                    {{#if concealDetails}}
+                    <span>{{ localize "ROTV.Unidentified.Title" }}</span>
+                    {{else}}
+                    <select name="system.rarity" {{~#if concealDetails}} inert{{/if}}>
                         {{selectOptions config.itemRarity selected=system.rarity blank=""}}
                     </select>
+                    {{/if}}
                 </li>
                 <li>
-                    <input type="text" name="system.source" value="{{system.source}}" placeholder="{{ localize 'ROTV.Source' }}"/>
+                    {{> "rotv.item-source"}}
                 </li>
             </ul>
         </div>
     </header>
 
+    {{!-- Item Sheet Navigation --}}
+    <nav class="sheet-navigation tabs" data-group="primary">
+        <a class="item active" data-tab="description">{{ localize "ROTV.Description" }}</a>
+        <a class="item" data-tab="details">{{ localize "ROTV.Details" }}</a>
+    </nav>
+
     {{!-- Item Sheet Body --}}
     <section class="sheet-body">
+
+        {{!-- Description Tab --}}
         {{> "rotv.item-description"}}
+
+        {{!-- Details Tab --}}
+        <div class="tab details" data-group="primary" data-tab="details">
+            {{#rotv-concealSection concealDetails}}
+
+            <h3 class="form-header">{{ localize "ROTV.ItemLootDetails" }}</h3>
+
+            {{!-- Loot Type --}}
+            <div class="form-group">
+                <label>{{ localize "ROTV.ItemLootType" }}</label>
+                <select name="system.type.value">
+                    {{selectOptions config.lootTypes selected=system.type.value labelAttr="label" blank=""}}
+                </select>
+            </div>
+
+            {{#if itemSubtypes}}
+            <div class="form-group">
+                <label>
+                    {{localize "ROTV.ItemLootSubtype"
+                               category=(lookup (lookup config.lootTypes system.type.value) "label")}}
+                </label>
+                <select name="system.type.subtype">
+                    {{selectOptions itemSubtypes selected=system.type.subtype blank=""}}
+                </select>
+            </div>
+            {{/if}}
+
+            {{!-- Loot Properties --}}
+            <div class="form-group stacked loot-properties">
+                <label>{{ localize "ROTV.ItemLootProperties" }}</label>
+                {{#each properties}}
+                <label class="checkbox">
+                    <input type="checkbox" name="system.properties.{{ @key }}" {{ checked selected }}>
+                    {{ label }}
+                </label>
+                {{/each}}
+            </div>
+
+            {{/rotv-concealSection}}
+        </div>
+
     </section>
 </form>

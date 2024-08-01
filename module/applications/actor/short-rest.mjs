@@ -1,7 +1,7 @@
 /**
  * A helper Dialog subclass for rolling Hit Dice on short rest.
  *
- * @param {ActorRelics} actor           Actor that is taking the short rest.
+ * @param {ActorRotV} actor           Actor that is taking the short rest.
  * @param {object} [dialogData={}]  An object of dialog data which configures how the modal window is rendered.
  * @param {object} [options={}]     Dialog rendering options.
  */
@@ -28,7 +28,8 @@ export default class ShortRestDialog extends Dialog {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       template: "systems/rotv/templates/apps/short-rest.hbs",
-      classes: ["rotv", "dialog"]
+      classes: ["rotv", "dialog"],
+      height: "auto"
     });
   }
 
@@ -36,26 +37,30 @@ export default class ShortRestDialog extends Dialog {
 
   /** @inheritDoc */
   getData() {
-    const data = super.getData();
+    const context = super.getData();
+    context.isGroup = this.actor.type === "group";
 
-    // Determine Hit Dice
-    data.availableHD = this.actor.items.reduce((hd, item) => {
-      if ( item.type === "class" ) {
-        const {levels, hitDice, hitDiceUsed} = item.system;
-        const denom = hitDice ?? "d6";
-        const available = parseInt(levels ?? 1) - parseInt(hitDiceUsed ?? 0);
-        hd[denom] = denom in hd ? hd[denom] + available : available;
-      }
-      return hd;
-    }, {});
-    data.canRoll = this.actor.system.attributes.hd > 0;
-    data.denomination = this._denom;
+    if ( this.actor.type === "npc" ) {
+      const hd = this.actor.system.attributes.hd;
+      context.availableHD = { [`d${hd.denomination}`]: hd.value };
+      context.canRoll = hd.value > 0;
+      context.denomination = `d${hd.denomination}`;
+    }
+
+    else if ( foundry.utils.hasProperty(this.actor, "system.attributes.hd") ) {
+      // Determine Hit Dice
+      context.availableHD = this.actor.system.attributes.hd.bySize;
+      context.canRoll = this.actor.system.attributes.hd.value > 0;
+
+      const dice = Object.entries(context.availableHD);
+      context.denomination = (context.availableHD[this._denom] > 0) ? this._denom : dice.find(([k, v]) => v > 0)?.[0];
+    }
 
     // Determine rest type
     const variant = game.settings.get("rotv", "restVariant");
-    data.promptNewDay = variant !== "epic";     // It's never a new day when only resting 1 minute
-    data.newDay = false;                        // It may be a new day, but not by default
-    return data;
+    context.promptNewDay = variant !== "epic";     // It's never a new day when only resting 1 minute
+    context.newDay = false;                        // It may be a new day, but not by default
+    return context;
   }
 
   /* -------------------------------------------- */
@@ -79,7 +84,7 @@ export default class ShortRestDialog extends Dialog {
     event.preventDefault();
     const btn = event.currentTarget;
     this._denom = btn.form.hd.value;
-    await this.actor.rollHitDie(this._denom);
+    await this.actor.rollHitDie({ denomination: this._denom });
     this.render();
   }
 
@@ -89,7 +94,7 @@ export default class ShortRestDialog extends Dialog {
    * A helper constructor function which displays the Short Rest dialog and returns a Promise once it's workflow has
    * been resolved.
    * @param {object} [options={}]
-   * @param {ActorRelics} [options.actor]  Actor that is taking the short rest.
+   * @param {ActorRotV} [options.actor]  Actor that is taking the short rest.
    * @returns {Promise}                Promise that resolves when the rest is completed or rejects when canceled.
    */
   static async shortRestDialog({ actor }={}) {
@@ -101,11 +106,8 @@ export default class ShortRestDialog extends Dialog {
             icon: '<i class="fas fa-bed"></i>',
             label: game.i18n.localize("ROTV.Rest"),
             callback: html => {
-              let newDay = false;
-              if ( game.settings.get("rotv", "restVariant") !== "epic" ) {
-                newDay = html.find('input[name="newDay"]')[0].checked;
-              }
-              resolve(newDay);
+              const formData = new FormDataExtended(html.find("form")[0]);
+              resolve(formData.object);
             }
           },
           cancel: {

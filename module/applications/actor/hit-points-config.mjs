@@ -9,7 +9,7 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
 
     /**
      * Cloned copy of the actor for previewing changes.
-     * @type {ActorRelics}
+     * @type {ActorRotV}
      */
     this.clone = this.object.clone();
   }
@@ -22,8 +22,7 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
       classes: ["rotv", "actor-hit-points-config"],
       template: "systems/rotv/templates/apps/hit-points-config.hbs",
       width: 320,
-      height: "auto",
-      sheetConfig: false
+      height: "auto"
     });
   }
 
@@ -99,7 +98,7 @@ export default class ActorHitPointsConfig extends BaseConfigSheet {
       this.clone.updateSource({"system.attributes.hp.max": roll.total});
       this.render();
     } catch(error) {
-      ui.notifications.error(game.i18n.localize("ROTV.HPFormulaError"));
+      ui.notifications.error("ROTV.HPFormulaError", {localize: true});
       throw error;
     }
   }

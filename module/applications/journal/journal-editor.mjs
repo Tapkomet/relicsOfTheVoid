@@ -12,9 +12,10 @@ export default class JournalEditor extends DocumentSheet {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["journal-editor"],
       template: "systems/rotv/templates/journal/journal-editor.hbs",
-      width: 520,
+      width: 550,
       height: 640,
-      textKeyPath: null
+      textKeyPath: null,
+      resizable: true
     });
   }
 
@@ -34,7 +35,7 @@ export default class JournalEditor extends DocumentSheet {
     const rawText = foundry.utils.getProperty(this.document, this.options.textKeyPath) ?? "";
     return foundry.utils.mergeObject(data, {
       enriched: await TextEditor.enrichHTML(rawText, {
-        relativeTo: this.document, secrets: this.document.isOwner, async: true
+        relativeTo: this.document, secrets: this.document.isOwner
       })
     });
   }

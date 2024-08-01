@@ -1,0 +1,34 @@
+<form class="{{ cssClass }} flexcol drop-target" autocomplete="off">
+    {{> journalEntryPageHeader }}
+
+    <div class="form-group">
+        <label>{{ localize "JOURNALENTRYPAGE.ROTV.Subclass.Item" }}</label>
+        <div class="form-fields">
+            <ol class="items-list">
+                {{#if document.system.item}}
+                <li class="item flexrow" data-item-uuid="{{ document.system.item }}" data-item-type="linked">
+                    <div class="item-name">{{{ rotv-linkForUuid document.system.item }}}</div>
+                    <div class="item-controls flexrow">
+                        <a class="item-control item-delete" data-tooltip="ROTV.ItemDelete"
+                           aria-label="{{ localize 'ROTV.ItemDelete' }}">
+                            <i class="fa-solid fa-trash" inert></i>
+                        </a>
+                    </div>
+                </li>
+                {{else}}
+                <li class="item flexrow">{{ localize "JOURNALENTRYPAGE.ROTV.Subclass.ItemHint" }}</li>
+                {{/if}}
+            </ol>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>{{ localize "JOURNALENTRYPAGE.ROTV.Subclass.Description" }}</label>
+        <div class="form-fields">
+            <button class="launch-text-editor" data-target="system.description.value">
+                <i class="fas fa-edit" inert></i> {{ localize "JOURNALENTRYPAGE.ROTV.EditDescription" }}
+            </button>
+        </div>
+        <p class="hint">{{localize "JOURNALENTRYPAGE.ROTV.Subclass.DescriptionHint"}}</p>
+    </div>
+</form>

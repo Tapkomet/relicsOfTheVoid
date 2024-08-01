@@ -1,20 +1,59 @@
-import Proficiency from "./proficiency.mjs";
-import { d20Roll } from "../../dice/dice.mjs";
-import { simplifyBonus } from "../../utils.mjs";
 import ShortRestDialog from "../../applications/actor/short-rest.mjs";
 import LongRestDialog from "../../applications/actor/long-rest.mjs";
+import PropertyAttribution from "../../applications/property-attribution.mjs";
+import { SummonsData } from "../../data/item/fields/summons-field.mjs";
+import { d20Roll } from "../../dice/dice.mjs";
+import { createRollLabel } from "../../enrichers.mjs";
+import { replaceFormulaData, simplifyBonus } from "../../utils.mjs";
+import ActiveEffectRotV from "../active-effect.mjs";
+import ItemRotV from "../item.mjs";
+import SystemDocumentMixin from "../mixins/document.mjs";
+import Proficiency from "./proficiency.mjs";
+import SelectChoices from "./select-choices.mjs";
+import * as Trait from "./trait.mjs";
 
 /**
  * Extend the base Actor class to implement additional system-specific logic.
  */
-export default class ActorRelics extends Actor {
+export default class ActorRotV extends SystemDocumentMixin(Actor) {
 
   /**
-   * The data source for ActorRelics.classes allowing it to be lazily computed.
-   * @type {Object<ItemRelics>}
+   * The data source for ActorRotV.classes allowing it to be lazily computed.
+   * @type {Record<string, ItemRotV>}
    * @private
    */
   _classes;
+
+  /**
+   * Cached spellcasting classes.
+   * @type {Record<string, ItemRotV>}
+   * @private
+   */
+  _spellcastingClasses;
+
+  /**
+   * Mapping of item source IDs to the items.
+   * @type {Map<string, ItemRotV>}
+   */
+  sourcedItems = this.sourcedItems;
+
+  /* -------------------------------------------- */
+
+  /**
+   * Types that can be selected within the compendium browser.
+   * @param {object} [options={}]
+   * @param {Set<string>} [options.chosen]  Types that have been selected.
+   * @returns {SelectChoices}
+   */
+  static compendiumBrowserTypes({ chosen=new Set() }={}) {
+    return new SelectChoices(Actor.TYPES.filter(t => t !== CONST.BASE_DOCUMENT_TYPE).reduce((obj, type) => {
+      obj[type] = {
+        label: CONFIG.Actor.typeLabels[type],
+        chosen: chosen.has(type)
+      };
+      return obj;
+    }, {}));
+  }
 
   /* -------------------------------------------- */
   /*  Properties                                  */
@@ -22,13 +61,27 @@ export default class ActorRelics extends Actor {
 
   /**
    * A mapping of classes belonging to this Actor.
-   * @type {Object<ItemRelics>}
+   * @type {Record<string, ItemRotV>}
    */
   get classes() {
     if ( this._classes !== undefined ) return this._classes;
     if ( !["character", "npc"].includes(this.type) ) return this._classes = {};
     return this._classes = this.items.filter(item => item.type === "class").reduce((obj, cls) => {
       obj[cls.identifier] = cls;
+      return obj;
+    }, {});
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Get all classes which have spellcasting ability.
+   * @type {Record<string, ItemRotV>}
+   */
+  get spellcastingClasses() {
+    if ( this._spellcastingClasses !== undefined ) return this._spellcastingClasses;
+    return this._spellcastingClasses = Object.entries(this.classes).reduce((obj, [identifier, cls]) => {
+      if ( cls.spellcasting && (cls.spellcasting.progression !== "none") ) obj[identifier] = cls;
       return obj;
     }, {});
   }
@@ -47,20 +100,59 @@ export default class ActorRelics extends Actor {
 
   /**
    * The Actor's currently equipped armor, if any.
-   * @type {ItemRelics|null}
+   * @type {ItemRotV|null}
    */
   get armor() {
-    return this.system.attributes.ac.equippedArmor ?? null;
+    return this.system.attributes?.ac?.equippedArmor ?? null;
   }
 
   /* -------------------------------------------- */
 
   /**
    * The Actor's currently equipped shield, if any.
-   * @type {ItemRelics|null}
+   * @type {ItemRotV|null}
    */
   get shield() {
-    return this.system.attributes.ac.equippedShield ?? null;
+    return this.system.attributes?.ac?.equippedShield ?? null;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * The items this actor is concentrating on, and the relevant effects.
+   * @type {{items: Set<ItemRotV>, effects: Set<ActiveEffectRotV>}}
+   */
+  get concentration() {
+    const concentration = {
+      items: new Set(),
+      effects: new Set()
+    };
+
+    const limit = this.system.attributes?.concentration?.limit ?? 0;
+    if ( !limit ) return concentration;
+
+    for ( const effect of this.effects ) {
+      if ( !effect.statuses.has(CONFIG.specialStatusEffects.CONCENTRATING) ) continue;
+      const data = effect.getFlag("rotv", "itemData");
+      concentration.effects.add(effect);
+      if ( data ) {
+        const item = typeof data === "string"
+          ? this.items.get(data)
+          : new Item.implementation(data, { keepId: true, parent: this });
+        if ( item ) concentration.items.add(item);
+      }
+    }
+    return concentration;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Creatures summoned by this actor.
+   * @type {ActorRotV[]}
+   */
+  get summonedCreatures() {
+    return SummonsData.summonedCreatures(this);
   }
 
   /* -------------------------------------------- */
@@ -90,35 +182,32 @@ export default class ActorRelics extends Actor {
 
   /** @inheritDoc */
   prepareData() {
-    this._classes = undefined;
+    if ( this.system.modelProvider !== rotv ) return super.prepareData();
+    this._clearCachedValues();
     this._preparationWarnings = [];
     super.prepareData();
     this.items.forEach(item => item.prepareFinalAttributes());
   }
 
-  /* -------------------------------------------- */
+  /* --------------------------------------------- */
+
+  /**
+   * Clear cached class collections.
+   * @internal
+   */
+  _clearCachedValues() {
+    this._classes = undefined;
+    this._spellcastingClasses = undefined;
+  }
+
+  /* --------------------------------------------- */
 
   /** @inheritDoc */
-  prepareBaseData() {
-
-    // Delegate preparation to type-subclass
-    if ( this.type === "group" ) {  // Eventually other types will also support this
-      return this.system._prepareBaseData();
-    }
-
-    this._prepareBaseAbilities();
-    this._prepareBaseSkills();
-    this._prepareBaseArmorClass();
-
-    // Type-specific preparation
-    switch ( this.type ) {
-      case "character":
-        return this._prepareCharacterData();
-      case "npc":
-        return this._prepareNPCData();
-      case "vehicle":
-        return this._prepareVehicleData();
-    }
+  prepareEmbeddedDocuments() {
+    this.sourcedItems = new Map();
+    this._embeddedPreparation = true;
+    super.prepareEmbeddedDocuments();
+    delete this._embeddedPreparation;
   }
 
   /* --------------------------------------------- */
@@ -126,48 +215,65 @@ export default class ActorRelics extends Actor {
   /** @inheritDoc */
   applyActiveEffects() {
     this._prepareScaleValues();
+    if ( this.system?.prepareEmbeddedData instanceof Function ) this.system.prepareEmbeddedData();
     // The Active Effects do not have access to their parent at preparation time, so we wait until this stage to
     // determine whether they are suppressed or not.
-    this.effects.forEach(e => e.determineSuppression());
+    for ( const effect of this.allApplicableEffects() ) {
+      effect.determineSuppression();
+    }
     return super.applyActiveEffects();
   }
 
   /* -------------------------------------------- */
 
   /** @inheritDoc */
-  prepareDerivedData() {
-
-    // Delegate preparation to type-subclass
-    if ( this.type === "group" ) {  // Eventually other types will also support this
-      return this.system._prepareDerivedData();
+  *allApplicableEffects() {
+    for ( const effect of super.allApplicableEffects() ) {
+      if ( (effect.getFlag("rotv", "type") !== "enchantment") && !effect.getFlag("rotv", "rider") ) yield effect;
     }
+  }
 
-    const flags = this.flags.rotv || {};
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  prepareDerivedData() {
+    const origin = this.getFlag("rotv", "summon.origin");
+    // TODO: Replace with parseUuid once V11 support is dropped
+    if ( origin && this.token?.id ) SummonsData.trackSummon(origin.split(".Item.")[0], this.uuid);
+
+    if ( (this.system.modelProvider !== rotv) || (this.type === "group") ) return;
+
     this.labels = {};
 
     // Retrieve data for polymorphed actors
-    let originalSaves = null;
-    let originalSkills = null;
-    if ( this.isPolymorphed ) {
-      const transformOptions = flags.transformOptions;
-      const original = game.actors?.get(flags.originalActor);
-      if ( original ) {
-        if ( transformOptions.mergeSaves ) originalSaves = original.system.abilities;
-        if ( transformOptions.mergeSkills ) originalSkills = original.system.skills;
-      }
-    }
+    const { originalSkills } = this.getOriginalStats();
 
     // Prepare abilities, skills, & everything else
     const globalBonuses = this.system.bonuses?.abilities ?? {};
     const rollData = this.getRollData();
     const checkBonus = simplifyBonus(globalBonuses?.check, rollData);
-    this._prepareAbilities(rollData, globalBonuses, checkBonus, originalSaves);
     this._prepareSkills(rollData, globalBonuses, checkBonus, originalSkills);
+    this._prepareTools(rollData, globalBonuses, checkBonus);
     this._prepareArmorClass();
-    this._prepareEncumbrance();
-    this._prepareHitPoints(rollData);
     this._prepareInitiative(rollData, checkBonus);
     this._prepareSpellcasting();
+
+    // Apply condition immunities
+    const conditionImmunities = this.system.traits?.ci?.value;
+    if ( conditionImmunities ) {
+      for ( const condition of conditionImmunities ) this.statuses.delete(condition);
+    }
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Calculate the DC of a concentration save required for a given amount of damage.
+   * @param {number} damage  Amount of damage taken.
+   * @returns {number}       DC of the required concentration save.
+   */
+  getConcentrationDC(damage) {
+    return Math.max(10, Math.floor(damage * .5));
   }
 
   /* -------------------------------------------- */
@@ -200,89 +306,38 @@ export default class ActorRelics extends Actor {
    * @inheritdoc
    * @param {object} [options]
    * @param {boolean} [options.deterministic] Whether to force deterministic values for data properties that could be
-   *                                            either a die term or a flat term.
+   *                                          either a die term or a flat term.
    */
   getRollData({ deterministic=false }={}) {
-    const data = {...super.getRollData()};
-    if ( this.type === "group" ) return data;
-    data.prof = new Proficiency(this.system.attributes.prof, 1);
-    if ( deterministic ) data.prof = data.prof.flat;
-    data.attributes = foundry.utils.deepClone(data.attributes);
-    data.attributes.spellmod = data.abilities[data.attributes.spellcasting || "int"]?.mod ?? 0;
-    data.classes = {};
-    for ( const [identifier, cls] of Object.entries(this.classes) ) {
-      data.classes[identifier] = {...cls.system};
-      if ( cls.subclass ) data.classes[identifier].subclass = cls.subclass.system;
-    }
+    let data;
+    if ( this.system.getRollData ) data = this.system.getRollData({ deterministic });
+    else data = {...super.getRollData()};
+    data.flags = {...this.flags};
+    data.name = this.name;
     return data;
   }
 
   /* -------------------------------------------- */
+
+  /**
+   * Is this actor under the effect of this property from some status or due to its level of exhaustion?
+   * @param {string} key      A key in `ROTV.conditionEffects`.
+   * @returns {boolean}       Whether the actor is affected.
+   */
+  hasConditionEffect(key) {
+    const props = CONFIG.ROTV.conditionEffects[key] ?? new Set();
+    const level = this.system.attributes?.exhaustion ?? null;
+    const imms = this.system.traits?.ci?.value ?? new Set();
+    const statuses = this.statuses;
+    return props.some(k => {
+      const l = Number(k.split("-").pop());
+      return (statuses.has(k) && !imms.has(k))
+        || (!imms.has("exhaustion") && (level !== null) && Number.isInteger(l) && (level >= l));
+    });
+  }
+
+  /* -------------------------------------------- */
   /*  Base Data Preparation Helpers               */
-  /* -------------------------------------------- */
-
-  /**
-   * Update the actor's abilities list to match the abilities configured in `ROTV.abilities`.
-   * Mutates the system.abilities object.
-   * @protected
-   */
-  _prepareBaseAbilities() {
-    if ( !("abilities" in this.system) ) return;
-    const abilities = {};
-    for ( const key of Object.keys(CONFIG.ROTV.abilities) ) {
-      abilities[key] = this.system.abilities[key];
-      if ( !abilities[key] ) {
-        abilities[key] = foundry.utils.deepClone(game.system.template.Actor.templates.common.abilities.cha);
-
-        // Honor: Charisma for NPC, 0 for vehicles
-        if ( key === "hon" ) {
-          if ( this.type === "vehicle" ) abilities[key].value = 0;
-          else if ( this.type === "npc" ) abilities[key].value = this.system.abilities.cha?.value ?? 10;
-        }
-
-        // Sanity: Wisdom for NPC, 0 for vehicles
-        else if ( key === "san" ) {
-          if ( this.type === "vehicle" ) abilities[key].value = 0;
-          else if ( this.type === "npc" ) abilities[key].value = this.system.abilities.wis?.value ?? 10;
-        }
-      }
-    }
-    this.system.abilities = abilities;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Update the actor's skill list to match the skills configured in `ROTV.skills`.
-   * Mutates the system.skills object.
-   * @protected
-   */
-  _prepareBaseSkills() {
-    if ( !("skills" in this.system) ) return;
-    const skills = {};
-    for ( const [key, skill] of Object.entries(CONFIG.ROTV.skills) ) {
-      skills[key] = this.system.skills[key];
-      if ( !skills[key] ) {
-        skills[key] = foundry.utils.deepClone(game.system.template.Actor.templates.creature.skills.acr);
-        skills[key].ability = skill.ability;
-      }
-    }
-    this.system.skills = skills;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Initialize derived AC fields for Active Effects to target.
-   * Mutates the system.attributes.ac object.
-   * @protected
-   */
-  _prepareBaseArmorClass() {
-    const ac = this.system.attributes.ac;
-    ac.armor = 10;
-    ac.shield = ac.bonus = ac.cover = 0;
-  }
-
   /* -------------------------------------------- */
 
   /**
@@ -291,88 +346,12 @@ export default class ActorRelics extends Actor {
    * @protected
    */
   _prepareScaleValues() {
-    this.system.scale = Object.entries(this.classes).reduce((scale, [identifier, cls]) => {
-      scale[identifier] = cls.scaleValues;
-      if ( cls.subclass ) scale[cls.subclass.identifier] = cls.subclass.scaleValues;
+    this.system.scale = this.items.reduce((scale, item) => {
+      if ( CONFIG.ROTV.advancementTypes.ScaleValue.validItemTypes.has(item.type) ) {
+        scale[item.identifier] = item.scaleValues;
+      }
       return scale;
     }, {});
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Perform any Character specific preparation.
-   * Mutates several aspects of the system data object.
-   * @protected
-   */
-  _prepareCharacterData() {
-    this.system.details.level = 0;
-    this.system.attributes.hd = 0;
-    this.system.attributes.attunement.value = 0;
-
-    for ( const item of this.items ) {
-      // Class levels & hit dice
-      if ( item.type === "class" ) {
-        const classLevels = parseInt(item.system.levels) || 1;
-        this.system.details.level += classLevels;
-        this.system.attributes.hd += classLevels - (parseInt(item.system.hitDiceUsed) || 0);
-      }
-
-      // Attuned items
-      else if ( item.system.attunement === CONFIG.ROTV.attunementTypes.ATTUNED ) {
-        this.system.attributes.attunement.value += 1;
-      }
-    }
-
-    // Character proficiency bonus
-    this.system.attributes.prof = Proficiency.calculateMod(this.system.details.level);
-
-    // Experience required for next level
-    const xp = this.system.details.xp;
-    xp.max = this.getLevelExp(this.system.details.level || 1);
-    const prior = this.getLevelExp(this.system.details.level - 1 || 0);
-    const required = xp.max - prior;
-    const pct = Math.round((xp.value - prior) * 100 / required);
-    xp.pct = Math.clamped(pct, 0, 100);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Perform any NPC specific preparation.
-   * Mutates several aspects of the system data object.
-   * @protected
-   */
-  _prepareNPCData() {
-    const cr = this.system.details.cr;
-
-    // Attuned items
-    this.system.attributes.attunement.value = this.items.filter(i => {
-      return i.system.attunement === CONFIG.ROTV.attunementTypes.ATTUNED;
-    }).length;
-
-    // Kill Experience
-    this.system.details.xp ??= {};
-    this.system.details.xp.value = this.getCRExp(cr);
-
-    // Proficiency
-    this.system.attributes.prof = Proficiency.calculateMod(Math.max(cr, 1));
-
-    // Spellcaster Level
-    if ( this.system.attributes.spellcasting && !Number.isNumeric(this.system.details.spellLevel) ) {
-      this.system.details.spellLevel = Math.max(cr, 1);
-    }
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Perform any Vehicle specific preparation.
-   * Mutates several aspects of the system data object.
-   * @protected
-   */
-  _prepareVehicleData() {
-    this.system.attributes.prof = 0;
   }
 
   /* -------------------------------------------- */
@@ -380,92 +359,132 @@ export default class ActorRelics extends Actor {
   /* -------------------------------------------- */
 
   /**
-   * Prepare abilities.
-   * @param {object} bonusData      Data produced by `getRollData` to be applied to bonus formulas.
-   * @param {object} globalBonuses  Global bonus data.
-   * @param {number} checkBonus     Global ability check bonus.
-   * @param {object} originalSaves  A transformed actor's original actor's abilities.
+   * Prepare skill checks. Mutates the values of system.skills.
+   * @param {object} rollData         Data produced by `getRollData` to be applied to bonus formulas.
+   * @param {object} globalBonuses     Global bonus data.
+   * @param {number} globalCheckBonus  Global ability check bonus.
+   * @param {object} originalSkills    A transformed actor's original actor's skills.
    * @protected
    */
-  _prepareAbilities(bonusData, globalBonuses, checkBonus, originalSaves) {
-    const flags = this.flags.rotv ?? {};
-    const dcBonus = simplifyBonus(this.system.bonuses?.spell?.dc, bonusData);
-    const saveBonus = simplifyBonus(globalBonuses.save, bonusData);
-    for ( const [id, abl] of Object.entries(this.system.abilities) ) {
-      if ( flags.diamondSoul ) abl.proficient = 1;  // Diamond Soul is proficient in all saves
-      abl.mod = abl.value;
-      abl.dmgMod = Math.floor(abl.value*0.5);
+  _prepareSkills(rollData, globalBonuses, globalCheckBonus, originalSkills) {
+    if ( this.type === "vehicle" ) return;
 
-      const isRA = this._isRemarkableAthlete(id);
-      abl.checkProf = new Proficiency(this.system.attributes.prof, (isRA || flags.jackOfAllTrades) ? 0.5 : 0, !isRA);
-      const saveBonusAbl = simplifyBonus(abl.bonuses?.save, bonusData);
-      abl.saveBonus = saveBonusAbl + saveBonus;
-
-      abl.saveProf = new Proficiency(this.system.attributes.prof, abl.proficient);
-      const checkBonusAbl = simplifyBonus(abl.bonuses?.check, bonusData);
-      abl.checkBonus = checkBonusAbl + checkBonus;
-
-      abl.save = abl.mod + abl.saveBonus;
-      if ( Number.isNumeric(abl.saveProf.term) ) abl.save += abl.saveProf.flat;
-      abl.dc = 8 + abl.mod + this.system.attributes.prof + dcBonus;
-
-      // If we merged saves when transforming, take the highest bonus here.
-      if ( originalSaves && abl.proficient ) abl.save = Math.max(abl.save, originalSaves[id].save);
+    // Skill modifiers
+    for ( const [id, skillData] of Object.entries(this.system.skills) ) {
+      this._prepareSkill(id, { skillData, rollData, originalSkills, globalCheckBonus, globalBonuses });
     }
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Prepare skill checks. Mutates the values of system.skills.
-   * @param {object} bonusData       Data produced by `getRollData` to be applied to bonus formulas.
-   * @param {object} globalBonuses   Global bonus data.
-   * @param {number} checkBonus      Global ability check bonus.
-   * @param {object} originalSkills  A transformed actor's original actor's skills.
-   * @protected
+   * Prepares data for a specific skill.
+   * @param {string} skillId                     The id of the skill to prepare data for.
+   * @param {object} [options]                   Additional options.
+   * @param {SkillData} [options.skillData]      The base skill data for this skill.
+   *                                             If undefined, `this.system.skill[skillId]` is used.
+   * @param {object} [options.rollData]          RollData for this actor, used to evaluate dice terms in bonuses.
+   *                                             If undefined, `this.getRollData()` is used.
+   * @param {object} [options.originalSkills]    Original skills if actor is polymorphed.
+   *                                             If undefined, the skills of the actor identified by
+   *                                             `this.flags.rotv.originalActor` are used.
+   * @param {object} [options.globalBonuses]     Global ability bonuses for this actor.
+   *                                             If undefined, `this.system.bonuses.abilities` is used.
+   * @param {number} [options.globalCheckBonus]  Global check bonus for this actor.
+   *                                             If undefined, `globalBonuses.check` will be evaluated using `rollData`.
+   * @param {number} [options.globalSkillBonus]  Global skill bonus for this actor.
+   *                                             If undefined, `globalBonuses.skill` will be evaluated using `rollData`.
+   * @param {string} [options.ability]           The ability to compute bonuses based on.
+   *                                             If undefined, skillData.ability is used.
+   * @returns {SkillData}
+   * @internal
    */
-  _prepareSkills(bonusData, globalBonuses, checkBonus, originalSkills) {
-    if ( this.type === "vehicle" ) return;
+  _prepareSkill(skillId, {
+    skillData, rollData, originalSkills, globalBonuses,
+    globalCheckBonus, globalSkillBonus, ability
+  }={}) {
     const flags = this.flags.rotv ?? {};
 
-    // Skill modifiers
+    skillData ??= foundry.utils.deepClone(this.system.skills[skillId]);
+    rollData ??= this.getRollData();
+    originalSkills ??= flags.originalActor ? game.actors?.get(flags.originalActor)?.system?.skills : null;
+    globalBonuses ??= this.system.bonuses?.abilities ?? {};
+    globalCheckBonus ??= simplifyBonus(globalBonuses.check, rollData);
+    globalSkillBonus ??= simplifyBonus(globalBonuses.skill, rollData);
+    ability ??= skillData.ability;
+    const abilityData = this.system.abilities[ability];
+    skillData.ability = ability;
+
     const feats = CONFIG.ROTV.characterFlags;
-    const skillBonus = simplifyBonus(globalBonuses.skill, bonusData);
-    for ( const [id, skl] of Object.entries(this.system.skills) ) {
-      const ability = this.system.abilities[skl.ability];
-      skl.value = Math.clamped(Number(skl.value).toNearest(0.5), 0, 2) ?? 0;
-      const baseBonus = simplifyBonus(skl.bonuses?.check, bonusData);
+
+    const baseBonus = simplifyBonus(skillData.bonuses?.check, rollData);
+    let roundDown = true;
+
+    // Remarkable Athlete
+    if ( this._isRemarkableAthlete(skillData.ability) && (skillData.value < 0.5) ) {
+      skillData.value = 0.5;
+      roundDown = false;
+    }
+
+    // Jack of All Trades
+    else if ( flags.jackOfAllTrades && (skillData.value < 0.5) ) {
+      skillData.value = 0.5;
+    }
+
+    // Polymorph Skill Proficiencies
+    if ( originalSkills ) {
+      skillData.value = Math.max(skillData.value, originalSkills[skillId].value);
+    }
+
+    // Compute modifier
+    const checkBonusAbl = simplifyBonus(abilityData?.bonuses?.check, rollData);
+    skillData.bonus = baseBonus + globalCheckBonus + checkBonusAbl + globalSkillBonus;
+    skillData.mod = abilityData?.mod ?? 0;
+    skillData.prof = new Proficiency(this.system.attributes.prof, skillData.value, roundDown);
+    skillData.proficient = skillData.value;
+    skillData.total = skillData.mod + skillData.bonus;
+    if ( Number.isNumeric(skillData.prof.term) ) skillData.total += skillData.prof.flat;
+
+    // Compute passive bonus
+    const passive = flags.observantFeat && feats.observantFeat.skills.includes(skillId) ? 5 : 0;
+    const passiveBonus = simplifyBonus(skillData.bonuses?.passive, rollData);
+    skillData.passive = 10 + skillData.mod + skillData.bonus + skillData.prof.flat + passive + passiveBonus;
+
+    return skillData;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Prepare tool checks. Mutates the values of system.tools.
+   * @param {object} bonusData       Data produced by `getRollData` to be applied to bonus formulae.
+   * @param {object} globalBonuses   Global bonus data.
+   * @param {number} checkBonus      Global ability check bonus.
+   * @protected
+   */
+  _prepareTools(bonusData, globalBonuses, checkBonus) {
+    if ( this.type === "vehicle" ) return;
+    const flags = this.flags.rotv ?? {};
+    for ( const tool of Object.values(this.system.tools) ) {
+      const ability = this.system.abilities[tool.ability];
+      const baseBonus = simplifyBonus(tool.bonuses.check, bonusData);
       let roundDown = true;
 
-      // Remarkable Athlete
-      if ( this._isRemarkableAthlete(skl.ability) && (skl.value < 0.5) ) {
-        skl.value = 0.5;
+      // Remarkable Athlete.
+      if ( this._isRemarkableAthlete(tool.ability) && (tool.value < 0.5) ) {
+        tool.value = 0.5;
         roundDown = false;
       }
 
-      // Jack of All Trades
-      else if ( flags.jackOfAllTrades && (skl.value < 0.5) ) {
-        skl.value = 0.5;
-      }
+      // Jack of All Trades.
+      else if ( flags.jackOfAllTrades && (tool.value < 0.5) ) tool.value = 0.5;
 
-      // Polymorph Skill Proficiencies
-      if ( originalSkills ) {
-        skl.value = Math.max(skl.value, originalSkills[id].value);
-      }
-
-      // Compute modifier
       const checkBonusAbl = simplifyBonus(ability?.bonuses?.check, bonusData);
-      skl.bonus = baseBonus + checkBonus + checkBonusAbl + skillBonus;
-      skl.mod = ability?.mod ?? 0;
-      skl.prof = new Proficiency(this.system.attributes.prof, skl.value, roundDown);
-      skl.proficient = skl.value;
-      skl.total = skl.mod + skl.bonus;
-      if ( Number.isNumeric(skl.prof.term) ) skl.total += skl.prof.flat;
-
-      // Compute passive bonus
-      const passive = flags.observantFeat && (feats.observantFeat.skills.includes(id)) ? 5 : 0;
-      const passiveBonus = simplifyBonus(skl.bonuses?.passive, bonusData);
-      skl.passive = 10 + skl.mod + skl.bonus + skl.prof.flat + passive + passiveBonus;
+      tool.bonus = baseBonus + checkBonus + checkBonusAbl;
+      tool.mod = ability?.mod ?? 0;
+      tool.prof = new Proficiency(this.system.attributes.prof, tool.value, roundDown);
+      tool.total = tool.mod + tool.bonus;
+      if ( Number.isNumeric(tool.prof.term) ) tool.total += tool.prof.flat;
     }
   }
 
@@ -489,12 +508,12 @@ export default class ActorRelics extends Actor {
     // Identify Equipped Items
     const armorTypes = new Set(Object.keys(CONFIG.ROTV.armorTypes));
     const {armors, shields} = this.itemTypes.equipment.reduce((obj, equip) => {
-      const armor = equip.system.armor;
-      if ( !equip.system.equipped || !armorTypes.has(armor?.type) ) return obj;
-      if ( armor.type === "shield" ) obj.shields.push(equip);
+      if ( !equip.system.equipped || !armorTypes.has(equip.system.type.value) ) return obj;
+      if ( equip.system.type.value === "shield" ) obj.shields.push(equip);
       else obj.armors.push(equip);
       return obj;
     }, {armors: [], shields: []});
+    const rollData = this.getRollData({ deterministic: true });
 
     // Determine base AC
     switch ( ac.calc ) {
@@ -516,24 +535,25 @@ export default class ActorRelics extends Actor {
             message: game.i18n.localize("ROTV.WarnMultipleArmor"), type: "warning"
           });
           const armorData = armors[0].system.armor;
-          const isHeavy = armorData.type === "heavy";
+          const isHeavy = armors[0].system.type.value === "heavy";
           ac.armor = armorData.value ?? ac.armor;
           ac.dex = isHeavy ? 0 : Math.min(armorData.dex ?? Infinity, this.system.abilities.dex?.mod ?? 0);
           ac.equippedArmor = armors[0];
         }
         else ac.dex = this.system.abilities.dex?.mod ?? 0;
 
-        const rollData = this.getRollData({ deterministic: true });
         rollData.attributes.ac = ac;
         try {
-          const replaced = Roll.replaceFormulaData(formula, rollData);
-          ac.base = Roll.safeEval(replaced);
+          const replaced = replaceFormulaData(formula, rollData, {
+            actor: this, missing: null, property: game.i18n.localize("ROTV.ArmorClass")
+          });
+          ac.base = replaced ? new Roll(replaced).evaluateSync().total : 0;
         } catch(err) {
           this._preparationWarnings.push({
-            message: game.i18n.localize("ROTV.WarnBadACFormula"), link: "armor", type: "error"
+            message: game.i18n.format("ROTV.WarnBadACFormula", { formula }), link: "armor", type: "error"
           });
           const replaced = Roll.replaceFormulaData(CONFIG.ROTV.armorClasses.default.formula, rollData);
-          ac.base = Roll.safeEval(replaced);
+          ac.base = new Roll(replaced).evaluateSync().total;
         }
         break;
     }
@@ -548,85 +568,8 @@ export default class ActorRelics extends Actor {
     }
 
     // Compute total AC and return
+    ac.bonus = simplifyBonus(ac.bonus, rollData);
     ac.value = ac.base + ac.shield + ac.bonus + ac.cover;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare the level and percentage of encumbrance for an Actor.
-   * Optionally include the weight of carried currency by applying the standard rule from the PHB pg. 143.
-   * Mutates the value of the `system.attributes.encumbrance` object.
-   * @protected
-   */
-  _prepareEncumbrance() {
-    const encumbrance = this.system.attributes.encumbrance ??= {};
-
-    // Get the total weight from items
-    const physicalItems = ["weapon", "equipment", "consumable", "tool", "backpack", "loot"];
-    let weight = this.items.reduce((weight, i) => {
-      if ( !physicalItems.includes(i.type) ) return weight;
-      const q = i.system.quantity || 0;
-      const w = i.system.weight || 0;
-      return weight + (q * w);
-    }, 0);
-
-    // [Optional] add Currency Weight (for non-transformed actors)
-    const currency = this.system.currency;
-    if ( game.settings.get("rotv", "currencyWeight") && currency ) {
-      const numCoins = Object.values(currency).reduce((val, denom) => val + Math.max(denom, 0), 0);
-      const currencyPerWeight = game.settings.get("rotv", "metricWeightUnits")
-        ? CONFIG.ROTV.encumbrance.currencyPerWeight.metric
-        : CONFIG.ROTV.encumbrance.currencyPerWeight.imperial;
-      weight += numCoins / currencyPerWeight;
-    }
-
-    // Determine the Encumbrance size class
-    let mod = {tiny: 0.5, sm: 1, med: 1, lg: 2, huge: 4, grg: 8}[this.system.traits.size] || 1;
-    if ( this.flags.rotv?.powerfulBuild ) mod = Math.min(mod * 2, 8);
-
-    const strengthMultiplier = game.settings.get("rotv", "metricWeightUnits")
-      ? CONFIG.ROTV.encumbrance.strMultiplier.metric
-      : CONFIG.ROTV.encumbrance.strMultiplier.imperial;
-
-    // Populate final Encumbrance values
-    encumbrance.value = weight.toNearest(0.01);
-    encumbrance.max = ((this.system.abilities.str?.value ?? 0) * strengthMultiplier * mod).toNearest(0.01) + 10;
-
-    if (this.system.abilities.str.value == -2) encumbrance.max = 8.5;
-    if (this.system.abilities.str.value == -1) encumbrance.max = 9.5;
-
-    if (this.system.abilities.str.value > 4 && this.system.abilities.str.value < 8) {
-    let remainder = this.system.abilities.str.value - 3;
-        encumbrance.max = 14 + remainder * 0.5;
-    }
-    if (this.system.abilities.str.value >= 8) {encumbrance.max = 15;}
-
-    encumbrance.pct = Math.clamped((encumbrance.value * 100) / encumbrance.max, 0, 100);
-    encumbrance.encumbered = encumbrance.pct > (200 / 3);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare hit points for characters.
-   * @param {object} rollData  Data produced by `getRollData` to be applied to bonus formulas.
-   * @protected
-   */
-  _prepareHitPoints(rollData) {
-    if ( this.type !== "character" || (this.system._source.attributes.hp.max !== null) ) return;
-    const hp = this.system.attributes.hp;
-
-    const abilityId = CONFIG.ROTV.hitPointsAbility || "con";
-    const abilityMod = (this.system.abilities[abilityId]?.mod ?? 0);
-    const base = Object.values(this.classes).reduce((total, item) => {
-      const advancement = item.advancement.byType.HitPoints?.[0];
-      return total + (advancement?.getAdjustedTotal(abilityMod) ?? 0);
-    }, 0);
-    const levelBonus = simplifyBonus(hp.bonuses.level, rollData) * this.system.details.level;
-    const overallBonus = simplifyBonus(hp.bonuses.overall, rollData);
-
-    hp.max = base + levelBonus + overallBonus;
   }
 
   /* -------------------------------------------- */
@@ -643,7 +586,7 @@ export default class ActorRelics extends Actor {
     const flags = this.flags.rotv || {};
 
     // Compute initiative modifier
-    const abilityId = init.ability || CONFIG.ROTV.initiativeAbility;
+    const abilityId = init.ability || CONFIG.ROTV.defaultAbilities.initiative;
     const ability = this.system.abilities?.[abilityId] || {};
     init.mod = ability.mod ?? 0;
 
@@ -672,34 +615,32 @@ export default class ActorRelics extends Actor {
   _prepareSpellcasting() {
     if ( !this.system.spells ) return;
 
-    // Spellcasting DC
+    // Spellcasting DC and modifier
     const spellcastingAbility = this.system.abilities[this.system.attributes.spellcasting];
     this.system.attributes.spelldc = spellcastingAbility ? spellcastingAbility.dc : 8 + this.system.attributes.prof;
+    this.system.attributes.spellmod = spellcastingAbility ? spellcastingAbility.mod : 0;
 
     // Translate the list of classes into spellcasting progression
     const progression = { slot: 0, pact: 0 };
     const types = {};
 
-    // NPCs don't get spell levels from classes
+    // Grab all classes with spellcasting
+    const classes = this.items.filter(cls => {
+      if ( cls.type !== "class" ) return false;
+      const type = cls.spellcasting.type;
+      if ( !type ) return false;
+      types[type] ??= 0;
+      types[type] += 1;
+      return true;
+    });
+
+    for ( const cls of classes ) this.constructor.computeClassProgression(
+      progression, cls, { actor: this, count: types[cls.spellcasting.type] }
+    );
+
     if ( this.type === "npc" ) {
-      progression.slot = this.system.details.spellLevel ?? 0;
-      types.leveled = 1;
-    }
-
-    else {
-      // Grab all classes with spellcasting
-      const classes = this.items.filter(cls => {
-        if ( cls.type !== "class" ) return false;
-        const type = cls.spellcasting.type;
-        if ( !type ) return false;
-        types[type] ??= 0;
-        types[type] += 1;
-        return true;
-      });
-
-      for ( const cls of classes ) this.constructor.computeClassProgression(
-        progression, cls, { actor: this, count: types[cls.spellcasting.type] }
-      );
+      if ( progression.slot || progression.pact ) this.system.details.spellLevel = progression.slot || progression.pact;
+      else progression.slot = this.system.details.spellLevel ?? 0;
     }
 
     for ( const type of Object.keys(CONFIG.ROTV.spellcastingTypes) ) {
@@ -712,9 +653,9 @@ export default class ActorRelics extends Actor {
   /**
    * Contribute to the actor's spellcasting progression.
    * @param {object} progression                             Spellcasting progression data. *Will be mutated.*
-   * @param {ItemRelics} cls                                     Class for whom this progression is being computed.
+   * @param {ItemRotV} cls                                     Class for whom this progression is being computed.
    * @param {object} [config={}]
-   * @param {ActorRelics|null} [config.actor]                    Actor for whom the data is being prepared.
+   * @param {ActorRotV|null} [config.actor]                    Actor for whom the data is being prepared.
    * @param {SpellcastingDescription} [config.spellcasting]  Spellcasting descriptive object.
    * @param {number} [config.count=1]                        Number of classes with this type of spellcasting.
    */
@@ -726,8 +667,8 @@ export default class ActorRelics extends Actor {
      * A hook event that fires while computing the spellcasting progression for each class on each actor.
      * The actual hook names include the spellcasting type (e.g. `rotv.computeLeveledProgression`).
      * @param {object} progression                    Spellcasting progression data. *Will be mutated.*
-     * @param {ActorRelics|null} [actor]                  Actor for whom the data is being prepared.
-     * @param {ItemRelics} cls                            Class for whom this progression is being computed.
+     * @param {ActorRotV|null} [actor]                  Actor for whom the data is being prepared.
+     * @param {ItemRotV} cls                            Class for whom this progression is being computed.
      * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
      * @param {number} count                          Number of classes with this type of spellcasting.
      * @returns {boolean}  Explicitly return false to prevent default progression from being calculated.
@@ -750,8 +691,8 @@ export default class ActorRelics extends Actor {
   /**
    * Contribute to the actor's spellcasting progression for a class with leveled spellcasting.
    * @param {object} progression                    Spellcasting progression data. *Will be mutated.*
-   * @param {ActorRelics} actor                         Actor for whom the data is being prepared.
-   * @param {ItemRelics} cls                            Class for whom this progression is being computed.
+   * @param {ActorRotV} actor                         Actor for whom the data is being prepared.
+   * @param {ItemRotV} cls                            Class for whom this progression is being computed.
    * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
    * @param {number} count                          Number of classes with this type of spellcasting.
    */
@@ -771,8 +712,8 @@ export default class ActorRelics extends Actor {
   /**
    * Contribute to the actor's spellcasting progression for a class with pact spellcasting.
    * @param {object} progression                    Spellcasting progression data. *Will be mutated.*
-   * @param {ActorRelics} actor                         Actor for whom the data is being prepared.
-   * @param {ItemRelics} cls                            Class for whom this progression is being computed.
+   * @param {ActorRotV} actor                         Actor for whom the data is being prepared.
+   * @param {ItemRotV} cls                            Class for whom this progression is being computed.
    * @param {SpellcastingDescription} spellcasting  Spellcasting descriptive object.
    * @param {number} count                          Number of classes with this type of spellcasting.
    */
@@ -788,14 +729,14 @@ export default class ActorRelics extends Actor {
    * @param {string} type             Type of spellcasting slots being prepared.
    * @param {object} progression      Spellcasting progression data.
    * @param {object} [config]
-   * @param {ActorRelics} [config.actor]  Actor for whom the data is being prepared.
+   * @param {ActorRotV} [config.actor]  Actor for whom the data is being prepared.
    */
   static prepareSpellcastingSlots(spells, type, progression, {actor}={}) {
     /**
      * A hook event that fires to convert the provided spellcasting progression into spell slots.
      * The actual hook names include the spellcasting type (e.g. `rotv.prepareLeveledSlots`).
      * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
-     * @param {ActorRelics} actor        Actor for whom the data is being prepared.
+     * @param {ActorRotV} actor        Actor for whom the data is being prepared.
      * @param {object} progression   Spellcasting progression data.
      * @returns {boolean}            Explicitly return false to prevent default preparation from being performed.
      * @function rotv.prepareSpellcastingSlots
@@ -812,59 +753,69 @@ export default class ActorRelics extends Actor {
   /**
    * Prepare leveled spell slots using progression data.
    * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
-   * @param {ActorRelics} actor        Actor for whom the data is being prepared.
+   * @param {ActorRotV} actor        Actor for whom the data is being prepared.
    * @param {object} progression   Spellcasting progression data.
    */
   static prepareLeveledSlots(spells, actor, progression) {
-    const levels = Math.clamped(progression.slot, 0, CONFIG.ROTV.maxLevel);
+    const levels = Math.clamp(progression.slot, 0, CONFIG.ROTV.maxLevel);
     const slots = CONFIG.ROTV.SPELL_SLOT_TABLE[Math.min(levels, CONFIG.ROTV.SPELL_SLOT_TABLE.length) - 1] ?? [];
-    for ( const [n, slot] of Object.entries(spells) ) {
-      const level = parseInt(n.slice(-1));
-      if ( Number.isNaN(level) ) continue;
+    for ( const level of Array.fromRange(Object.keys(CONFIG.ROTV.spellLevels).length - 1, 1) ) {
+      const slot = spells[`spell${level}`] ??= { value: 0 };
+      slot.level = level;
       slot.max = Number.isNumeric(slot.override) ? Math.max(parseInt(slot.override), 0) : slots[level - 1] ?? 0;
-      slot.value = parseInt(slot.value); // TODO: DataModels should remove the need for this
     }
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Prepare pact spell slots using progression data.
+   * Prepare non-leveled spell slots using progression data.
    * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
-   * @param {ActorRelics} actor        Actor for whom the data is being prepared.
+   * @param {ActorRotV} actor        Actor for whom the data is being prepared.
    * @param {object} progression   Spellcasting progression data.
+   * @param {string} key           The internal key for these spell slots on the actor.
+   * @param {object} table         The table used for determining the progression of slots.
    */
-  static preparePactSlots(spells, actor, progression) {
-    // Pact spell data:
-    // - pact.level: Slot level for pact casting
-    // - pact.max: Total number of pact slots
-    // - pact.value: Currently available pact slots
-    // - pact.override: Override number of available spell slots
+  static prepareAltSlots(spells, actor, progression, key, table) {
+    // Spell data:
+    // - x.level: Slot level for casting
+    // - x.max: Total number of slots
+    // - x.value: Currently available slots
+    // - x.override: Override number of available spell slots
 
-    let pactLevel = Math.clamped(progression.pact, 0, CONFIG.ROTV.maxLevel);
-    spells.pact ??= {};
-    const override = Number.isNumeric(spells.pact.override) ? parseInt(spells.pact.override) : null;
+    let keyLevel = Math.clamp(progression[key], 0, CONFIG.ROTV.maxLevel);
+    spells[key] ??= {};
+    const override = Number.isNumeric(spells[key].override) ? parseInt(spells[key].override) : null;
 
-    // Pact slot override
-    if ( (pactLevel === 0) && (actor.type === "npc") && (override !== null) ) {
-      pactLevel = actor.system.details.spellLevel;
+    // Slot override
+    if ( (keyLevel === 0) && (actor.type === "npc") && (override !== null) ) {
+      keyLevel = actor.system.details.spellLevel;
     }
 
-    // TODO: Allow pact level and slot count to be configured
-    if ( pactLevel > 0 ) {
-      spells.pact.level = Math.ceil(Math.min(10, pactLevel) / 2); // TODO: Allow custom max pact level
-      if ( override === null ) {
-        spells.pact.max = Math.max(1, Math.min(pactLevel, 2), Math.min(pactLevel - 8, 3), Math.min(pactLevel - 13, 4));
-      } else {
-        spells.pact.max = Math.max(override, 1);
-      }
-      spells.pact.value = Math.min(spells.pact.value, spells.pact.max);
+    const [, keyConfig] = Object.entries(table).reverse().find(([l]) => Number(l) <= keyLevel) ?? [];
+    if ( keyConfig ) {
+      spells[key].level = keyConfig.level;
+      if ( override === null ) spells[key].max = keyConfig.slots;
+      else spells[key].max = Math.max(override, 1);
+      spells[key].value = Math.min(spells[key].value, spells[key].max);
     }
 
     else {
-      spells.pact.max = override || 0;
-      spells.pact.level = spells.pact.max > 0 ? 1 : 0;
+      spells[key].max = override || 0;
+      spells[key].level = (spells[key].max > 0) ? 1 : 0;
     }
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Convenience method for preparing pact slots specifically.
+   * @param {object} spells        The `data.spells` object within actor's data. *Will be mutated.*
+   * @param {ActorRotV} actor        Actor for whom the data is being prepared.
+   * @param {object} progression   Spellcasting progression data.
+   */
+  static preparePactSlots(spells, actor, progression) {
+    this.prepareAltSlots(spells, actor, progression, "pact", CONFIG.ROTV.pactCastingProgression);
   }
 
   /* -------------------------------------------- */
@@ -873,32 +824,35 @@ export default class ActorRelics extends Actor {
 
   /** @inheritdoc */
   async _preCreate(data, options, user) {
-    await super._preCreate(data, options, user);
+    if ( (await super._preCreate(data, options, user)) === false ) return false;
+
     const sourceId = this.getFlag("core", "sourceId");
     if ( sourceId?.startsWith("Compendium.") ) return;
 
     // Configure prototype token settings
+    const prototypeToken = {};
     if ( "size" in (this.system.traits || {}) ) {
-      const s = CONFIG.ROTV.tokenSizes[this.system.traits.size || "med"];
-      const prototypeToken = {width: s, height: s};
-      if ( this.type === "character" ) Object.assign(prototypeToken, {
-        sight: { enabled: true }, actorLink: true, disposition: 1
-      });
-      this.updateSource({prototypeToken});
+      const size = CONFIG.ROTV.actorSizes[this.system.traits.size || "med"].token ?? 1;
+      if ( !foundry.utils.hasProperty(data, "prototypeToken.width") ) prototypeToken.width = size;
+      if ( !foundry.utils.hasProperty(data, "prototypeToken.height") ) prototypeToken.height = size;
     }
+    if ( this.type === "character" ) Object.assign(prototypeToken, {
+      sight: { enabled: true }, actorLink: true, disposition: CONST.TOKEN_DISPOSITIONS.FRIENDLY
+    });
+    this.updateSource({ prototypeToken });
   }
 
   /* -------------------------------------------- */
 
   /** @inheritdoc */
   async _preUpdate(changed, options, user) {
-    await super._preUpdate(changed, options, user);
+    if ( (await super._preUpdate(changed, options, user)) === false ) return false;
 
     // Apply changes in Actor size to Token width/height
     if ( "size" in (this.system.traits || {}) ) {
       const newSize = foundry.utils.getProperty(changed, "system.traits.size");
       if ( newSize && (newSize !== this.system.traits?.size) ) {
-        let size = CONFIG.ROTV.tokenSizes[newSize];
+        let size = CONFIG.ROTV.actorSizes[newSize].token ?? 1;
         if ( !foundry.utils.hasProperty(changed, "prototypeToken.width") ) {
           changed.prototypeToken ||= {};
           changed.prototypeToken.height = size;
@@ -907,13 +861,19 @@ export default class ActorRelics extends Actor {
       }
     }
 
-    // Reset death save counters
+    // Reset death save counters and store hp
     if ( "hp" in (this.system.attributes || {}) ) {
       const isDead = this.system.attributes.hp.value <= 0;
       if ( isDead && (foundry.utils.getProperty(changed, "system.attributes.hp.value") > 0) ) {
         foundry.utils.setProperty(changed, "system.attributes.death.success", 0);
         foundry.utils.setProperty(changed, "system.attributes.death.failure", 0);
       }
+      foundry.utils.setProperty(options, "rotv.hp", { ...this.system.attributes.hp });
+    }
+
+    // Record previous exhaustion level.
+    if ( Number.isFinite(foundry.utils.getProperty(changed, "system.attributes.exhaustion")) ) {
+      foundry.utils.setProperty(options, "rotv.originalExhaustion", this.system.attributes.exhaustion);
     }
   }
 
@@ -921,7 +881,7 @@ export default class ActorRelics extends Actor {
 
   /**
    * Assign a class item as the original class for the Actor based on which class has the most levels.
-   * @returns {Promise<ActorRelics>}  Instance of the updated actor.
+   * @returns {Promise<ActorRotV>}  Instance of the updated actor.
    * @protected
    */
   _assignPrimaryClass() {
@@ -940,6 +900,12 @@ export default class ActorRelics extends Actor {
       const hp = this.system.attributes.hp;
       const delta = isDelta ? (-1 * value) : (hp.value + hp.temp) - value;
       return this.applyDamage(delta);
+    } else if ( attribute.startsWith(".") ) {
+      const item = fromUuidSync(attribute, { relative: this });
+      let newValue = item?.system.uses?.value ?? 0;
+      if ( isDelta ) newValue += value;
+      else newValue = value;
+      return item?.update({ "system.uses.value": newValue });
     }
     return super.modifyTokenAttribute(attribute, value, isDelta, isBar);
   }
@@ -947,39 +913,216 @@ export default class ActorRelics extends Actor {
   /* -------------------------------------------- */
 
   /**
-   * Apply a certain amount of damage or healing to the health pool for Actor
-   * @param {number} amount       An amount of damage (positive) or healing (negative) to sustain
-   * @param {number} multiplier   A multiplier which allows for resistance, vulnerability, or healing
-   * @returns {Promise<ActorRelics>}  A Promise which resolves once the damage has been applied
+   * Description of a source of damage.
+   *
+   * @typedef {object} DamageDescription
+   * @property {number} value            Amount of damage.
+   * @property {string} type             Type of damage.
+   * @property {Set<string>} properties  Physical properties that affect damage application.
+   * @property {object} [active]
+   * @property {number} [active.multiplier]      Final calculated multiplier.
+   * @property {boolean} [active.modifications]  Did modification affect this description?
+   * @property {boolean} [active.resistance]     Did resistance affect this description?
+   * @property {boolean} [active.vulnerability]  Did vulnerability affect this description?
+   * @property {boolean} [active.immunity]       Did immunity affect this description?
    */
-  async applyDamage(amount=0, multiplier=1) {
-    amount = Math.floor(parseInt(amount) * multiplier);
+
+  /**
+   * Options for damage application.
+   *
+   * @typedef {object} DamageApplicationOptions
+   * @property {boolean|Set<string>} [downgrade]  Should this actor's resistances and immunities be downgraded by one
+   *                                              step? A set of damage types to be downgraded or `true` to downgrade
+   *                                              all damage types.
+   * @property {number} [multiplier=1]         Amount by which to multiply all damage.
+   * @property {object|boolean} [ignore]       Set to `true` to ignore all damage modifiers. If set to an object, then
+   *                                           values can either be `true` to indicate that the all modifications of
+   *                                           that type should be ignored, or a set of specific damage types for which
+   *                                           it should be ignored.
+   * @property {boolean|Set<string>} [ignore.immunity]       Should this actor's damage immunity be ignored?
+   * @property {boolean|Set<string>} [ignore.resistance]     Should this actor's damage resistance be ignored?
+   * @property {boolean|Set<string>} [ignore.vulnerability]  Should this actor's damage vulnerability be ignored?
+   * @property {boolean|Set<string>} [ignore.modification]   Should this actor's damage modification be ignored?
+   * @property {boolean} [invertHealing=true]  Automatically invert healing types to it heals, rather than damages.
+   * @property {"damage"|"healing"} [only]     Apply only damage or healing parts. Untyped rolls will always be applied.
+   */
+
+  /**
+   * Apply a certain amount of damage or healing to the health pool for Actor
+   * @param {DamageDescription[]|number} damages     Damages to apply.
+   * @param {DamageApplicationOptions} [options={}]  Damage application options.
+   * @returns {Promise<ActorRotV>}                     A Promise which resolves once the damage has been applied.
+   */
+  async applyDamage(damages, options={}) {
     const hp = this.system.attributes.hp;
     if ( !hp ) return this; // Group actors don't have HP at the moment
 
-    // Deduct damage from temp HP first
-    const tmp = parseInt(hp.temp) || 0;
-    const dt = amount > 0 ? Math.min(tmp, amount) : 0;
+    if ( Number.isNumeric(damages) ) {
+      damages = [{ value: damages }];
+      options.ignore ??= true;
+    }
 
-    // Remaining goes to health
-    const tmpMax = parseInt(hp.tempmax) || 0;
-    const dh = Math.clamped(hp.value - (amount - dt), 0, hp.max + tmpMax);
+    damages = this.calculateDamage(damages, options);
+    if ( !damages ) return this;
 
-    // Update the Actor
+    // Round damage towards zero
+    let { amount, temp } = damages.reduce((acc, d) => {
+      if ( d.type === "temphp" ) acc.temp += d.value;
+      else acc.amount += d.value;
+      return acc;
+    }, { amount: 0, temp: 0 });
+    amount = amount > 0 ? Math.floor(amount) : Math.ceil(amount);
+
+    const deltaTemp = amount > 0 ? Math.min(hp.temp, amount) : 0;
+    const deltaHP = Math.clamp(amount - deltaTemp, -hp.damage, hp.value);
     const updates = {
-      "system.attributes.hp.temp": tmp - dt,
-      "system.attributes.hp.value": dh
+      "system.attributes.hp.temp": hp.temp - deltaTemp,
+      "system.attributes.hp.value": hp.value - deltaHP
     };
 
+    if ( temp > updates["system.attributes.hp.temp"] ) updates["system.attributes.hp.temp"] = temp;
+
+    /**
+     * A hook event that fires before damage is applied to an actor.
+     * @param {ActorRotV} actor                     Actor the damage will be applied to.
+     * @param {number} amount                     Amount of damage that will be applied.
+     * @param {object} updates                    Distinct updates to be performed on the actor.
+     * @param {DamageApplicationOptions} options  Additional damage application options.
+     * @returns {boolean}                         Explicitly return `false` to prevent damage application.
+     * @function rotv.preApplyDamage
+     * @memberof hookEvents
+     */
+    if ( Hooks.call("rotv.preApplyDamage", this, amount, updates, options) === false ) return this;
+
     // Delegate damage application to a hook
-    // TODO replace this in the future with a better modifyTokenAttribute function in the core
-    const allowed = Hooks.call("modifyTokenAttribute", {
+    // TODO: Replace this in the future with a better modifyTokenAttribute function in the core
+    if ( Hooks.call("modifyTokenAttribute", {
       attribute: "attributes.hp",
       value: amount,
       isDelta: false,
       isBar: true
-    }, updates);
-    return allowed !== false ? this.update(updates, {dhp: -amount}) : this;
+    }, updates) === false ) return this;
+
+    await this.update(updates);
+
+    /**
+     * A hook event that fires after damage has been applied to an actor.
+     * @param {ActorRotV} actor                     Actor that has been damaged.
+     * @param {number} amount                     Amount of damage that has been applied.
+     * @param {DamageApplicationOptions} options  Additional damage application options.
+     * @function rotv.applyDamage
+     * @memberof hookEvents
+     */
+    Hooks.callAll("rotv.applyDamage", this, amount, options);
+
+    return this;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Calculate the damage that will be applied to this actor.
+   * @param {DamageDescription[]} damages            Damages to calculate.
+   * @param {DamageApplicationOptions} [options={}]  Damage calculation options.
+   * @returns {DamageDescription[]|false}            New damage descriptions with changes applied, or `false` if the
+   *                                                 calculation was canceled.
+   */
+  calculateDamage(damages, options={}) {
+    damages = foundry.utils.deepClone(damages);
+
+    /**
+     * A hook event that fires before damage amount is calculated for an actor.
+     * @param {ActorRotV} actor                     The actor being damaged.
+     * @param {DamageDescription[]} damages       Damage descriptions.
+     * @param {DamageApplicationOptions} options  Additional damage application options.
+     * @returns {boolean}                         Explicitly return `false` to prevent damage application.
+     * @function rotv.preCalculateDamage
+     * @memberof hookEvents
+     */
+    if ( Hooks.call("rotv.preCalculateDamage", this, damages, options) === false ) return false;
+
+    const multiplier = options.multiplier ?? 1;
+
+    const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
+    const ignore = (category, type, skipDowngrade) => {
+      return options.ignore === true
+        || options.ignore?.[category] === true
+        || options.ignore?.[category]?.has?.(type)
+        || ((category === "immunity") && downgrade(type) && !skipDowngrade)
+        || ((category === "resistance") && downgrade(type) && !hasEffect("di", type));
+    };
+
+    const traits = this.system.traits ?? {};
+    const hasEffect = (category, type, properties) => {
+      if ( (category === "dr") && downgrade(type) && hasEffect("di", type, properties)
+        && !ignore("immunity", type, true) ) return true;
+      const config = traits[category];
+      if ( !config?.value.has(type) ) return false;
+      if ( !CONFIG.ROTV.damageTypes[type]?.isPhysical || !properties?.size ) return true;
+      return !config.bypasses?.intersection(properties)?.size;
+    };
+
+    const skipped = type => {
+      if ( options.only === "damage" ) return type in CONFIG.ROTV.healingTypes;
+      if ( options.only === "healing" ) return type in CONFIG.ROTV.damageTypes;
+      return false;
+    };
+
+    const rollData = this.getRollData({deterministic: true});
+
+    damages.forEach(d => {
+      d.active ??= {};
+
+      // Skip damage types with immunity
+      if ( skipped(d.type) || (!ignore("immunity", d.type) && hasEffect("di", d.type, d.properties)) ) {
+        d.value = 0;
+        d.active.multiplier = 0;
+        d.active.immunity = true;
+        return;
+      }
+
+      // Apply type-specific damage reduction
+      if ( !ignore("modification", d.type) && traits.dm?.amount[d.type]
+        && !traits.dm.bypasses.intersection(d.properties).size ) {
+        const modification = simplifyBonus(traits.dm.amount[d.type], rollData);
+        if ( Math.sign(d.value) !== Math.sign(d.value + modification) ) d.value = 0;
+        else d.value += modification;
+        d.active.modification = true;
+      }
+
+      let damageMultiplier = multiplier;
+
+      // Apply type-specific damage resistance
+      if ( !ignore("resistance", d.type) && hasEffect("dr", d.type, d.properties) ) {
+        damageMultiplier /= 2;
+        d.active.resistance = true;
+      }
+
+      // Apply type-specific damage vulnerability
+      if ( !ignore("vulnerability", d.type) && hasEffect("dv", d.type, d.properties) ) {
+        damageMultiplier *= 2;
+        d.active.vulnerability = true;
+      }
+
+      // Negate healing types
+      if ( (options.invertHealing !== false) && (d.type === "healing") ) damageMultiplier *= -1;
+
+      d.value = d.value * damageMultiplier;
+      d.active.multiplier = (d.active.multiplier ?? 1) * damageMultiplier;
+    });
+
+    /**
+     * A hook event that fires after damage values are calculated for an actor.
+     * @param {ActorRotV} actor                     The actor being damaged.
+     * @param {DamageDescription[]} damages       Damage descriptions.
+     * @param {DamageApplicationOptions} options  Additional damage application options.
+     * @returns {boolean}                         Explicitly return `false` to prevent damage application.
+     * @function rotv.calculateDamage
+     * @memberof hookEvents
+     */
+    if ( Hooks.call("rotv.calculateDamage", this, damages, options) === false ) return false;
+
+    return damages;
   }
 
   /* -------------------------------------------- */
@@ -987,7 +1130,7 @@ export default class ActorRelics extends Actor {
   /**
    * Apply a certain amount of temporary hit point, but only if it's more than the actor currently has.
    * @param {number} amount       An amount of temporary hit points to set
-   * @returns {Promise<ActorRelics>}  A Promise which resolves once the temp HP has been applied
+   * @returns {Promise<ActorRotV>}  A Promise which resolves once the temp HP has been applied
    */
   async applyTempHP(amount=0) {
     amount = parseInt(amount);
@@ -1007,8 +1150,134 @@ export default class ActorRelics extends Actor {
    * @returns {Color}               The color used to represent the HP percentage
    */
   static getHPColor(current, max) {
-    const pct = Math.clamped(current, 0, max) / max;
+    const pct = Math.clamp(current, 0, max) / max;
     return Color.fromRGB([(1-(pct/2)), pct, 0]);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Initiate concentration on an item.
+   * @param {ItemRotV} item                        The item on which to being concentration.
+   * @param {object} [effectData]                Effect data to merge into the created effect.
+   * @returns {Promise<ActiveEffectRotV|void>}     A promise that resolves to the created effect.
+   */
+  async beginConcentrating(item, effectData={}) {
+    effectData = ActiveEffectRotV.createConcentrationEffectData(item, effectData);
+
+    /**
+     * A hook that is called before a concentration effect is created.
+     * @function rotv.preBeginConcentrating
+     * @memberof hookEvents
+     * @param {ActorRotV} actor         The actor initiating concentration.
+     * @param {ItemRotV} item           The item that will be concentrated on.
+     * @param {object} effectData     Data used to create the ActiveEffect.
+     * @returns {boolean}             Explicitly return false to prevent the effect from being created.
+     */
+    if ( Hooks.call("rotv.preBeginConcentrating", this, item, effectData) === false ) return;
+
+    const effect = await ActiveEffectRotV.create(effectData, { parent: this });
+
+    /**
+     * A hook that is called after a concentration effect is created.
+     * @function rotv.createConcentrating
+     * @memberof hookEvents
+     * @param {ActorRotV} actor             The actor initiating concentration.
+     * @param {ItemRotV} item               The item that is being concentrated on.
+     * @param {ActiveEffectRotV} effect     The created ActiveEffect instance.
+     */
+    Hooks.callAll("rotv.beginConcentrating", this, item, effect);
+
+    return effect;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * End concentration on an item.
+   * @param {ItemRotV|ActiveEffectRotV|string} [target]    An item or effect to end concentration on, or id of an effect.
+   *                                                   If not provided, all maintained effects are removed.
+   * @returns {Promise<ActiveEffectRotV[]>}              A promise that resolves to the deleted effects.
+   */
+  async endConcentration(target) {
+    let effect;
+    const { effects } = this.concentration;
+
+    if ( !target ) {
+      return effects.reduce(async (acc, effect) => {
+        acc = await acc;
+        return acc.concat(await this.endConcentration(effect));
+      }, []);
+    }
+
+    if ( foundry.utils.getType(target) === "string" ) effect = effects.find(e => e.id === target);
+    else if ( target instanceof ActiveEffectRotV ) effect = effects.has(target) ? target : null;
+    else if ( target instanceof ItemRotV ) {
+      effect = effects.find(e => {
+        const data = e.getFlag("rotv", "itemData") ?? {};
+        return (data === target._id) || (data._id === target._id);
+      });
+    }
+    if ( !effect ) return [];
+
+    /**
+     * A hook that is called before a concentration effect is deleted.
+     * @function rotv.preEndConcentration
+     * @memberof hookEvents
+     * @param {ActorRotV} actor             The actor ending concentration.
+     * @param {ActiveEffectRotV} effect     The ActiveEffect that will be deleted.
+     * @returns {boolean}                 Explicitly return false to prevent the effect from being deleted.
+     */
+    if ( Hooks.call("rotv.preEndConcentration", this, effect) === false) return [];
+
+    await effect.delete();
+
+    /**
+     * A hook that is called after a concentration effect is deleted.
+     * @function rotv.endConcentration
+     * @memberof hookEvents
+     * @param {ActorRotV} actor             The actor ending concentration.
+     * @param {ActiveEffectRotV} effect     The ActiveEffect that was deleted.
+     */
+    Hooks.callAll("rotv.endConcentration", this, effect);
+
+    return [effect];
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Create a chat message for this actor with a prompt to challenge concentration.
+   * @param {object} [options]
+   * @param {number} [options.dc]         The target value of the saving throw.
+   * @param {string} [options.ability]    An ability to use instead of the default.
+   * @returns {Promise<ChatMessageRotV>}    A promise that resolves to the created chat message.
+   */
+  async challengeConcentration({ dc=10, ability=null }={}) {
+    const isConcentrating = this.concentration.effects.size > 0;
+    if ( !isConcentrating ) return null;
+
+    const dataset = {
+      action: "concentration",
+      dc: dc
+    };
+    if ( ability in CONFIG.ROTV.abilities ) dataset.ability = ability;
+
+    const config = {
+      type: "concentration",
+      format: "short",
+      icon: true
+    };
+
+    return ChatMessage.implementation.create({
+      content: await renderTemplate("systems/rotv/templates/chat/request-card.hbs", {
+        dataset: { ...dataset, type: "concentration" },
+        buttonLabel: createRollLabel({ ...dataset, ...config }),
+        hiddenLabel: createRollLabel({ ...dataset, ...config, hideDC: true })
+      }),
+      whisper: game.users.filter(user => this.testUserPermission(user, "OWNER")),
+      speaker: ChatMessage.implementation.getSpeaker({ actor: this })
+    });
   }
 
   /* -------------------------------------------- */
@@ -1037,14 +1306,14 @@ export default class ActorRelics extends Actor {
    */
   async rollSkill(skillId, options={}) {
     const skl = this.system.skills[skillId];
-    const abl = this.system.abilities[skl.ability];
+    const abl = this.system.abilities[options.ability ?? skl.ability];
     const globalBonuses = this.system.bonuses?.abilities ?? {};
     const parts = ["@mod", "@abilityCheckBonus"];
     const data = this.getRollData();
 
     // Add ability modifier
-    data.mod = skl.mod;
-    data.defaultAbility = skl.ability;
+    data.mod = abl?.mod ?? 0;
+    data.defaultAbility = options.ability ?? skl.ability;
 
     // Include proficiency bonus
     if ( skl.prof.hasProficiency ) {
@@ -1098,7 +1367,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires before a skill check is rolled for an Actor.
      * @function rotv.preRollSkill
      * @memberof hookEvents
-     * @param {ActorRelics} actor                Actor for which the skill check is being rolled.
+     * @param {ActorRotV} actor                Actor for which the skill check is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @param {string} skillId               ID of the skill being rolled as defined in `ROTV.skills`.
      * @returns {boolean}                    Explicitly return `false` to prevent skill check from being rolled.
@@ -1111,11 +1380,101 @@ export default class ActorRelics extends Actor {
      * A hook event that fires after a skill check has been rolled for an Actor.
      * @function rotv.rollSkill
      * @memberof hookEvents
-     * @param {ActorRelics} actor   Actor for which the skill check has been rolled.
+     * @param {ActorRotV} actor   Actor for which the skill check has been rolled.
      * @param {D20Roll} roll    The resulting roll.
      * @param {string} skillId  ID of the skill that was rolled as defined in `ROTV.skills`.
      */
     if ( roll ) Hooks.callAll("rotv.rollSkill", this, roll, skillId);
+
+    return roll;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Roll a Tool Check.
+   * Prompt the user for input regarding Advantage/Disadvantage and any Situational Bonuses.
+   * @param {string} toolId       The identifier of the tool being rolled.
+   * @param {object} options      Options which configure how the tool check is rolled.
+   * @returns {Promise<D20Roll>}  A Promise which resolves to the created Roll instance.
+   */
+  async rollToolCheck(toolId, options={}) {
+    // Prepare roll data.
+    const tool = this.system.tools[toolId];
+    const ability = this.system.abilities[options.ability || (tool?.ability ?? "int")];
+    const globalBonuses = this.system.bonuses?.abilities ?? {};
+    const parts = ["@mod", "@abilityCheckBonus"];
+    const data = this.getRollData();
+
+    // Add ability modifier.
+    data.mod = ability?.mod ?? 0;
+    data.defaultAbility = options.ability || (tool?.ability ?? "int");
+
+    // Add proficiency.
+    const prof = options.prof ?? tool?.prof;
+    if ( prof?.hasProficiency ) {
+      parts.push("@prof");
+      data.prof = prof.term;
+    }
+
+    // Global ability check bonus.
+    if ( globalBonuses.check ) {
+      parts.push("@checkBonus");
+      data.checkBonus = Roll.replaceFormulaData(globalBonuses.check, data);
+    }
+
+    // Ability-specific check bonus.
+    if ( ability?.bonuses.check ) data.abilityCheckBonus = Roll.replaceFormulaData(ability.bonuses.check, data);
+    else data.abilityCheckBonus = 0;
+
+    // Tool-specific check bonus.
+    if ( tool?.bonuses.check || options.bonus ) {
+      parts.push("@toolBonus");
+      const bonus = [];
+      if ( tool?.bonuses.check ) bonus.push(Roll.replaceFormulaData(tool.bonuses.check, data));
+      if ( options.bonus ) bonus.push(Roll.replaceFormulaData(options.bonus, data));
+      data.toolBonus = bonus.join(" + ");
+    }
+
+    // Reliable Talent applies to any tool check we have full or better proficiency in
+    const reliableTalent = (prof?.multiplier >= 1 && this.getFlag("rotv", "reliableTalent"));
+
+    const flavor = game.i18n.format("ROTV.ToolPromptTitle", {tool: Trait.keyLabel(toolId, {trait: "tool"}) ?? ""});
+    const rollData = foundry.utils.mergeObject({
+      data, flavor,
+      title: `${flavor}: ${this.name}`,
+      chooseModifier: true,
+      halflingLucky: this.getFlag("rotv", "halflingLucky"),
+      reliableTalent,
+      messageData: {
+        speaker: options.speaker || ChatMessage.implementation.getSpeaker({actor: this}),
+        "flags.rotv.roll": {type: "tool", toolId}
+      }
+    }, options);
+    rollData.parts = parts.concat(options.parts ?? []);
+
+    /**
+     * A hook event that fires before a tool check is rolled for an Actor.
+     * @function rotv.preRollRool
+     * @memberof hookEvents
+     * @param {ActorRotV} actor                Actor for which the tool check is being rolled.
+     * @param {D20RollConfiguration} config  Configuration data for the pending roll.
+     * @param {string} toolId                Identifier of the tool being rolled.
+     * @returns {boolean}                    Explicitly return `false` to prevent skill check from being rolled.
+     */
+    if ( Hooks.call("rotv.preRollToolCheck", this, rollData, toolId) === false ) return;
+
+    const roll = await d20Roll(rollData);
+
+    /**
+     * A hook event that fires after a tool check has been rolled for an Actor.
+     * @function rotv.rollTool
+     * @memberof hookEvents
+     * @param {ActorRotV} actor   Actor for which the tool check has been rolled.
+     * @param {D20Roll} roll    The resulting roll.
+     * @param {string} toolId   Identifier of the tool that was rolled.
+     */
+    if ( roll ) Hooks.callAll("rotv.rollToolCheck", this, roll, toolId);
 
     return roll;
   }
@@ -1129,7 +1488,7 @@ export default class ActorRelics extends Actor {
    * @param {object} options      Options which configure how ability tests or saving throws are rolled
    */
   rollAbility(abilityId, options={}) {
-    const label = CONFIG.ROTV.abilities[abilityId] ?? "";
+    const label = CONFIG.ROTV.abilities[abilityId]?.label ?? "";
     new Dialog({
       title: `${game.i18n.format("ROTV.AbilityPromptTitle", {ability: label})}: ${this.name}`,
       content: `<p>${game.i18n.format("ROTV.AbilityPromptText", {ability: label})}</p>`,
@@ -1156,7 +1515,7 @@ export default class ActorRelics extends Actor {
    * @returns {Promise<D20Roll>}  A Promise which resolves to the created Roll instance
    */
   async rollAbilityTest(abilityId, options={}) {
-    const label = CONFIG.ROTV.abilities[abilityId] ?? "";
+    const label = CONFIG.ROTV.abilities[abilityId]?.label ?? "";
     const abl = this.system.abilities[abilityId];
     const globalBonuses = this.system.bonuses?.abilities ?? {};
     const parts = [];
@@ -1203,7 +1562,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires before an ability test is rolled for an Actor.
      * @function rotv.preRollAbilityTest
      * @memberof hookEvents
-     * @param {ActorRelics} actor                Actor for which the ability test is being rolled.
+     * @param {ActorRotV} actor                Actor for which the ability test is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @param {string} abilityId             ID of the ability being rolled as defined in `ROTV.abilities`.
      * @returns {boolean}                    Explicitly return `false` to prevent ability test from being rolled.
@@ -1216,7 +1575,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires after an ability test has been rolled for an Actor.
      * @function rotv.rollAbilityTest
      * @memberof hookEvents
-     * @param {ActorRelics} actor     Actor for which the ability test has been rolled.
+     * @param {ActorRotV} actor     Actor for which the ability test has been rolled.
      * @param {D20Roll} roll      The resulting roll.
      * @param {string} abilityId  ID of the ability that was rolled as defined in `ROTV.abilities`.
      */
@@ -1230,12 +1589,12 @@ export default class ActorRelics extends Actor {
   /**
    * Roll an Ability Saving Throw
    * Prompt the user for input regarding Advantage/Disadvantage and any Situational Bonus
-   * @param {string} abilityId    The ability ID (e.g. "str")
-   * @param {object} options      Options which configure how ability tests are rolled
-   * @returns {Promise<D20Roll>}  A Promise which resolves to the created Roll instance
+   * @param {string} abilityId          The ability ID (e.g. "str")
+   * @param {object} [options]          Options which configure how ability saves are rolled
+   * @returns {Promise<D20Roll|null>}   A Promise which resolves to the created Roll instance
    */
   async rollAbilitySave(abilityId, options={}) {
-    const label = CONFIG.ROTV.abilities[abilityId] ?? "";
+    const label = CONFIG.ROTV.abilities[abilityId]?.label ?? "";
     const abl = this.system.abilities[abilityId];
     const globalBonuses = this.system.bonuses?.abilities ?? {};
     const parts = [];
@@ -1282,7 +1641,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires before an ability save is rolled for an Actor.
      * @function rotv.preRollAbilitySave
      * @memberof hookEvents
-     * @param {ActorRelics} actor                Actor for which the ability save is being rolled.
+     * @param {ActorRotV} actor                Actor for which the ability save is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @param {string} abilityId             ID of the ability being rolled as defined in `ROTV.abilities`.
      * @returns {boolean}                    Explicitly return `false` to prevent ability save from being rolled.
@@ -1295,7 +1654,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires after an ability save has been rolled for an Actor.
      * @function rotv.rollAbilitySave
      * @memberof hookEvents
-     * @param {ActorRelics} actor     Actor for which the ability save has been rolled.
+     * @param {ActorRotV} actor     Actor for which the ability save has been rolled.
      * @param {D20Roll} roll      The resulting roll.
      * @param {string} abilityId  ID of the ability that was rolled as defined in `ROTV.abilities`.
      */
@@ -1313,10 +1672,11 @@ export default class ActorRelics extends Actor {
    */
   async rollDeathSave(options={}) {
     const death = this.system.attributes.death;
+    if ( !death ) throw new Error(`Actors of the type '${this.type}' don't support death saves.`);
 
     // Display a warning if we are not at zero HP or if we already have reached 3
     if ( (this.system.attributes.hp.value > 0) || (death.failure >= 3) || (death.success >= 3) ) {
-      ui.notifications.warn(game.i18n.localize("ROTV.DeathSaveUnnecessary"));
+      ui.notifications.warn("ROTV.DeathSaveUnnecessary", {localize: true});
       return null;
     }
 
@@ -1357,7 +1717,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires before a death saving throw is rolled for an Actor.
      * @function rotv.preRollDeathSave
      * @memberof hookEvents
-     * @param {ActorRelics} actor                Actor for which the death saving throw is being rolled.
+     * @param {ActorRotV} actor                Actor for which the death saving throw is being rolled.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                    Explicitly return `false` to prevent death saving throw from being rolled.
      */
@@ -1393,13 +1753,13 @@ export default class ActorRelics extends Actor {
       }
 
       // Increment successes
-      else details.updates = {"system.attributes.death.success": Math.clamped(successes, 0, 3)};
+      else details.updates = {"system.attributes.death.success": Math.clamp(successes, 0, 3)};
     }
 
     // Save failure
     else {
       let failures = (death.failure || 0) + (roll.isFumble ? 2 : 1);
-      details.updates = {"system.attributes.death.failure": Math.clamped(failures, 0, 3)};
+      details.updates = {"system.attributes.death.failure": Math.clamp(failures, 0, 3)};
       if ( failures >= 3 ) {  // 3 Failures = death
         details.chatString = "ROTV.DeathSaveFailure";
       }
@@ -1410,7 +1770,7 @@ export default class ActorRelics extends Actor {
      * updates have been performed.
      * @function rotv.rollDeathSave
      * @memberof hookEvents
-     * @param {ActorRelics} actor              Actor for which the death saving throw has been rolled.
+     * @param {ActorRotV} actor              Actor for which the death saving throw has been rolled.
      * @param {D20Roll} roll               The resulting roll.
      * @param {object} details
      * @param {object} details.updates     Updates that will be applied to the actor as a result of this save.
@@ -1436,6 +1796,61 @@ export default class ActorRelics extends Actor {
   /* -------------------------------------------- */
 
   /**
+   * Perform a saving throw to maintain concentration.
+   * @param {object} [options]          Options to configure how the saving throw is rolled
+   * @returns {Promise<D20Roll|null>}   A Promise which resolves to the created Roll instance
+   */
+  async rollConcentration(options={}) {
+    if ( !this.isOwner ) return null;
+    const conc = this.system.attributes?.concentration;
+    if ( !conc ) throw new Error("You may not make a Concentration Saving Throw with this Actor.");
+
+    const config = CONFIG.ROTV;
+    const modes = CONFIG.Dice.D20Roll.ADV_MODE;
+    const parts = [];
+
+    // Concentration bonus
+    if ( conc.bonuses.save ) parts.push(conc.bonuses.save);
+
+    const ability = (conc.ability in config.abilities) ? conc.ability : config.defaultAbilities.concentration;
+
+    options = foundry.utils.mergeObject({
+      ability: ability,
+      isConcentration: true,
+      targetValue: 10,
+      advantage: options.advantage || (conc.roll.mode === modes.ADVANTAGE),
+      disadvantage: options.disadvantage || (conc.roll.mode === modes.DISADVANTAGE)
+    }, options);
+    options.parts = parts.concat(options.parts ?? []);
+
+    /**
+     * A hook event that fires before a saving throw to maintain concentration is rolled for an Actor.
+     * @function rotv.preRollConcentration
+     * @memberof hookEvents
+     * @param {ActorRotV} actor                   Actor for which the saving throw is being rolled.
+     * @param {D20RollConfiguration} options    Configuration data for the pending roll.
+     * @returns {boolean}                       Explicitly return `false` to prevent the save from being performed.
+     */
+    if ( Hooks.call("rotv.preRollConcentration", this, options) === false ) return;
+
+    // Perform a standard ability save.
+    const roll = await this.rollAbilitySave(options.ability, options);
+
+    /**
+     * A hook event that fires after a saving throw to maintain concentration is rolled for an Actor.
+     * @function rotv.rollConcentration
+     * @memberof hookEvents
+     * @param {ActorRotV} actor     Actor for which the saving throw has been rolled.
+     * @param {D20Roll} roll      The resulting roll.
+     */
+    if ( roll ) Hooks.callAll("rotv.rollConcentration", this, roll);
+
+    return roll;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
    * Get an un-evaluated D20Roll instance used to roll initiative for this Actor.
    * @param {object} [options]                        Options which modify the roll
    * @param {D20Roll.ADV_MODE} [options.advantageMode]    A specific advantage mode to apply
@@ -1449,7 +1864,7 @@ export default class ActorRelics extends Actor {
 
     // Obtain required data
     const init = this.system.attributes?.init;
-    const abilityId = init?.ability || CONFIG.ROTV.initiativeAbility;
+    const abilityId = init?.ability || CONFIG.ROTV.defaultAbilities.initiative;
     const data = this.getRollData();
     const flags = this.flags.rotv || {};
     if ( flags.initiativeAdv ) options.advantageMode ??= rotv.dice.D20Roll.ADV_MODE.ADVANTAGE;
@@ -1464,9 +1879,9 @@ export default class ActorRelics extends Actor {
         parts.push("@prof");
         data.prof = init.prof.term;
       }
-      if ( init.bonus !== 0 ) {
+      if ( init.bonus ) {
         parts.push("@bonus");
-        data.bonus = init.bonus;
+        data.bonus = Roll.replaceFormulaData(init.bonus, data);
       }
     }
 
@@ -1475,7 +1890,7 @@ export default class ActorRelics extends Actor {
       const abilityBonus = this.system.abilities[abilityId]?.bonuses?.check;
       if ( abilityBonus ) {
         parts.push("@abilityBonus");
-        data.abilityBonus = abilityBonus;
+        data.abilityBonus = Roll.replaceFormulaData(abilityBonus, data);
       }
     }
 
@@ -1484,7 +1899,7 @@ export default class ActorRelics extends Actor {
       const globalCheckBonus = this.system.bonuses.abilities?.check;
       if ( globalCheckBonus ) {
         parts.push("@globalBonus");
-        data.globalBonus = globalCheckBonus;
+        data.globalBonus = Roll.replaceFormulaData(globalCheckBonus, data);
       }
     }
 
@@ -1534,21 +1949,25 @@ export default class ActorRelics extends Actor {
     // Temporarily cache the configured roll and use it to roll initiative for the Actor
     this._cachedInitiativeRoll = roll;
     await this.rollInitiative({createCombatants: true});
-    delete this._cachedInitiativeRoll;
   }
 
   /* -------------------------------------------- */
 
   /** @inheritdoc */
-  async rollInitiative(options={}) {
+  async rollInitiative(options={}, rollOptions={}) {
+    this._cachedInitiativeRoll ??= this.getInitiativeRoll(rollOptions);
+
     /**
      * A hook event that fires before initiative is rolled for an Actor.
      * @function rotv.preRollInitiative
      * @memberof hookEvents
-     * @param {ActorRelics} actor  The Actor that is rolling initiative.
+     * @param {ActorRotV} actor  The Actor that is rolling initiative.
      * @param {D20Roll} roll   The initiative roll.
      */
-    if ( Hooks.call("rotv.preRollInitiative", this, this._cachedInitiativeRoll) === false ) return;
+    if ( Hooks.call("rotv.preRollInitiative", this, this._cachedInitiativeRoll) === false ) {
+      delete this._cachedInitiativeRoll;
+      return null;
+    }
 
     const combat = await super.rollInitiative(options);
     const combatants = this.isToken ? this.getActiveTokens(false, true).reduce((arr, t) => {
@@ -1561,110 +1980,177 @@ export default class ActorRelics extends Actor {
      * A hook event that fires after an Actor has rolled for initiative.
      * @function rotv.rollInitiative
      * @memberof hookEvents
-     * @param {ActorRelics} actor           The Actor that rolled initiative.
+     * @param {ActorRotV} actor           The Actor that rolled initiative.
      * @param {Combatant[]} combatants  The associated Combatants in the Combat.
      */
     Hooks.callAll("rotv.rollInitiative", this, combatants);
+    delete this._cachedInitiativeRoll;
     return combat;
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Roll a hit die of the appropriate type, gaining hit points equal to the die roll plus your CON modifier.
-   * @param {string} [denomination]  The hit denomination of hit die to roll. Example "d8".
-   *                                 If no denomination is provided, the first available HD will be used
-   * @param {object} options         Additional options which modify the roll.
-   * @returns {Promise<Roll|null>}   The created Roll instance, or null if no hit die was rolled
+   * @typedef {BasicRollProcessConfiguration} HitDieRollProcessConfiguration
+   * @property {string} [denomination]  The denomination of hit die to roll with the leading letter (e.g. `d8`).
+   *                                    If no denomination is provided, the first available hit die will be used.
+   * @property {boolean} [modifyHitDice=true]    Should the actor's spent hit dice count be updated?
+   * @property {boolean} [modifyHitPoints=true]  Should the actor's hit points be updated after the roll?
    */
-  async rollHitDie(denomination, options={}) {
-    // If no denomination was provided, choose the first available
+
+  /**
+   * Roll a hit die of the appropriate type, gaining hit points equal to the die roll plus your CON modifier.
+   * @param {HitDieRollProcessConfiguration} config  Configuration information for the roll.
+   * @param {BasicRollDialogConfiguration} dialog    Configuration for the roll dialog.
+   * @param {BasicRollMessageConfiguration} message  Configuration for the roll message.
+   * @returns {Promise<BasicRoll[]|null>}            The created Roll instances, or `null` if no hit die was rolled.
+   */
+  async rollHitDie(config={}, dialog={}, message={}) {
+    let formula;
+    let oldFormat = false;
+
+    // Handle deprecated calling pattern
+    if ( config && (foundry.utils.getType(config) !== "Object") ) {
+      foundry.utils.logCompatibilityWarning(
+        "ActorRotV.rollHitDie now takes roll, dialog, and message config objects as parameters.",
+        { since: "RotV 4.0", until: "RotV 4.4" }
+      );
+      oldFormat = true;
+      formula = dialog.formula;
+      config = { denomination: config, data: dialog.data };
+      message = { create: dialog.chatMessage, data: dialog.messageData };
+      dialog = {};
+    }
+
     let cls = null;
-    if ( !denomination ) {
-      cls = this.itemTypes.class.find(c => c.system.hitDiceUsed < c.system.levels);
-      if ( !cls ) return null;
-      denomination = cls.system.hitDice;
+
+    // NPCs only have one denomination
+    if ( this.type === "npc" ) {
+      config.denomination = `d${this.system.attributes.hd.denomination}`;
+
+      // If no hit dice are available, display an error notification
+      if ( !this.system.attributes.hd.value ) {
+        ui.notifications.error(game.i18n.format("ROTV.HitDiceNPCWarn", {name: this.name}));
+        return null;
+      }
     }
 
-    // Otherwise, locate a class (if any) which has an available hit die of the requested denomination
-    else cls = this.items.find(i => {
-      return (i.system.hitDice === denomination) && ((i.system.hitDiceUsed || 0) < (i.system.levels || 1));
-    });
+    // Otherwise check classes
+    else {
+      // If no denomination was provided, choose the first available
+      if ( !config.denomination ) {
+        cls = this.system.attributes.hd.classes.find(c => c.system.hitDiceUsed < c.system.levels);
+        if ( !cls ) return null;
+        config.denomination = cls.system.hitDice;
+      }
 
-    // If no class is available, display an error notification
-    if ( !cls ) {
-      ui.notifications.error(game.i18n.format("ROTV.HitDiceWarn", {name: this.name, formula: denomination}));
-      return null;
+      // Otherwise, locate a class (if any) which has an available hit die of the requested denomination
+      else cls = this.system.attributes.hd.classes.find(i => {
+        return (i.system.hitDice === config.denomination) && (i.system.hitDiceUsed < i.system.levels);
+      });
+
+      // If no class is available, display an error notification
+      if ( !cls ) {
+        ui.notifications.error(game.i18n.format("ROTV.HitDiceWarn", {name: this.name, formula: config.denomination}));
+        return null;
+      }
     }
 
-    // Prepare roll data
+    formula ??= `max(0, 1${config.denomination} + @abilities.con.mod)`;
+    const rollConfig = foundry.utils.deepClone(config);
+    rollConfig.origin = this;
+    rollConfig.rolls = [{ parts: [formula], data: this.getRollData() }].concat(config.rolls ?? []);
+
+    const dialogConfig = foundry.utils.mergeObject({
+      configure: false
+    }, dialog);
+
     const flavor = game.i18n.localize("ROTV.HitDiceRoll");
-    const rollConfig = foundry.utils.mergeObject({
-      formula: `max(0, 1${denomination} + @abilities.con.mod)`,
-      data: this.getRollData(),
-      chatMessage: true,
-      messageData: {
-        speaker: ChatMessage.getSpeaker({actor: this}),
+    const messageConfig = foundry.utils.mergeObject({
+      rollMode: game.settings.get("core", "rollMode"),
+      data: {
+        speaker: ChatMessage.implementation.getSpeaker({actor: this}),
         flavor,
         title: `${flavor}: ${this.name}`,
-        rollMode: game.settings.get("core", "rollMode"),
         "flags.rotv.roll": {type: "hitDie"}
       }
-    }, options);
+    }, message);
 
     /**
      * A hook event that fires before a hit die is rolled for an Actor.
      * @function rotv.preRollHitDie
      * @memberof hookEvents
-     * @param {ActorRelics} actor               Actor for which the hit die is to be rolled.
-     * @param {object} config               Configuration data for the pending roll.
-     * @param {string} config.formula       Formula that will be rolled.
-     * @param {object} config.data          Data used when evaluating the roll.
-     * @param {boolean} config.chatMessage  Should a chat message be created for this roll?
-     * @param {object} config.messageData   Data used to create the chat message.
-     * @param {string} denomination         Size of hit die to be rolled.
-     * @returns {boolean}                   Explicitly return `false` to prevent hit die from being rolled.
+     * @param {ActorRotV} actor                          Actor performing the roll.
+     * @param {HitDieRollProcessConfiguration} config  Configuration information for the roll.
+     * @param {BasicRollDialogConfiguration} dialog    Configuration for the roll dialog.
+     * @param {BasicRollMessageConfiguration} message  Configuration for the roll message.
+     * @returns {boolean}                              Explicitly return `false` to prevent hit die from being rolled.
      */
-    if ( Hooks.call("rotv.preRollHitDie", this, rollConfig, denomination) === false ) return;
+    if ( Hooks.call("rotv.preRollHitDieV2", this, rollConfig, dialogConfig, messageConfig) === false ) return;
 
-    const roll = await new Roll(rollConfig.formula, rollConfig.data).roll({async: true});
-    if ( rollConfig.chatMessage ) roll.toMessage(rollConfig.messageData);
+    if ( "rotv.preRollHitDie" in Hooks.events ) {
+      foundry.utils.logCompatibilityWarning(
+        "The `rotv.preRollHitDie` hook has been deprecated and replaced with `rotv.preRollHitDieV2`.",
+        { since: "RotV 4.0", until: "RotV 4.4" }
+      );
+      const hookData = {
+        formula: rollConfig.rolls[0].parts[0], data: rollConfig.rolls[0].data,
+        chatMessage: messageConfig.create, messageData: messageConfig.data
+      };
+      if ( Hooks.call("rotv.preRollHitDie", this, hookData, rollConfig.denomination) === false ) return;
+      rollConfig.rolls[0].parts[0] = hookData.formula;
+      rollConfig.rolls[0].data = hookData.data;
+      messageConfig.create = hookData.chatMessage;
+      messageConfig.data = hookData.messageData;
+    }
 
+    const rolls = await CONFIG.Dice.BasicRoll.build(rollConfig, dialogConfig, messageConfig);
+    const returnValue = oldFormat && rolls?.length ? rolls[0] : rolls;
+
+    const updates = { actor: {}, class: {} };
+    if ( rollConfig.modifyHitDice !== false ) {
+      if ( cls ) updates.class["system.hitDiceUsed"] = cls.system.hitDiceUsed + 1;
+      else updates.actor["system.attributes.hd.spent"] = this.system.attributes.hd.spent + 1;
+    }
     const hp = this.system.attributes.hp;
-    const dhp = Math.min(hp.max + (hp.tempmax ?? 0) - hp.value, roll.total);
-    const updates = {
-      actor: {"system.attributes.hp.value": hp.value + dhp},
-      class: {"system.hitDiceUsed": cls.system.hitDiceUsed + 1}
-    };
+    if ( rollConfig.modifyHitPoints !== false ) {
+      const dhp = Math.min(Math.max(0, hp.effectiveMax) - hp.value, rolls.reduce((t, r) => t + r.total, 0));
+      updates.actor["system.attributes.hp.value"] = hp.value + dhp;
+    }
 
     /**
      * A hook event that fires after a hit die has been rolled for an Actor, but before updates have been performed.
      * @function rotv.rollHitDie
      * @memberof hookEvents
-     * @param {ActorRelics} actor         Actor for which the hit die has been rolled.
-     * @param {Roll} roll             The resulting roll.
+     * @param {ActorRotV} actor           Actor for which the hit die has been rolled.
+     * @param {BasicRoll[]} rolls       The resulting rolls.
      * @param {object} updates
-     * @param {object} updates.actor  Updates that will be applied to the actor.
-     * @param {object} updates.class  Updates that will be applied to the class.
-     * @returns {boolean}             Explicitly return `false` to prevent updates from being performed.
+     * @param {object} updates.actor    Updates that will be applied to the actor.
+     * @param {object} [updates.class]  Updates that will be applied to the class.
+     * @returns {boolean}               Explicitly return `false` to prevent updates from being performed.
      */
-    if ( Hooks.call("rotv.rollHitDie", this, roll, updates) === false ) return roll;
+    if ( Hooks.call("rotv.rollHitDieV2", this, rolls, updates) === false ) return returnValue;
 
-    // Re-evaluate dhp in the event that it was changed in the previous hook
-    const updateOptions = { dhp: (updates.actor?.["system.attributes.hp.value"] ?? hp.value) - hp.value };
+    if ( "rotv.rollHitDie" in Hooks.events ) {
+      foundry.utils.logCompatibilityWarning(
+        "The `rotv.rollHitDie` hook has been deprecated and replaced with `rotv.rollHitDieV2`.",
+        { since: "RotV 4.0", until: "RotV 4.4" }
+      );
+      if ( Hooks.call("rotv.rollHitDie", this, rolls[0], updates) === false ) return;
+    }
 
     // Perform updates
-    if ( !foundry.utils.isEmpty(updates.actor) ) await this.update(updates.actor, updateOptions);
+    if ( !foundry.utils.isEmpty(updates.actor) ) await this.update(updates.actor);
     if ( !foundry.utils.isEmpty(updates.class) ) await cls.update(updates.class);
 
-    return roll;
+    return returnValue;
   }
 
   /* -------------------------------------------- */
 
   /**
    * Roll hit points for a specific class as part of a level-up workflow.
-   * @param {ItemRelics} item                         The class item whose hit dice to roll.
+   * @param {ItemRotV} item                         The class item whose hit dice to roll.
    * @param {object} options
    * @param {boolean} [options.chatMessage=true]  Display the chat message for this roll.
    * @returns {Promise<Roll>}                     The completed roll.
@@ -1681,7 +2167,7 @@ export default class ActorRelics extends Actor {
     const messageData = {
       title: `${flavor}: ${this.name}`,
       flavor,
-      speaker: ChatMessage.getSpeaker({ actor: this }),
+      speaker: ChatMessage.implementation.getSpeaker({ actor: this }),
       "flags.rotv.roll": { type: "hitPoints" }
     };
 
@@ -1689,8 +2175,8 @@ export default class ActorRelics extends Actor {
      * A hook event that fires before hit points are rolled for a character's class.
      * @function rotv.preRollClassHitPoints
      * @memberof hookEvents
-     * @param {ActorRelics} actor            Actor for which the hit points are being rolled.
-     * @param {ItemRelics} item              The class item whose hit dice will be rolled.
+     * @param {ActorRotV} actor            Actor for which the hit points are being rolled.
+     * @param {ItemRotV} item              The class item whose hit dice will be rolled.
      * @param {object} rollData
      * @param {string} rollData.formula  The string formula to parse.
      * @param {object} rollData.data     The data object against which to parse attributes within the formula.
@@ -1699,13 +2185,13 @@ export default class ActorRelics extends Actor {
     Hooks.callAll("rotv.preRollClassHitPoints", this, item, rollData, messageData);
 
     const roll = new Roll(rollData.formula, rollData.data);
-    await roll.evaluate({async: true});
+    await roll.evaluate();
 
     /**
      * A hook event that fires after hit points haven been rolled for a character's class.
      * @function rotv.rollClassHitPoints
      * @memberof hookEvents
-     * @param {ActorRelics} actor  Actor for which the hit points have been rolled.
+     * @param {ActorRotV} actor  Actor for which the hit points have been rolled.
      * @param {Roll} roll      The resulting roll.
      */
     Hooks.callAll("rotv.rollClassHitPoints", this, roll);
@@ -1742,7 +2228,7 @@ export default class ActorRelics extends Actor {
      * A hook event that fires before hit points are rolled for an NPC.
      * @function rotv.preRollNPCHitPoints
      * @memberof hookEvents
-     * @param {ActorRelics} actor            Actor for which the hit points are being rolled.
+     * @param {ActorRotV} actor            Actor for which the hit points are being rolled.
      * @param {object} rollData
      * @param {string} rollData.formula  The string formula to parse.
      * @param {object} rollData.data     The data object against which to parse attributes within the formula.
@@ -1751,13 +2237,13 @@ export default class ActorRelics extends Actor {
     Hooks.callAll("rotv.preRollNPCHitPoints", this, rollData, messageData);
 
     const roll = new Roll(rollData.formula, rollData.data);
-    await roll.evaluate({async: true});
+    await roll.evaluate();
 
     /**
      * A hook event that fires after hit points are rolled for an NPC.
      * @function rotv.rollNPCHitPoints
      * @memberof hookEvents
-     * @param {ActorRelics} actor  Actor for which the hit points have been rolled.
+     * @param {ActorRotV} actor  Actor for which the hit points have been rolled.
      * @param {Roll} roll      The resulting roll.
      */
     Hooks.callAll("rotv.rollNPCHitPoints", this, roll);
@@ -1774,10 +2260,13 @@ export default class ActorRelics extends Actor {
    * Configuration options for a rest.
    *
    * @typedef {object} RestConfiguration
+   * @property {string} type               Type of rest to perform.
    * @property {boolean} dialog            Present a dialog window which allows for rolling hit dice as part of the
    *                                       Short Rest and selecting whether a new day has occurred.
    * @property {boolean} chat              Should a chat message be created to summarize the results of the rest?
+   * @property {number} duration           Amount of time passed during the rest in minutes.
    * @property {boolean} newDay            Does this rest carry over to a new day?
+   * @property {boolean} [advanceTime]     Should the game clock be advanced by the rest duration?
    * @property {boolean} [autoHD]          Should hit dice be spent automatically during a short rest?
    * @property {number} [autoHDThreshold]  How many hit points should be missing before hit dice are
    *                                       automatically spent during a short rest.
@@ -1799,42 +2288,56 @@ export default class ActorRelics extends Actor {
   /* -------------------------------------------- */
 
   /**
-   * Take a short rest, possibly spending hit dice and recovering resources, item uses, and pact slots.
+   * Take a short rest, possibly spending hit dice and recovering resources, item uses, and relevant spell slots.
    * @param {RestConfiguration} [config]  Configuration options for a short rest.
    * @returns {Promise<RestResult>}       A Promise which resolves once the short rest workflow has completed.
    */
   async shortRest(config={}) {
+    if ( this.type === "vehicle" ) return;
+
     config = foundry.utils.mergeObject({
-      dialog: true, chat: true, newDay: false, autoHD: false, autoHDThreshold: 3
+      type: "short", dialog: true, chat: true, newDay: false, advanceTime: false, autoHD: false, autoHDThreshold: 3,
+      duration: CONFIG.ROTV.restTypes.short.duration[game.settings.get("rotv", "restVariant")]
     }, config);
 
     /**
      * A hook event that fires before a short rest is started.
      * @function rotv.preShortRest
      * @memberof hookEvents
-     * @param {ActorRelics} actor             The actor that is being rested.
+     * @param {ActorRotV} actor             The actor that is being rested.
      * @param {RestConfiguration} config  Configuration options for the rest.
      * @returns {boolean}                 Explicitly return `false` to prevent the rest from being started.
      */
     if ( Hooks.call("rotv.preShortRest", this, config) === false ) return;
 
     // Take note of the initial hit points and number of hit dice the Actor has
-    const hd0 = this.system.attributes.hd;
-    const hp0 = this.system.attributes.hp.value;
+    const hd0 = foundry.utils.getProperty(this, "system.attributes.hd.value");
+    const hp0 = foundry.utils.getProperty(this, "system.attributes.hp.value");
 
     // Display a Dialog for rolling hit dice
     if ( config.dialog ) {
-      try { config.newDay = await ShortRestDialog.shortRestDialog({actor: this, canRoll: hd0 > 0});
+      try {
+        foundry.utils.mergeObject(config, await ShortRestDialog.shortRestDialog({actor: this, canRoll: hd0 > 0}));
       } catch(err) { return; }
     }
 
+    /**
+     * A hook event that fires after a short rest has started, after the configuration is complete.
+     * @function rotv.shortRest
+     * @memberof hookEvents
+     * @param {ActorRotV} actor             The actor that is being rested.
+     * @param {RestConfiguration} config  Configuration options for the rest.
+     * @returns {boolean}                 Explicitly return `false` to prevent the rest from being continued.
+     */
+    if ( Hooks.call("rotv.shortRest", this, config) === false ) return;
+
     // Automatically spend hit dice
-    else if ( config.autoHD ) await this.autoSpendHitDice({ threshold: config.autoHDThreshold });
+    if ( !config.dialog && config.autoHD ) await this.autoSpendHitDice({ threshold: config.autoHDThreshold });
 
     // Return the rest result
-    const dhd = this.system.attributes.hd - hd0;
-    const dhp = this.system.attributes.hp.value - hp0;
-    return this._rest(config.chat, config.newDay, false, dhd, dhp);
+    const dhd = foundry.utils.getProperty(this, "system.attributes.hd.value") - hd0;
+    const dhp = foundry.utils.getProperty(this, "system.attributes.hp.value") - hp0;
+    return this._rest(config, { dhd, dhp });
   }
 
   /* -------------------------------------------- */
@@ -1845,26 +2348,40 @@ export default class ActorRelics extends Actor {
    * @returns {Promise<RestResult>}       A Promise which resolves once the long rest workflow has completed.
    */
   async longRest(config={}) {
+    if ( this.type === "vehicle" ) return;
+
     config = foundry.utils.mergeObject({
-      dialog: true, chat: true, newDay: true
+      type: "long", dialog: true, chat: true, newDay: true, advanceTime: false,
+      duration: CONFIG.ROTV.restTypes.long.duration[game.settings.get("rotv", "restVariant")]
     }, config);
 
     /**
      * A hook event that fires before a long rest is started.
      * @function rotv.preLongRest
      * @memberof hookEvents
-     * @param {ActorRelics} actor             The actor that is being rested.
+     * @param {ActorRotV} actor             The actor that is being rested.
      * @param {RestConfiguration} config  Configuration options for the rest.
      * @returns {boolean}                 Explicitly return `false` to prevent the rest from being started.
      */
     if ( Hooks.call("rotv.preLongRest", this, config) === false ) return;
 
     if ( config.dialog ) {
-      try { config.newDay = await LongRestDialog.longRestDialog({actor: this}); }
-      catch(err) { return; }
+      try {
+        foundry.utils.mergeObject(config, await LongRestDialog.longRestDialog({actor: this}));
+      } catch(err) { return; }
     }
 
-    return this._rest(config.chat, config.newDay, true);
+    /**
+     * A hook event that fires after a long rest has started, after the configuration is complete.
+     * @function rotv.longRest
+     * @memberof hookEvents
+     * @param {ActorRotV} actor             The actor that is being rested.
+     * @param {RestConfiguration} config  Configuration options for the rest.
+     * @returns {boolean}                 Explicitly return `false` to prevent the rest from being continued.
+     */
+    if ( Hooks.call("rotv.longRest", this, config) === false ) return;
+
+    return this._rest(config);
   }
 
   /* -------------------------------------------- */
@@ -1872,70 +2389,80 @@ export default class ActorRelics extends Actor {
   /**
    * Perform all of the changes needed for a short or long rest.
    *
-   * @param {boolean} chat           Summarize the results of the rest workflow as a chat message.
-   * @param {boolean} newDay         Has a new day occurred during this rest?
-   * @param {boolean} longRest       Is this a long rest?
-   * @param {number} [dhd=0]         Number of hit dice spent during so far during the rest.
-   * @param {number} [dhp=0]         Number of hit points recovered so far during the rest.
+   * @param {RestConfiguration} config  Configuration data for the rest occurring.
+   * @param {RestResult} [result={}]    Results of the rest operation being built.
+   * @param {*[]} [args]
    * @returns {Promise<RestResult>}  Consolidated results of the rest workflow.
    * @private
    */
-  async _rest(chat, newDay, longRest, dhd=0, dhp=0) {
+  async _rest(config, result={}, ...args) {
+    if ( (foundry.utils.getType(this.system.rest) === "function")
+      && (await this.system.rest(config, result) === false) ) return;
+
     let hitPointsRecovered = 0;
-    let hitPointUpdates = {};
+    let hpActorUpdates = {};
     let hitDiceRecovered = 0;
-    let hitDiceUpdates = [];
+    let hdActorUpdates = {};
+    let hdItemUpdates = [];
     const rolls = [];
+    const longRest = config.type === "long";
+    const newDay = config.newDay === true;
 
     // Recover hit points & hit dice on long rest
     if ( longRest ) {
-      ({ updates: hitPointUpdates, hitPointsRecovered } = this._getRestHitPointRecovery());
-      ({ updates: hitDiceUpdates, hitDiceRecovered } = this._getRestHitDiceRecovery());
+      ({ updates: hpActorUpdates, hitPointsRecovered } = this._getRestHitPointRecovery());
+      ({ updates: hdItemUpdates, actorUpdates: hdActorUpdates, hitDiceRecovered } = this._getRestHitDiceRecovery());
     }
 
     // Figure out the rest of the changes
-    const result = {
-      dhd: dhd + hitDiceRecovered,
-      dhp: dhp + hitPointsRecovered,
+    foundry.utils.mergeObject(result, {
+      dhd: (result.dhd ?? 0) + hitDiceRecovered,
+      dhp: (result.dhp ?? 0) + hitPointsRecovered,
       updateData: {
-        ...hitPointUpdates,
+        ...(hdActorUpdates ?? {}),
+        ...hpActorUpdates,
         ...this._getRestResourceRecovery({ recoverShortRestResources: !longRest, recoverLongRestResources: longRest }),
-        ...this._getRestSpellRecovery({ recoverSpells: longRest })
+        ...this._getRestSpellRecovery({ recoverLong: longRest })
       },
       updateItems: [
-        ...hitDiceUpdates,
+        ...(hdItemUpdates ?? []),
         ...(await this._getRestItemUsesRecovery({ recoverLongRestUses: longRest, recoverDailyUses: newDay, rolls }))
       ],
       longRest,
       newDay
-    };
+    });
     result.rolls = rolls;
 
     /**
      * A hook event that fires after rest result is calculated, but before any updates are performed.
      * @function rotv.preRestCompleted
      * @memberof hookEvents
-     * @param {ActorRelics} actor      The actor that is being rested.
-     * @param {RestResult} result  Details on the rest to be completed.
-     * @returns {boolean}          Explicitly return `false` to prevent the rest updates from being performed.
+     * @param {ActorRotV} actor             The actor that is being rested.
+     * @param {RestResult} result         Details on the rest to be completed.
+     * @param {RestConfiguration} config  Configuration data for the rest occurring.
+     * @returns {boolean}                 Explicitly return `false` to prevent the rest updates from being performed.
      */
-    if ( Hooks.call("rotv.preRestCompleted", this, result) === false ) return result;
+    if ( Hooks.call("rotv.preRestCompleted", this, result, config) === false ) return result;
 
     // Perform updates
-    await this.update(result.updateData);
-    await this.updateEmbeddedDocuments("Item", result.updateItems);
+    await this.update(result.updateData, { isRest: true });
+    await this.updateEmbeddedDocuments("Item", result.updateItems, { isRest: true });
+
+    // Advance the game clock
+    if ( config.advanceTime && (config.duration > 0) && game.user.isGM ) await game.time.advance(60 * config.duration);
 
     // Display a Chat Message summarizing the rest effects
-    if ( chat ) await this._displayRestResultMessage(result, longRest);
+    if ( config.chat ) await this._displayRestResultMessage(result, longRest);
 
     /**
      * A hook event that fires when the rest process is completed for an actor.
      * @function rotv.restCompleted
      * @memberof hookEvents
-     * @param {ActorRelics} actor      The actor that just completed resting.
-     * @param {RestResult} result  Details on the rest completed.
+     * @param {ActorRotV} actor             The actor that just completed resting.
+     * @param {RestResult} result         Details on the rest completed.
+     * @param {RestConfiguration} config  Configuration data for that occurred.
      */
-    Hooks.callAll("rotv.restCompleted", this, result);
+    Hooks.callAll("rotv.restCompleted", this, result, config);
 
     // Return data summarizing the rest effects
     return result;
@@ -1988,7 +2515,8 @@ export default class ActorRelics extends Actor {
         name: this.name,
         dice: longRest ? dhd : -dhd,
         health: dhp
-      })
+      }),
+      "flags.rotv.rest": { type: longRest ? "long" : "short" }
     };
     ChatMessage.applyRollMode(chatData, game.settings.get("core", "rollMode"));
     return ChatMessage.create(chatData);
@@ -2004,7 +2532,7 @@ export default class ActorRelics extends Actor {
    */
   async autoSpendHitDice({ threshold=3 }={}) {
     const hp = this.system.attributes.hp;
-    const max = hp.max + hp.tempmax;
+    const max = Math.max(0, hp.effectiveMax);
     let diceRolled = 0;
     while ( (this.system.attributes.hp.value + threshold) <= max ) {
       const r = await this.rollHitDie();
@@ -2029,10 +2557,10 @@ export default class ActorRelics extends Actor {
     let max = hp.max;
     let updates = {};
     if ( recoverTempMax ) updates["system.attributes.hp.tempmax"] = 0;
-    else max += hp.tempmax;
+    else max = Math.max(0, hp.effectiveMax);
     updates["system.attributes.hp.value"] = max;
     if ( recoverTemp ) updates["system.attributes.hp.temp"] = 0;
-    return { updates, hitPointsRecovered: max - hp.value };
+    return { updates, hitPointsRecovered: Math.max(0, max - hp.value) };
   }
 
   /* -------------------------------------------- */
@@ -2047,7 +2575,7 @@ export default class ActorRelics extends Actor {
    */
   _getRestResourceRecovery({recoverShortRestResources=true, recoverLongRestResources=true}={}) {
     let updates = {};
-    for ( let [k, r] of Object.entries(this.system.resources) ) {
+    for ( let [k, r] of Object.entries(this.system.resources ?? {}) ) {
       if ( Number.isNumeric(r.max) && ((recoverShortRestResources && r.sr) || (recoverLongRestResources && r.lr)) ) {
         updates[`system.resources.${k}.value`] = Number(r.max);
       }
@@ -2058,25 +2586,29 @@ export default class ActorRelics extends Actor {
   /* -------------------------------------------- */
 
   /**
-   * Recovers spell slots and pact slots.
+   * Recovers expended spell slots.
    * @param {object} [options]
-   * @param {boolean} [options.recoverPact=true]     Recover all expended pact slots.
-   * @param {boolean} [options.recoverSpells=true]   Recover all expended spell slots.
+   * @param {boolean} [options.recoverShort=true]    Recover slots that return on short rests.
+   * @param {boolean} [options.recoverLong=true]     Recover slots that return on long rests.
    * @returns {object}                               Updates to the actor.
    * @protected
    */
-  _getRestSpellRecovery({recoverPact=true, recoverSpells=true}={}) {
+  _getRestSpellRecovery({recoverShort=true, recoverLong=true}={}) {
     const spells = this.system.spells;
     let updates = {};
-    if ( recoverPact ) {
-      const pact = spells.pact;
-      updates["system.spells.pact.value"] = pact.override || pact.max;
-    }
-    if ( recoverSpells ) {
-      for ( let [k, v] of Object.entries(spells) ) {
-        updates[`system.spells.${k}.value`] = Number.isNumeric(v.override) ? v.override : (v.max ?? 0);
+    if ( !spells ) return updates;
+
+    Object.entries(CONFIG.ROTV.spellPreparationModes).forEach(([k, v]) => {
+      const isSR = CONFIG.ROTV.spellcastingTypes[k === "prepared" ? "leveled" : k]?.shortRest;
+      if ( v.upcast && ((recoverShort && isSR) || recoverLong) ) {
+        if ( k === "prepared" ) {
+          Object.entries(spells).forEach(([m, n]) => {
+            if ( /^spell\d+/.test(m) && n.level ) updates[`system.spells.${m}.value`] = n.max;
+          });
+        }
+        else if ( k !== "always" ) updates[`system.spells.${k}.value`] = spells[k].max;
       }
-    }
+    });
     return updates;
   }
 
@@ -2091,26 +2623,19 @@ export default class ActorRelics extends Actor {
    * @protected
    */
   _getRestHitDiceRecovery({maxHitDice}={}) {
-    // Determine the number of hit dice which may be recovered
-    if ( maxHitDice === undefined ) maxHitDice = Math.max(Math.floor(this.system.details.level / 2), 1);
-
-    // Sort classes which can recover HD, assuming players prefer recovering larger HD first.
-    const sortedClasses = Object.values(this.classes).sort((a, b) => {
-      return (parseInt(b.system.hitDice.slice(1)) || 0) - (parseInt(a.system.hitDice.slice(1)) || 0);
-    });
-
-    // Update hit dice usage
-    let updates = [];
-    let hitDiceRecovered = 0;
-    for ( let item of sortedClasses ) {
-      const hitDiceUsed = item.system.hitDiceUsed;
-      if ( (hitDiceRecovered < maxHitDice) && (hitDiceUsed > 0) ) {
-        let delta = Math.min(hitDiceUsed || 0, maxHitDice - hitDiceRecovered);
-        hitDiceRecovered += delta;
-        updates.push({_id: item.id, "system.hitDiceUsed": hitDiceUsed - delta});
-      }
+    // Handle simpler HD recovery for NPCs
+    if ( this.type === "npc" ) {
+      const hd = this.system.attributes.hd;
+      const recovered = Math.min(
+        Math.max(1, Math.floor(hd.max * 0.5)), hd.spent, maxHitDice ?? Infinity
+      );
+      return {
+        actorUpdates: { "system.attributes.hd.spent": hd.spent - recovered },
+        hitDiceRecovered: recovered
+      };
     }
-    return { updates, hitDiceRecovered };
+
+    return this.system.attributes.hd.createHitDiceUpdates({maxHitDice});
   }
 
   /* -------------------------------------------- */
@@ -2133,24 +2658,24 @@ export default class ActorRelics extends Actor {
     if ( recoverDailyUses ) recovery.push("day");
     let updates = [];
     for ( let item of this.items ) {
-      const uses = item.system.uses;
-      if ( recovery.includes(uses?.per) ) {
+      const uses = item.system.uses ?? {};
+      if ( recovery.includes(uses.per) ) {
         updates.push({_id: item.id, "system.uses.value": uses.max});
       }
       if ( recoverLongRestUses && item.system.recharge?.value ) {
         updates.push({_id: item.id, "system.recharge.charged": true});
       }
 
-      // Items that roll to gain charges on a new day
-      if ( recoverDailyUses && uses?.recovery && (uses?.per === "charges") ) {
-        const roll = new Roll(uses.recovery, this.getRollData());
+      // Items that roll to gain charges via a formula
+      if ( recoverDailyUses && uses.recovery && CONFIG.ROTV.limitedUsePeriods[uses.per]?.formula ) {
+        const roll = new Roll(uses.recovery, item.getRollData());
         if ( recoverLongRestUses && (game.settings.get("rotv", "restVariant") === "gritty") ) {
           roll.alter(7, 0, {multiplyNumeric: true});
         }
 
         let total = 0;
         try {
-          total = (await roll.evaluate({async: true})).total;
+          total = (await roll.evaluate()).total;
         } catch(err) {
           ui.notifications.warn(game.i18n.format("ROTV.ItemRecoveryFormulaWarning", {
             name: item.name,
@@ -2158,7 +2683,7 @@ export default class ActorRelics extends Actor {
           }));
         }
 
-        const newValue = Math.clamped(uses.value + total, 0, uses.max);
+        const newValue = Math.clamp(uses.value + total, 0, uses.max);
         if ( newValue !== uses.value ) {
           const diff = newValue - uses.value;
           const isMax = newValue === uses.max;
@@ -2177,35 +2702,178 @@ export default class ActorRelics extends Actor {
   }
 
   /* -------------------------------------------- */
+  /*  Property Attribution                        */
+  /* -------------------------------------------- */
+
+  /**
+   * Format an HTML breakdown for a given property.
+   * @param {string} attribution      The property.
+   * @param {object} [options]
+   * @param {string} [options.title]  A title for the breakdown.
+   * @returns {Promise<string>}
+   */
+  async getAttributionData(attribution, { title }={}) {
+    switch ( attribution ) {
+      case "attributes.ac": return this._prepareArmorClassAttribution({ title });
+      case "attributes.movement": return this._prepareMovementAttribution();
+      default: return "";
+    }
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Prepare a movement breakdown.
+   * @returns {string}
+   * @protected
+   */
+  _prepareMovementAttribution() {
+    const { movement } = this.system.attributes;
+    const units = movement.units || Object.keys(CONFIG.ROTV.movementUnits)[0];
+    return Object.entries(CONFIG.ROTV.movementTypes).reduce((html, [k, label]) => {
+      const value = movement[k];
+      if ( value || (k === "walk") ) html += `
+        <div class="row">
+          <i class="fas ${k}"></i>
+          <span class="value">${value ?? 0} <span class="units">${units}</span></span>
+          <span class="label">${label}</span>
+        </div>
+      `;
+      return html;
+    }, "");
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Prepare an AC breakdown.
+   * @param {object} [options]
+   * @param {string} [options.title]  A title for the breakdown.
+   * @returns {Promise<string>}
+   * @protected
+   */
+  async _prepareArmorClassAttribution({ title }={}) {
+    const rollData = this.getRollData({ deterministic: true });
+    const ac = rollData.attributes.ac;
+    const cfg = CONFIG.ROTV.armorClasses[ac.calc];
+    const attribution = [];
+
+    if ( ac.calc === "flat" ) {
+      attribution.push({
+        label: game.i18n.localize("ROTV.ArmorClassFlat"),
+        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+        value: ac.flat
+      });
+      return new PropertyAttribution(this, attribution, "attributes.ac", { title }).renderTooltip();
+    }
+
+    // Base AC Attribution
+    switch ( ac.calc ) {
+
+      // Natural armor
+      case "natural":
+        attribution.push({
+          label: game.i18n.localize("ROTV.ArmorClassNatural"),
+          mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+          value: ac.flat
+        });
+        break;
+
+      default:
+        const formula = ac.calc === "custom" ? ac.formula : cfg.formula;
+        let base = ac.base;
+        const dataRgx = new RegExp(/@([a-z.0-9_-]+)/gi);
+        for ( const [match, term] of formula.matchAll(dataRgx) ) {
+          const value = String(foundry.utils.getProperty(rollData, term));
+          if ( (term === "attributes.ac.armor") || (value === "0") ) continue;
+          if ( Number.isNumeric(value) ) base -= Number(value);
+          attribution.push({
+            label: match,
+            mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+            value
+          });
+        }
+        const armorInFormula = formula.includes("@attributes.ac.armor");
+        let label = game.i18n.localize("ROTV.PropertyBase");
+        if ( armorInFormula ) label = this.armor?.name ?? game.i18n.localize("ROTV.ArmorClassUnarmored");
+        attribution.unshift({
+          label,
+          mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+          value: base
+        });
+        break;
+    }
+
+    // Shield
+    if ( ac.shield !== 0 ) attribution.push({
+      label: this.shield?.name ?? game.i18n.localize("ROTV.EquipmentShield"),
+      mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+      value: ac.shield
+    });
+
+    // Bonus
+    if ( ac.bonus !== 0 ) attribution.push(...this._prepareActiveEffectAttributions("system.attributes.ac.bonus"));
+
+    // Cover
+    if ( ac.cover !== 0 ) attribution.push({
+      label: game.i18n.localize("ROTV.Cover"),
+      mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+      value: ac.cover
+    });
+
+    if ( attribution.length ) {
+      return new PropertyAttribution(this, attribution, "attributes.ac", { title }).renderTooltip();
+    }
+
+    return "";
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Break down all of the Active Effects affecting a given target property.
+   * @param {string} target               The data property being targeted.
+   * @returns {AttributionDescription[]}  Any active effects that modify that property.
+   * @protected
+   */
+  _prepareActiveEffectAttributions(target) {
+    const rollData = this.getRollData({ deterministic: true });
+    const attributions = [];
+    for ( const e of this.allApplicableEffects() ) {
+      let source = e.sourceName;
+      if ( !e.origin || (e.origin === this.uuid) ) source = e.name;
+      if ( !source || e.disabled || e.isSuppressed ) continue;
+      const value = e.changes.reduce((n, change) => {
+        if ( change.key !== target ) return n;
+        if ( change.mode !== CONST.ACTIVE_EFFECT_MODES.ADD ) return n;
+        return n + simplifyBonus(change.value, rollData);
+      }, 0);
+      if ( value ) attributions.push({ value, label: source, mode: CONST.ACTIVE_EFFECT_MODES.ADD });
+    }
+    return attributions;
+  }
+
+  /* -------------------------------------------- */
   /*  Conversion & Transformation                 */
   /* -------------------------------------------- */
 
   /**
-   * Convert all carried currency to the highest possible denomination using configured conversion rates.
-   * See CONFIG.ROTV.currencies for configuration.
-   * @returns {Promise<ActorRelics>}
+   * Fetch stats from the original actor for data preparation.
+   * @returns {{ originalSaves: object|null, originalSkills: object|null }}
    */
-  convertCurrency() {
-    const currency = foundry.utils.deepClone(this.system.currency);
-    const currencies = Object.entries(CONFIG.ROTV.currencies);
-    currencies.sort((a, b) => a[1].conversion - b[1].conversion);
-
-    // Count total converted units of the base currency
-    let basis = currencies.reduce((change, [denomination, config]) => {
-      if ( !config.conversion ) return change;
-      return change + (currency[denomination] / config.conversion);
-    }, 0);
-
-    // Convert base units into the highest denomination possible
-    for ( const [denomination, config] of currencies) {
-      if ( !config.conversion ) continue;
-      const amount = Math.floor(basis * config.conversion);
-      currency[denomination] = amount;
-      basis -= (amount / config.conversion);
+  getOriginalStats() {
+    // Retrieve data for polymorphed actors
+    let originalSaves = null;
+    let originalSkills = null;
+    if ( this.isPolymorphed ) {
+      const transformOptions = this.flags.rotv?.transformOptions;
+      const original = game.actors?.get(this.flags.rotv?.originalActor);
+      if ( original ) {
+        if ( transformOptions.mergeSaves ) originalSaves = original.system.abilities;
+        if ( transformOptions.mergeSkills ) originalSkills = original.system.skills;
+      }
     }
-
-    // Save the updated currency object
-    return this.update({"system.currency": currency});
+    return { originalSaves, originalSkills };
   }
 
   /* -------------------------------------------- */
@@ -2223,7 +2891,7 @@ export default class ActorRelics extends Actor {
    * @property {boolean} [mergeSkills=false]        Take the maximum of the skill proficiencies
    * @property {boolean} [keepClass=false]          Keep proficiency bonus
    * @property {boolean} [keepFeats=false]          Keep features
-   * @property {boolean} [keepSpells=false]         Keep spells
+   * @property {boolean} [keepSpells=false]         Keep spells and spellcasting ability
    * @property {boolean} [keepItems=false]          Keep items
    * @property {boolean} [keepBio=false]            Keep biography
    * @property {boolean} [keepVision=false]         Keep vision
@@ -2242,7 +2910,7 @@ export default class ActorRelics extends Actor {
   /**
    * Transform this Actor into another one.
    *
-   * @param {ActorRelics} target                      The target Actor.
+   * @param {ActorRotV} target                      The target Actor.
    * @param {TransformationOptions} [options={}]  Options that determine how the transformation is performed.
    * @param {boolean} [options.renderSheet=true]  Render the sheet of the transformed actor after the polymorph
    * @returns {Promise<Array<Token>>|null}        Updated token if the transformation was performed.
@@ -2256,7 +2924,8 @@ export default class ActorRelics extends Actor {
     // Ensure the player is allowed to polymorph
     const allowed = game.settings.get("rotv", "allowPolymorphing");
     if ( !allowed && !game.user.isGM ) {
-      return ui.notifications.warn(game.i18n.localize("ROTV.PolymorphWarn"));
+      ui.notifications.warn("ROTV.PolymorphWarn", {localize: true});
+      return null;
     }
 
     // Get the original Actor data and the new source data
@@ -2271,7 +2940,7 @@ export default class ActorRelics extends Actor {
     }
 
     // Prepare new data to merge from the source
-    const d = foundry.utils.mergeObject({
+    const d = foundry.utils.mergeObject(foundry.utils.deepClone({
       type: o.type, // Remain the same actor type
       name: `${o.name} (${source.name})`, // Append the new shape to your old name
       system: source.system, // Get the systemdata model of your new form
@@ -2282,21 +2951,20 @@ export default class ActorRelics extends Actor {
       folder: o.folder, // Be displayed in the same sidebar folder
       flags: o.flags, // Use the original actor flags
       prototypeToken: { name: `${o.name} (${source.name})`, texture: {}, sight: {}, detectionModes: [] } // Set a new empty token
-    }, keepSelf ? o : {}); // Keeps most of original actor
+    }), keepSelf ? o : {}); // Keeps most of original actor
 
     // Specifically delete some data attributes
     delete d.system.resources; // Don't change your resource pools
     delete d.system.currency; // Don't lose currency
     delete d.system.bonuses; // Don't lose global bonuses
+    if ( keepSpells ) delete d.system.attributes.spellcasting; // Keep spellcasting ability if retaining spells.
 
     // Specific additional adjustments
     d.system.details.alignment = o.system.details.alignment; // Don't change alignment
     d.system.attributes.exhaustion = o.system.attributes.exhaustion; // Keep your prior exhaustion level
-    d.system.attributes.stress = o.system.attributes.stress; // Keep your prior exhaustion level
-    d.system.attributes.maxStress = o.system.attributes.maxStress; // Keep your prior exhaustion level
+    d.system.attributes.inspiration = o.system.attributes.inspiration; // Keep inspiration
     d.system.spells = o.system.spells; // Keep spell slots
     d.system.attributes.ac.flat = target.system.attributes.ac.value; // Override AC
-    d.system.attributes.damRe = o.system.attributes.damRed; // Keep your prior damRed
 
     // Token appearance updates
     for ( const k of ["width", "height", "alpha", "lockRotation"] ) {
@@ -2305,6 +2973,7 @@ export default class ActorRelics extends Actor {
     for ( const k of ["offsetX", "offsetY", "scaleX", "scaleY", "src", "tint"] ) {
       d.prototypeToken.texture[k] = source.prototypeToken.texture[k];
     }
+    d.prototypeToken.ring = source.prototypeToken.ring;
     for ( const k of ["bar1", "bar2", "displayBars", "displayName", "disposition", "rotation", "elevation"] ) {
       d.prototypeToken[k] = o.prototypeToken[k];
     }
@@ -2321,17 +2990,21 @@ export default class ActorRelics extends Actor {
       for ( let k of Object.keys(abilities) ) {
         const oa = o.system.abilities[k];
         const prof = abilities[k].proficient;
-        if ( keepPhysical && ["str", "dex", "con"].includes(k) ) abilities[k] = oa;
-        else if ( keepMental && ["int", "wis", "cha"].includes(k) ) abilities[k] = oa;
-        if ( keepSaves ) abilities[k].proficient = oa.proficient;
-        else if ( mergeSaves ) abilities[k].proficient = Math.max(prof, oa.proficient);
+        const type = CONFIG.ROTV.abilities[k]?.type;
+        if ( keepPhysical && (type === "physical") ) abilities[k] = oa;
+        else if ( keepMental && (type === "mental") ) abilities[k] = oa;
+
+        // Set saving throw proficiencies.
+        if ( keepSaves && oa ) abilities[k].proficient = oa.proficient;
+        else if ( mergeSaves && oa ) abilities[k].proficient = Math.max(prof, oa.proficient);
+        else abilities[k].proficient = source.system.abilities[k].proficient;
       }
 
       // Transfer skills
       if ( keepSkills ) d.system.skills = o.system.skills;
       else if ( mergeSkills ) {
         for ( let [k, s] of Object.entries(d.system.skills) ) {
-          s.value = Math.max(s.value, o.system.skills[k].value);
+          s.value = Math.max(s.value, o.system.skills[k]?.value ?? 0);
         }
       }
 
@@ -2374,8 +3047,8 @@ export default class ActorRelics extends Actor {
         if ( origin.type === "spell" ) return keepSpellAE;
         if ( origin.type === "feat" ) return keepFeatAE;
         if ( origin.type === "background" ) return keepBackgroundAE;
-        if ( ["subclass", "feat"].includes(origin.type) ) return keepClassAE;
-        if ( ["equipment", "weapon", "tool", "loot", "backpack"].includes(origin.type) ) return keepEquipmentAE;
+        if ( ["subclass", "class"].includes(origin.type) ) return keepClassAE;
+        if ( ["equipment", "weapon", "tool", "loot", "container"].includes(origin.type) ) return keepEquipmentAE;
         return true;
       });
     }
@@ -2399,8 +3072,9 @@ export default class ActorRelics extends Actor {
     if ( this.isToken ) {
       const tokenData = d.prototypeToken;
       delete d.prototypeToken;
-      tokenData.actorData = d;
-      setProperty(tokenData, "flags.rotv.previousActorData", this.token.toObject().actorData);
+      tokenData.delta = d;
+      const previousActorData = this.token.delta.toObject();
+      foundry.utils.setProperty(tokenData, "flags.rotv.previousActorData", previousActorData);
       await this.sheet?.close();
       const update = await this.token.update(tokenData);
       if ( renderSheet ) this.sheet?.render(true);
@@ -2414,8 +3088,8 @@ export default class ActorRelics extends Actor {
      * A hook event that fires just before the actor is transformed.
      * @function rotv.transformActor
      * @memberof hookEvents
-     * @param {ActorRelics} actor                  The original actor before transformation.
-     * @param {ActorRelics} target                 The target actor into which to transform.
+     * @param {ActorRotV} actor                  The original actor before transformation.
+     * @param {ActorRotV} target                 The target actor into which to transform.
      * @param {object} data                    The data that will be used to create the new transformed actor.
      * @param {TransformationOptions} options  Options that determine how the transformation is performed.
      * @param {object} [options]
@@ -2458,7 +3132,10 @@ export default class ActorRelics extends Actor {
    */
   async revertOriginalForm({renderSheet=true}={}) {
     if ( !this.isPolymorphed ) return;
-    if ( !this.isOwner ) return ui.notifications.warn(game.i18n.localize("ROTV.PolymorphRevertWarn"));
+    if ( !this.isOwner ) {
+      ui.notifications.warn("ROTV.PolymorphRevertWarn", {localize: true});
+      return null;
+    }
 
     /**
      * A hook event that fires just before the actor is reverted to original form.
@@ -2484,10 +3161,11 @@ export default class ActorRelics extends Actor {
         }));
         return;
       }
-      const prototypeTokenData = await baseActor.getTokenDocument();
+      const prototypeTokenData = (await baseActor.getTokenDocument()).toObject();
       const actorData = this.token.getFlag("rotv", "previousActorData");
       const tokenUpdate = this.token.toObject();
-      tokenUpdate.actorData = actorData ? actorData : {};
+      actorData._id = tokenUpdate.delta._id;
+      tokenUpdate.delta = actorData;
 
       for ( const k of ["width", "height", "alpha", "lockRotation", "name"] ) {
         tokenUpdate[k] = prototypeTokenData[k];
@@ -2495,6 +3173,7 @@ export default class ActorRelics extends Actor {
       for ( const k of ["offsetX", "offsetY", "scaleX", "scaleY", "src", "tint"] ) {
         tokenUpdate.texture[k] = prototypeTokenData.texture[k];
       }
+      tokenUpdate.ring = prototypeTokenData.ring;
       tokenUpdate.sight = prototypeTokenData.sight;
       tokenUpdate.detectionModes = prototypeTokenData.detectionModes;
 
@@ -2522,15 +3201,15 @@ export default class ActorRelics extends Actor {
     // Get the Tokens which represent this actor
     if ( canvas.ready ) {
       const tokens = this.getActiveTokens(true);
-      const tokenData = await original.getTokenDocument();
+      const tokenData = (await original.getTokenDocument()).toObject();
       const tokenUpdates = tokens.map(t => {
-        const update = duplicate(tokenData);
+        const update = foundry.utils.deepClone(tokenData);
         update._id = t.id;
         delete update.x;
         delete update.y;
         return update;
       });
-      await canvas.scene.updateEmbeddedDocuments("Token", tokenUpdates);
+      await canvas.scene.updateEmbeddedDocuments("Token", tokenUpdates, { diff: false, recursive: false });
     }
     if ( isOriginalActor ) {
       await this.unsetFlag("rotv", "isPolymorphed");
@@ -2562,7 +3241,7 @@ export default class ActorRelics extends Actor {
   static addDirectoryContextOptions(html, entryOptions) {
     entryOptions.push({
       name: "ROTV.PolymorphRestoreTransformation",
-      icon: '<i class="fas fa-backward"></i>',
+      icon: '<i class="fa-solid fa-backward"></i>',
       callback: li => {
         const actor = game.actors.get(li.data("documentId"));
         return actor.revertOriginalForm();
@@ -2572,8 +3251,48 @@ export default class ActorRelics extends Actor {
         if ( !allowed && !game.user.isGM ) return false;
         const actor = game.actors.get(li.data("documentId"));
         return actor && actor.isPolymorphed;
-      }
+      },
+      group: "system"
+    }, {
+      name: "ROTV.Group.Primary.Set",
+      icon: '<i class="fa-solid fa-star"></i>',
+      callback: li => {
+        game.settings.set("rotv", "primaryParty", { actor: game.actors.get(li[0].dataset.documentId) });
+      },
+      condition: li => {
+        const actor = game.actors.get(li[0].dataset.documentId);
+        const primary = game.settings.get("rotv", "primaryParty")?.actor;
+        return game.user.isGM && (actor.type === "group")
+          && (actor.system.type.value === "party") && (actor !== primary);
+      },
+      group: "system"
+    }, {
+      name: "ROTV.Group.Primary.Remove",
+      icon: '<i class="fa-regular fa-star"></i>',
+      callback: li => {
+        game.settings.set("rotv", "primaryParty", { actor: null });
+      },
+      condition: li => {
+        const actor = game.actors.get(li[0].dataset.documentId);
+        const primary = game.settings.get("rotv", "primaryParty")?.actor;
+        return game.user.isGM && (actor === primary);
+      },
+      group: "system"
     });
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Add class to actor entry representing the primary group.
+   * @param {jQuery} jQuery
+   */
+  static onRenderActorDirectory(jQuery) {
+    const primaryParty = game.settings.get("rotv", "primaryParty")?.actor;
+    if ( primaryParty ) {
+      const element = jQuery[0]?.querySelector(`[data-entry-id="${primaryParty.id}"]`);
+      element?.classList.add("primary-party");
+    }
   }
 
   /* -------------------------------------------- */
@@ -2588,14 +3307,14 @@ export default class ActorRelics extends Actor {
     let localizedType;
     if ( typeData.value === "custom" ) {
       localizedType = typeData.custom;
-    } else {
-      let code = CONFIG.ROTV.creatureTypes[typeData.value];
-      localizedType = game.i18n.localize(typeData.swarm ? `${code}Pl` : code);
+    } else if ( typeData.value in CONFIG.ROTV.creatureTypes ) {
+      const code = CONFIG.ROTV.creatureTypes[typeData.value];
+      localizedType = game.i18n.localize(typeData.swarm ? code.plural : code.label);
     }
     let type = localizedType;
     if ( typeData.swarm ) {
       type = game.i18n.format("ROTV.CreatureSwarmPhrase", {
-        size: game.i18n.localize(CONFIG.ROTV.actorSizes[typeData.swarm]),
+        size: game.i18n.localize(CONFIG.ROTV.actorSizes[typeData.swarm].label),
         type: localizedType
       });
     }
@@ -2608,29 +3327,121 @@ export default class ActorRelics extends Actor {
   /* -------------------------------------------- */
 
   /** @inheritdoc */
-  _onUpdate(data, options, userId) {
+  async _onUpdate(data, options, userId) {
     super._onUpdate(data, options, userId);
-    this._displayScrollingDamage(options.dhp);
+    if ( userId === game.userId ) {
+      await this.updateEncumbrance(options);
+      this._onUpdateExhaustion(data, options);
+    }
+
+    const hp = options.rotv?.hp;
+    if ( hp && !options.isRest && !options.isAdvancement ) {
+      const curr = this.system.attributes.hp;
+      const changes = {
+        hp: curr.value - hp.value,
+        temp: curr.temp - hp.temp
+      };
+      changes.total = changes.hp + changes.temp;
+
+      if ( Number.isInteger(changes.total) && (changes.total !== 0) ) {
+        this._displayTokenEffect(changes);
+        if ( !game.settings.get("rotv", "disableConcentration") && (userId === game.userId) && (changes.total < 0) ) {
+          this.challengeConcentration({ dc: this.getConcentrationDC(-changes.total) });
+        }
+
+        /**
+         * A hook event that fires when an actor is damaged or healed by any means. The actual name
+         * of the hook will depend on the change in hit points.
+         * @function rotv.damageActor
+         * @memberof hookEvents
+         * @param {ActorRotV} actor                                       The actor that had their hit points reduced.
+         * @param {{hp: number, temp: number, total: number}} changes   The changes to hit points.
+         * @param {object} update                                       The original update delta.
+         * @param {string} userId                                       Id of the user that performed the update.
+         */
+        Hooks.callAll(`rotv.${changes.total > 0 ? "heal" : "damage"}Actor`, this, changes, data, userId);
+      }
+    }
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  _onDelete(options, userId) {
+    super._onDelete(options, userId);
+
+    const origin = this.getFlag("rotv", "summon.origin");
+    // TODO: Replace with parseUuid once V11 support is dropped
+    if ( origin ) SummonsData.untrackSummon(origin.split(".Item.")[0], this.uuid);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  async _onCreateDescendantDocuments(parent, collection, documents, data, options, userId) {
+    if ( (userId === game.userId) && (collection === "items") ) await this.updateEncumbrance(options);
+    super._onCreateDescendantDocuments(parent, collection, documents, data, options, userId);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  async _onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId) {
+    if ( (userId === game.userId) && (collection === "items") ) await this.updateEncumbrance(options);
+    super._onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId);
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  async _onDeleteDescendantDocuments(parent, collection, documents, ids, options, userId) {
+    if ( (userId === game.userId) ) {
+      if ( collection === "items" ) await this.updateEncumbrance(options);
+      await this._clearFavorites(documents);
+    }
+    super._onDeleteDescendantDocuments(parent, collection, documents, ids, options, userId);
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Display changes to health as scrolling combat text.
-   * Adapt the font size relative to the Actor's HP total to emphasize more significant blows.
-   * @param {number} dhp      The change in hit points that was applied
-   * @private
+   * Flash ring & display changes to health as scrolling combat text.
+   * @param {object} changes          Object of changes to hit points.
+   * @param {number} changes.hp       Changes to `hp.value`.
+   * @param {number} changes.temp     The change to `hp.temp`.
+   * @param {number} changes.total    The total change to hit points.
+   * @protected
    */
-  _displayScrollingDamage(dhp) {
-    if ( !dhp ) return;
-    dhp = Number(dhp);
-    const tokens = this.isToken ? [this.token?.object] : this.getActiveTokens(true);
-    for ( const t of tokens ) {
-      const pct = Math.clamped(Math.abs(dhp) / this.system.attributes.hp.max, 0, 1);
-      canvas.interface.createScrollingText(t.center, dhp.signedString(), {
+  _displayTokenEffect(changes) {
+    let key;
+    let value;
+    if ( changes.hp < 0 ) {
+      key = "damage";
+      value = changes.total;
+    } else if ( changes.hp > 0 ) {
+      key = "healing";
+      value = changes.total;
+    } else if ( changes.temp ) {
+      key = "temp";
+      value = changes.temp;
+    }
+    if ( !key || !value ) return;
+
+    const tokens = this.isToken ? [this.token] : this.getActiveTokens(true, true);
+    if ( !tokens.length ) return;
+
+    const pct = Math.clamp(Math.abs(value) / this.system.attributes.hp.max, 0, 1);
+    const fill = CONFIG.ROTV.tokenHPColors[key];
+
+    for ( const token of tokens ) {
+      if ( !token.object?.visible || token.isSecret ) continue;
+      if ( token.hasDynamicRing ) token.flashRing(key);
+      const t = token.object;
+      canvas.interface.createScrollingText(t.center, value.signedString(), {
         anchor: CONST.TEXT_ANCHOR_POINTS.TOP,
+        // Adapt the font size relative to the Actor's HP total to emphasize more significant blows
         fontSize: 16 + (32 * pct), // Range between [16, 48]
-        fill: CONFIG.ROTV.tokenHPColors[dhp < 0 ? "damage" : "healing"],
+        fill: fill,
         stroke: 0x000000,
         strokeThickness: 4,
         jitter: 0.25
@@ -2639,87 +3450,73 @@ export default class ActorRelics extends Actor {
   }
 
   /* -------------------------------------------- */
-  /*  DEPRECATED METHODS                          */
-  /* -------------------------------------------- */
 
   /**
-   * Determine a character's AC value from their equipped armor and shield.
-   * @returns {object}
-   * @private
-   * @deprecated since rotv 2.0, targeted for removal in 2.2
-   */
-  _computeArmorClass() {
-    foundry.utils.logCompatibilityWarning(
-      "ActorRelics#_computeArmorClass has been renamed ActorRelics#_prepareArmorClass.",
-      { since: "RotV 2.0", until: "RotV 2.2" }
-    );
-    this._prepareArmorClass();
-    return this.system.attributes.ac;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Compute the level and percentage of encumbrance for an Actor.
-   * @returns {object}  An object describing the character's encumbrance level
-   * @private
-   * @deprecated since rotv 2.0, targeted for removal in 2.2
-   */
-  _computeEncumbrance() {
-    foundry.utils.logCompatibilityWarning(
-      "ActorRelics#_computeEncumbrance has been renamed ActorRelics#_prepareEncumbrance.",
-      { since: "RotV 2.0", until: "RotV 2.2" }
-    );
-    this._prepareEncumbrance();
-    return this.system.attributes.encumbrance;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Calculate the initiative bonus to display on a character sheet.
-   * @private
-   * @deprecated since rotv 2.0, targeted for removal in 2.2
-   */
-  _computeInitiativeModifier() {
-    foundry.utils.logCompatibilityWarning(
-      "ActorRelics#_computeInitiativeModifier has been renamed ActorRelics#_prepareInitiative.",
-      { since: "RotV 2.0", until: "RotV 2.2" }
-    );
-    this._prepareInitiative();
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare data related to the spell-casting capabilities of the Actor.
-   * Mutates the value of the system.spells object.
-   * @private
-   * @deprecated since rotv 2.0, targeted for removal in 2.2
-   */
-  _computeSpellcastingProgression() {
-    foundry.utils.logCompatibilityWarning(
-      "ActorRelics#_computeSpellcastingProgression has been renamed ActorRelics#_prepareSpellcasting.",
-      { since: "RotV 2.0", until: "RotV 2.2" }
-    );
-    this._prepareSpellcasting();
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Convert a bonus value to a simple integer for displaying on the sheet.
-   * @param {number|string|null} bonus  Actor's bonus value.
-   * @param {object} data               Actor data to use for replacing @ strings.
-   * @returns {number}                  Simplified bonus as an integer.
+   * TODO: Perform this as part of Actor._preUpdateOperation instead when it becomes available in v12.
+   * Handle syncing the Actor's exhaustion level with the ActiveEffect.
+   * @param {object} data                          The Actor's update delta.
+   * @param {DocumentModificationContext} options  Additional options supplied with the update.
+   * @returns {Promise<ActiveEffect|void>}
    * @protected
-   * @deprecated since rotv 2.0, targeted for removal in 2.2
    */
-  _simplifyBonus(bonus, data) {
-    foundry.utils.logCompatibilityWarning(
-      "Actor#_simplifyBonus has been made a utility function and can be accessed at rotv.utils.simplifyBonus.",
-      { since: "RotV 2.0", until: "RotV 2.2" }
+  async _onUpdateExhaustion(data, options) {
+    const level = foundry.utils.getProperty(data, "system.attributes.exhaustion");
+    if ( !Number.isFinite(level) ) return;
+    let effect = this.effects.get(ActiveEffectRotV.ID.EXHAUSTION);
+    if ( level < 1 ) return effect?.delete();
+    else if ( effect ) {
+      const originalExhaustion = foundry.utils.getProperty(options, "rotv.originalExhaustion");
+      return effect.update({ "flags.rotv.exhaustionLevel": level }, { rotv: { originalExhaustion } });
+    } else {
+      effect = await ActiveEffect.implementation.fromStatusEffect("exhaustion", { parent: this });
+      effect.updateSource({ "flags.rotv.exhaustionLevel": level });
+      return ActiveEffect.implementation.create(effect, { parent: this, keepId: true });
+    }
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Handle applying/removing encumbrance statuses.
+   * @param {DocumentModificationContext} options  Additional options supplied with the update.
+   * @returns {Promise<ActiveEffect>|void}
+   */
+  updateEncumbrance(options) {
+    const encumbrance = this.system.attributes?.encumbrance;
+    if ( !encumbrance || (game.settings.get("rotv", "encumbrance") === "none") ) return;
+    const statuses = [];
+    const variant = game.settings.get("rotv", "encumbrance") === "variant";
+    if ( encumbrance.value > encumbrance.thresholds.maximum ) statuses.push("exceedingCarryingCapacity");
+    if ( (encumbrance.value > encumbrance.thresholds.heavilyEncumbered) && variant ) statuses.push("heavilyEncumbered");
+    if ( (encumbrance.value > encumbrance.thresholds.encumbered) && variant ) statuses.push("encumbered");
+
+    const effect = this.effects.get(ActiveEffectRotV.ID.ENCUMBERED);
+    if ( !statuses.length ) return effect?.delete();
+
+    const effectData = { ...CONFIG.ROTV.encumbrance.effects[statuses[0]], statuses };
+    if ( effect ) {
+      const originalEncumbrance = effect.statuses.first();
+      return effect.update(effectData, { rotv: { originalEncumbrance } });
+    }
+
+    return ActiveEffect.implementation.create(
+      { _id: ActiveEffectRotV.ID.ENCUMBERED, ...effectData },
+      { parent: this, keepId: true }
     );
-    return simplifyBonus(bonus, data);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Handle clearing favorited entries that were deleted.
+   * @param {Document[]} documents  The deleted Documents.
+   * @returns {Promise<ActorRotV>|void}
+   * @protected
+   */
+  _clearFavorites(documents) {
+    if ( !("favorites" in this.system) ) return;
+    const ids = new Set(documents.map(d => d.getRelativeUUID(this)));
+    const favorites = this.system.favorites.filter(f => !ids.has(f.id));
+    return this.update({ "system.favorites": favorites });
   }
 }

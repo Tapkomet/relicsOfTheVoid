@@ -44,7 +44,7 @@ export default class ActorSheetFlags extends BaseConfigSheet {
    */
   _getClasses() {
     const classes = this.object.items.filter(i => i.type === "class");
-    return classes.sort((a, b) => a.name.localeCompare(b.name)).reduce((obj, i) => {
+    return classes.sort((a, b) => a.name.localeCompare(b.name, game.i18n.lang)).reduce((obj, i) => {
       obj[i.id] = i.name;
       return obj;
     }, {});
@@ -87,6 +87,10 @@ export default class ActorSheetFlags extends BaseConfigSheet {
       {name: "system.bonuses.mwak.damage", label: "ROTV.BonusMWDamage"},
       {name: "system.bonuses.rwak.attack", label: "ROTV.BonusRWAttack"},
       {name: "system.bonuses.rwak.damage", label: "ROTV.BonusRWDamage"},
+      {name: "system.bonuses.msak.attack", label: "ROTV.BonusMSAttack"},
+      {name: "system.bonuses.msak.damage", label: "ROTV.BonusMSDamage"},
+      {name: "system.bonuses.rsak.attack", label: "ROTV.BonusRSAttack"},
+      {name: "system.bonuses.rsak.damage", label: "ROTV.BonusRSDamage"},
       {name: "system.bonuses.abilities.check", label: "ROTV.BonusAbilityCheck"},
       {name: "system.bonuses.abilities.save", label: "ROTV.BonusAbilitySave"},
       {name: "system.bonuses.abilities.skill", label: "ROTV.BonusAbilitySkill"},

@@ -1,20 +1,96 @@
+import AdvancementManager from "../applications/advancement/advancement-manager.mjs";
+import AdvancementConfirmationDialog from "../applications/advancement/advancement-confirmation-dialog.mjs";
+import AbilityUseDialog from "../applications/item/ability-use-dialog.mjs";
+import ClassData from "../data/item/class.mjs";
+import ContainerData from "../data/item/container.mjs";
+import EquipmentData from "../data/item/equipment.mjs";
+import SpellData from "../data/item/spell.mjs";
+import { EnchantmentData } from "../data/item/fields/enchantment-field.mjs";
+import PhysicalItemTemplate from "../data/item/templates/physical-item.mjs";
 import {d20Roll, damageRoll} from "../dice/dice.mjs";
 import simplifyRollFormula from "../dice/simplify-roll-formula.mjs";
-import Advancement from "./advancement/advancement.mjs";
-import AbilityUseDialog from "../applications/item/ability-use-dialog.mjs";
+import { getSceneTargets } from "../utils.mjs";
 import Proficiency from "./actor/proficiency.mjs";
+import SelectChoices from "./actor/select-choices.mjs";
+import Advancement from "./advancement/advancement.mjs";
+import SystemDocumentMixin from "./mixins/document.mjs";
 
 /**
  * Override and extend the basic Item implementation.
  */
-export default class ItemRelics extends Item {
+export default class ItemRotV extends SystemDocumentMixin(Item) {
 
   /**
    * Caches an item linked to this one, such as a subclass associated with a class.
-   * @type {ItemRelics}
+   * @type {ItemRotV}
    * @private
    */
   _classLink;
+
+  /* -------------------------------------------- */
+
+  /**
+   * An object that tracks which tracks the changes to the data model which were applied by active effects
+   * @type {object}
+   */
+  overrides = this.overrides ?? {};
+
+  /* -------------------------------------------- */
+
+  /**
+   * Types that can be selected within the compendium browser.
+   * @param {object} [options={}]
+   * @param {Set<string>} [options.chosen]  Types that have been selected.
+   * @returns {SelectChoices}
+   */
+  static compendiumBrowserTypes({ chosen=new Set() }={}) {
+    const [generalTypes, physicalTypes] = Item.TYPES.reduce(([g, p], t) => {
+      if ( ![CONST.BASE_DOCUMENT_TYPE, "backpack"].includes(t) ) {
+        if ( CONFIG.Item.dataModels[t]?.metadata?.inventoryItem ) p.push(t);
+        else g.push(t);
+      }
+      return [g, p];
+    }, [[], []]);
+
+    const makeChoices = (types, categoryChosen) => types.reduce((obj, type) => {
+      obj[type] = {
+        label: CONFIG.Item.typeLabels[type],
+        chosen: chosen.has(type) || categoryChosen
+      };
+      return obj;
+    }, {});
+    const choices = makeChoices(generalTypes);
+    choices.physical = {
+      label: game.i18n.localize("ROTV.Item.Category.Physical"),
+      children: makeChoices(physicalTypes, chosen.has("physical"))
+    };
+    return new SelectChoices(choices);
+  }
+
+  /* -------------------------------------------- */
+  /*  Migrations                                  */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  _initializeSource(data, options={}) {
+    // Migrate backpack -> container.
+    if ( data.type === "backpack" ) {
+      data.type = "container";
+      foundry.utils.setProperty(data, "flags.rotv.persistSourceMigration", true);
+    }
+
+    /**
+     * A hook event that fires before source data is initialized for an Item in a compendium.
+     * @function rotv.initializeItemSource
+     * @memberof hookEvents
+     * @param {ItemRotV} item     Item for which the data is being initialized.
+     * @param {object} data     Source data being initialized.
+     * @param {object} options  Additional data initialization options.
+     */
+    if ( options.pack || options.parent?.pack ) Hooks.callAll("rotv.initializeItemSource", this, data, options);
+
+    return super._initializeSource(data, options);
+  }
 
   /* -------------------------------------------- */
   /*  Item Properties                             */
@@ -23,21 +99,46 @@ export default class ItemRelics extends Item {
   /**
    * Which ability score modifier is used by this item?
    * @type {string|null}
+   * @see {@link ActionTemplate#abilityMod}
    */
   get abilityMod() {
+    return this.system.abilityMod ?? null;
+  }
 
-    // Case 3 - unknown
-    return "con";
+  /* --------------------------------------------- */
+
+  /**
+   * The item that contains this item, if it is in a container. Returns a promise if the item is located
+   * in a compendium pack.
+   * @type {ItemRotV|Promise<ItemRotV>|void}
+   */
+  get container() {
+    if ( !this.system.container ) return;
+    if ( this.isEmbedded ) return this.actor.items.get(this.system.container);
+    if ( this.pack ) return game.packs.get(this.pack).getDocument(this.system.container);
+    return game.items.get(this.system.container);
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Return an item's identifier.
-   * @type {string}
+   * What is the critical hit threshold for this item, if applicable?
+   * @type {number|null}
+   * @see {@link ActionTemplate#criticalThreshold}
    */
-  get identifier() {
-    return this.system.identifier || this.name.slugify({strict: true});
+  get criticalThreshold() {
+    return this.system.criticalThreshold ?? null;
+  }
+
+  /* --------------------------------------------- */
+
+  /**
+   * Does the Item implement an ability check as part of its usage?
+   * @type {boolean}
+   * @see {@link ActionTemplate#hasAbilityCheck}
+   */
+  get hasAbilityCheck() {
+    return this.system.hasAbilityCheck ?? false;
   }
 
   /* -------------------------------------------- */
@@ -53,11 +154,23 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
+   * Does the Item have an area of effect target?
+   * @type {boolean}
+   * @see {@link ActivatedEffectTemplate#hasAreaTarget}
+   */
+  get hasAreaTarget() {
+    return this.system.hasAreaTarget ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
    * Does the Item implement an attack roll as part of its usage?
    * @type {boolean}
+   * @see {@link ActionTemplate#hasAttack}
    */
   get hasAttack() {
-    return ["mwak", "rwak"].includes(this.system.actionType);
+    return this.system.hasAttack ?? false;
   }
 
   /* -------------------------------------------- */
@@ -65,19 +178,108 @@ export default class ItemRelics extends Item {
   /**
    * Does the Item implement a damage roll as part of its usage?
    * @type {boolean}
+   * @see {@link ActionTemplate#hasDamage}
    */
   get hasDamage() {
-    return !!(this.system.damage && this.system.damage.parts.length);
+    return this.system.hasDamage ?? false;
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Does the Item implement a versatile damage roll as part of its usage?
+   * Does the Item target one or more distinct targets?
+   * @type {boolean}
+   * @see {@link ActivatedEffectTemplate#hasIndividualTarget}
+   */
+  get hasIndividualTarget() {
+    return this.system.hasIndividualTarget ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Is this Item limited in its ability to be used by charges or by recharge?
+   * @type {boolean}
+   * @see {@link ActivatedEffectTemplate#hasLimitedUses}
+   * @see {@link FeatData#hasLimitedUses}
+   */
+  get hasLimitedUses() {
+    return this.system.hasLimitedUses ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does this Item draw from a resource?
+   * @type {boolean}
+   * @see {@link ActivatedEffectTemplate#hasResource}
+   */
+  get hasResource() {
+    return this.system.hasResource ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does this Item draw from ammunition?
+   * @type {boolean}
+   * @see {@link ActivatedEffectTemplate#hasAmmo}
+   */
+  get hasAmmo() {
+    return this.system.hasAmmo ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item implement a saving throw as part of its usage?
+   * @type {boolean}
+   * @see {@link ActionTemplate#hasSave}
+   */
+  get hasSave() {
+    return this.system.hasSave ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does the Item have a target?
+   * @type {boolean}
+   * @see {@link ActivatedEffectTemplate#hasTarget}
+   */
+  get hasTarget() {
+    return this.system.hasTarget ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Return an item's identifier.
+   * @type {string}
+   */
+  get identifier() {
+    return this.system.identifier || this.name.slugify({strict: true});
+  }
+
+  /* --------------------------------------------- */
+
+  /**
+   * Is this Item an activatable item?
    * @type {boolean}
    */
-  get isVersatile() {
-    return !!(this.hasDamage && this.system.damage.versatile);
+  get isActive() {
+    return this.system.isActive ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Is this item any of the armor subtypes?
+   * @type {boolean}
+   * @see {@link EquipmentTemplate#isArmor}
+   */
+  get isArmor() {
+    return this.system.isArmor ?? false;
   }
 
   /* -------------------------------------------- */
@@ -85,9 +287,23 @@ export default class ItemRelics extends Item {
   /**
    * Does the item provide an amount of healing instead of conventional damage?
    * @type {boolean}
+   * @see {@link ActionTemplate#isHealing}
    */
   get isHealing() {
-    return (this.system.actionType === "heal") && this.system.damage.parts.length;
+    return this.system.isHealing ?? false;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Is this item a separate large object like a siege engine or vehicle component that is
+   * usually mounted on fixtures rather than equipped, and has its own AC and HP?
+   * @type {boolean}
+   * @see {@link EquipmentData#isMountable}
+   * @see {@link WeaponData#isMountable}
+   */
+  get isMountable() {
+    return this.system.isMountable ?? false;
   }
 
   /* -------------------------------------------- */
@@ -98,15 +314,49 @@ export default class ItemRelics extends Item {
    * @type {boolean|null}
    */
   get isOriginalClass() {
-    if ( this.type !== "class" || !this.isEmbedded ) return null;
+    if ( this.type !== "class" || !this.isEmbedded || !this.parent.system.details?.originalClass ) return null;
     return this.id === this.parent.system.details.originalClass;
   }
 
   /* -------------------------------------------- */
 
   /**
+   * Does the Item implement a versatile damage roll as part of its usage?
+   * @type {boolean}
+   * @see {@link ActionTemplate#isVersatile}
+   */
+  get isVersatile() {
+    return this.system.isVersatile ?? false;
+  }
+
+  /* --------------------------------------------- */
+
+  /**
+   * Is the item on recharge cooldown?
+   * @type {boolean}
+   * @see {@link ActionTemplate#isOnCooldown}
+   */
+  get isOnCooldown() {
+    const { recharge } = this.system;
+    return (recharge?.value > 0) && (recharge?.charged === false);
+  }
+
+  /* --------------------------------------------- */
+
+  /**
+   * Does this item require concentration?
+   * @type {boolean}
+   */
+  get requiresConcentration() {
+    const isValid = this.system.validProperties.has("concentration") && this.system.properties.has("concentration");
+    return isValid && this.isActive && this.system.hasScalarDuration;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
    * Class associated with this subclass. Always returns null on non-subclass or non-embedded items.
-   * @type {ItemRelics|null}
+   * @type {ItemRotV|null}
    */
   get class() {
     if ( !this.isEmbedded || (this.type !== "subclass") ) return null;
@@ -118,7 +368,7 @@ export default class ItemRelics extends Item {
 
   /**
    * Subclass associated with this class. Always returns null on non-class or non-embedded items.
-   * @type {ItemRelics|null}
+   * @type {ItemRotV|null}
    */
   get subclass() {
     if ( !this.isEmbedded || (this.type !== "class") ) return null;
@@ -130,81 +380,31 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
-   * Does the Item implement a saving throw as part of its usage?
-   * @type {boolean}
-   */
-  get hasSave() {
-    const save = this.system.save || {};
-    return !!(save.ability && save.scaling);
-  }
-
-  /* --------------------------------------------- */
-
-  /**
-   * Does the Item implement an ability check as part of its usage?
-   * @type {boolean}
-   */
-  get hasAbilityCheck() {
-    return (this.system.actionType === "abil") && this.system.ability;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Does the Item have a target?
-   * @type {boolean}
-   */
-  get hasTarget() {
-    const target = this.system.target;
-    return target && !["none", ""].includes(target.type);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Does the Item have an area of effect target?
-   * @type {boolean}
-   */
-  get hasAreaTarget() {
-    const target = this.system.target;
-    return target && (target.type in CONFIG.ROTV.areaTargetTypes);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Is this Item limited in its ability to be used by charges or by recharge?
-   * @type {boolean}
-   */
-  get hasLimitedUses() {
-    let recharge = this.system.recharge || {};
-    let uses = this.system.uses || {};
-    return !!recharge.value || (uses.per && (uses.max > 0));
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Is this item any of the armor subtypes?
-   * @type {boolean}
-   */
-  get isArmor() {
-    return this.system.armor?.type in CONFIG.ROTV.armorTypes;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
    * Retrieve scale values for current level from advancement data.
    * @type {object}
    */
   get scaleValues() {
-    if ( !["class", "subclass"].includes(this.type) || !this.advancement.byType.ScaleValue ) return {};
-    const level = this.type === "class" ? this.system.levels : this.class?.system.levels ?? 0;
+    if ( !this.advancement.byType.ScaleValue ) return {};
+    const level = this.type === "class" ? this.system.levels : this.type === "subclass" ? this.class?.system.levels
+      : this.parent?.system.details.level ?? 0;
     return this.advancement.byType.ScaleValue.reduce((obj, advancement) => {
       obj[advancement.identifier] = advancement.valueForLevel(level);
       return obj;
     }, {});
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Does this item scale with any kind of consumption?
+   * @type {string|null}
+   */
+  get usageScaling() {
+    const { level, preparation, consume } = this.system;
+    const isLeveled = (this.type === "spell") && (level > 0);
+    if ( isLeveled && CONFIG.ROTV.spellPreparationModes[preparation.mode]?.upcast ) return "slot";
+    else if ( isLeveled && this.hasResource && consume.scale ) return "resource";
+    return null;
   }
 
   /* -------------------------------------------- */
@@ -247,6 +447,53 @@ export default class ItemRelics extends Item {
   }
 
   /* -------------------------------------------- */
+  /*  Active Effects                              */
+  /* -------------------------------------------- */
+
+  /**
+   * Get all ActiveEffects that may apply to this Item.
+   * @yields {ActiveEffectRotV}
+   * @returns {Generator<ActiveEffectRotV, void, void>}
+   */
+  *allApplicableEffects() {
+    for ( const effect of this.effects ) {
+      if ( effect.isAppliedEnchantment ) yield effect;
+    }
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Apply any transformation to the Item data which are caused by enchantment Effects.
+   */
+  applyActiveEffects() {
+    const overrides = {};
+
+    // Organize non-disabled effects by their application priority
+    const changes = [];
+    for ( const effect of this.allApplicableEffects() ) {
+      if ( !effect.active ) continue;
+      changes.push(...effect.changes.map(change => {
+        const c = foundry.utils.deepClone(change);
+        c.effect = effect;
+        c.priority ??= c.mode * 10;
+        return c;
+      }));
+    }
+    changes.sort((a, b) => a.priority - b.priority);
+
+    // Apply all changes
+    for ( const change of changes ) {
+      if ( !change.key ) continue;
+      const changes = change.effect.apply(this, change);
+      Object.assign(overrides, changes);
+    }
+
+    // Expand the set of final overrides
+    this.overrides = foundry.utils.expandObject(overrides);
+  }
+
+  /* -------------------------------------------- */
 
   /**
    * Should this item's active effects be suppressed.
@@ -254,13 +501,21 @@ export default class ItemRelics extends Item {
    */
   get areEffectsSuppressed() {
     const requireEquipped = (this.type !== "consumable")
-      || ["rod", "trinket", "wand"].includes(this.system.consumableType);
+      || ["rod", "trinket", "wand"].includes(this.system.type.value);
     if ( requireEquipped && (this.system.equipped === false) ) return true;
-    return this.system.attunement === CONFIG.ROTV.attunementTypes.REQUIRED;
+    return !this.system.attuned && (this.system.attunement === "required");
   }
 
   /* -------------------------------------------- */
   /*  Data Preparation                            */
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  prepareEmbeddedDocuments() {
+    super.prepareEmbeddedDocuments();
+    if ( !this.actor || this.actor._embeddedPreparation ) this.applyActiveEffects();
+  }
+
   /* -------------------------------------------- */
 
   /** @inheritDoc */
@@ -274,6 +529,19 @@ export default class ItemRelics extends Item {
     // Advancement
     this._prepareAdvancement();
 
+    // Item Properties
+    if ( this.system.properties ) {
+      this.labels.properties = this.system.properties.reduce((acc, prop) => {
+        if ( (prop === "concentration") && !this.requiresConcentration ) return acc;
+        acc.push({
+          abbr: prop,
+          label: CONFIG.ROTV.itemProperties[prop]?.label,
+          icon: CONFIG.ROTV.itemProperties[prop]?.icon
+        });
+        return acc;
+      }, []);
+    }
+
     // Specialized preparation per Item type
     switch ( this.type ) {
       case "equipment":
@@ -282,11 +550,13 @@ export default class ItemRelics extends Item {
         this._prepareFeat(); break;
       case "spell":
         this._prepareSpell(); break;
+      case "weapon":
+        this._prepareWeapon(); break;
     }
 
     // Activated Items
-    this._prepareActivation();
     this._prepareAction();
+    this._prepareRecovery();
 
     // Un-owned items can have their final preparation done here, otherwise this needs to happen in the owning Actor
     if ( !this.isOwned ) this.prepareFinalAttributes();
@@ -310,11 +580,11 @@ export default class ItemRelics extends Item {
    */
   _prepareFeat() {
     const act = this.system.activation;
-    const types = CONFIG.ROTV.abilityActivationTypes;
-    if ( act?.type === types.legendary ) this.labels.featType = game.i18n.localize("ROTV.LegendaryActionLabel");
-    else if ( act?.type === types.lair ) this.labels.featType = game.i18n.localize("ROTV.LairActionLabel");
+    if ( act?.type === "legendary" ) this.labels.featType = game.i18n.localize("ROTV.LegendaryActionLabel");
+    else if ( act?.type === "lair" ) this.labels.featType = game.i18n.localize("ROTV.LairActionLabel");
     else if ( act?.type ) {
-      this.labels.featType = game.i18n.localize(this.system.damage.length ? "ROTV.Attack" : "ROTV.Action");
+      const isAttack = /\w\wak$/.test(this.system.actionType);
+      this.labels.featType = game.i18n.localize(isAttack ? "ROTV.Attack" : "ROTV.Action");
     }
     else this.labels.featType = game.i18n.localize("ROTV.Passive");
   }
@@ -326,20 +596,20 @@ export default class ItemRelics extends Item {
    * @protected
    */
   _prepareSpell() {
-    const tags = Object.fromEntries(Object.entries(CONFIG.ROTV.spellTags).map(([k, v]) => {
-      v.tag = true;
-      return [k, v];
-    }));
-    const attributes = {...CONFIG.ROTV.spellComponents, ...tags};
+    const attributes = this.system?.validProperties.reduce((obj, k) => {
+      obj[k] = CONFIG.ROTV.itemProperties[k];
+      return obj;
+    }, {});
     this.system.preparation.mode ||= "prepared";
     this.labels.level = CONFIG.ROTV.spellLevels[this.system.level];
-    this.labels.school = CONFIG.ROTV.spellSchools[this.system.school];
-    this.labels.components = Object.entries(this.system.components).reduce((obj, [c, active]) => {
+    this.labels.school = CONFIG.ROTV.spellSchools[this.system.school]?.label;
+    this.labels.components = this.system.properties.reduce((obj, c) => {
       const config = attributes[c];
-      if ( !config || (active !== true) ) return obj;
-      obj.all.push({abbr: config.abbr, tag: config.tag});
-      if ( config.tag ) obj.tags.push(config.label);
-      else obj.vsm.push(config.abbr);
+      if ( !config ) return obj;
+      const { abbreviation: abbr, label, icon } = config;
+      obj.all.push({ abbr, label, icon, tag: config.isTag });
+      if ( config.isTag ) obj.tags.push(label);
+      else obj.vsm.push(abbr);
       return obj;
     }, {all: [], vsm: [], tags: []});
     this.labels.components.vsm = new Intl.ListFormat(game.i18n.lang, { style: "narrow", type: "conjunction" })
@@ -350,37 +620,11 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
-   * Prepare derived data for activated items and define labels.
+   * Prepare derived data for a weapon-type item and define labels.
    * @protected
    */
-  _prepareActivation() {
-    if ( !("activation" in this.system) ) return;
-    const C = CONFIG.ROTV;
-
-    // Ability Activation Label
-    const act = this.system.activation ?? {};
-    if ( ["none", ""].includes(act.type) ) act.type = null;   // Backwards compatibility
-    this.labels.activation = act.type ? [act.cost, C.abilityActivationTypes[act.type]].filterJoin(" ") : "";
-
-    // Target Label
-    let tgt = this.system.target ?? {};
-    if ( ["none", ""].includes(tgt.type) ) tgt.type = null;   // Backwards compatibility
-    if ( [null, "self"].includes(tgt.type) ) tgt.value = tgt.units = null;
-    else if ( tgt.units === "touch" ) tgt.value = null;
-    this.labels.target = tgt.type
-      ? [tgt.value, C.distanceUnits[tgt.units], C.targetTypes[tgt.type]].filterJoin(" ") : "";
-
-    // Range Label
-    let rng = this.system.range ?? {};
-    if ( ["none", ""].includes(rng.units) ) rng.units = null; // Backwards compatibility
-    if ( [null, "touch", "self"].includes(rng.units) ) rng.value = rng.long = null;
-    this.labels.range = rng.units
-      ? [rng.value, rng.long ? `/ ${rng.long}` : null, C.distanceUnits[rng.units]].filterJoin(" ") : "";
-
-    // Recharge Label
-    let chg = this.system.recharge ?? {};
-    const chgSuffix = `${chg.value}${parseInt(chg.value) < 6 ? "+" : ""}`;
-    this.labels.recharge = `${game.i18n.localize("ROTV.Recharge")} [${chgSuffix}]`;
+  _prepareWeapon() {
+    this.labels.armor = this.system.armor.value ? `${this.system.armor.value} ${game.i18n.localize("ROTV.AC")}` : "";
   }
 
   /* -------------------------------------------- */
@@ -395,8 +639,20 @@ export default class ItemRelics extends Item {
     if ( dmg.parts ) {
       const types = CONFIG.ROTV.damageTypes;
       this.labels.damage = dmg.parts.map(d => d[0]).join(" + ").replace(/\+ -/g, "- ");
-      this.labels.damageTypes = dmg.parts.map(d => types[d[1]]).join(", ");
+      this.labels.damageTypes = dmg.parts.map(d => types[d[1]]?.label).join(", ");
     }
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Prepare recovery labels.
+   * @protected
+   */
+  _prepareRecovery() {
+    const { per } = this.system.uses ?? {};
+    const config = CONFIG.ROTV.limitedUsePeriods[per] ?? {};
+    this.labels.recovery = config.abbreviation ?? config.label;
   }
 
   /* -------------------------------------------- */
@@ -410,7 +666,7 @@ export default class ItemRelics extends Item {
     this.advancement = {
       byId: {},
       byLevel: Object.fromEntries(
-        Array.fromRange(CONFIG.ROTV.maxLevel + 1).slice(minAdvancementLevel).map(l => [l, []])
+        Array.fromRange(CONFIG.ROTV.maxLevel, minAdvancementLevel).map(l => [l, []])
       ),
       byType: {},
       needingConfiguration: []
@@ -420,12 +676,31 @@ export default class ItemRelics extends Item {
       this.advancement.byId[advancement.id] = advancement;
       this.advancement.byType[advancement.type] ??= [];
       this.advancement.byType[advancement.type].push(advancement);
-      advancement.levels.forEach(l => this.advancement.byLevel[l].push(advancement));
-      if ( !advancement.levels.length ) this.advancement.needingConfiguration.push(advancement);
+      advancement.levels.forEach(l => this.advancement.byLevel[l]?.push(advancement));
+      if ( !advancement.levels.length
+        || ((advancement.levels.length === 1) && (advancement.levels[0] < minAdvancementLevel)) ) {
+        this.advancement.needingConfiguration.push(advancement);
+      }
     }
     Object.entries(this.advancement.byLevel).forEach(([lvl, data]) => data.sort((a, b) => {
-      return a.sortingValueForLevel(lvl).localeCompare(b.sortingValueForLevel(lvl));
+      return a.sortingValueForLevel(lvl).localeCompare(b.sortingValueForLevel(lvl), game.i18n.lang);
     }));
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Determine an item's proficiency level based on its parent actor's proficiencies.
+   * @protected
+   */
+  _prepareProficiency() {
+    if ( !["spell", "weapon", "equipment", "tool", "feat", "consumable"].includes(this.type) ) return;
+    if ( !this.actor?.system.attributes?.prof ) {
+      this.system.prof = new Proficiency(0, 0);
+      return;
+    }
+
+    this.system.prof = new Proficiency(this.actor.system.attributes.prof, this.system.proficiencyMultiplier ?? 0);
   }
 
   /* -------------------------------------------- */
@@ -433,15 +708,13 @@ export default class ItemRelics extends Item {
   /**
    * Compute item attributes which might depend on prepared actor data. If this item is embedded this method will
    * be called after the actor's data is prepared.
-   * Otherwise, it will be called at the end of `ItemRelics#prepareDerivedData`.
+   * Otherwise, it will be called at the end of `ItemRotV#prepareDerivedData`.
    */
   prepareFinalAttributes() {
+    this.system.prepareFinalData?.();
 
     // Proficiency
-    if ( this.actor?.system.attributes?.prof ) {
-      const isProficient = (this.type === "spell") || this.system.proficient; // Always proficient in spell attacks.
-      this.system.prof = new Proficiency(this.actor?.system.attributes.prof, isProficient);
-    }
+    this._prepareProficiency();
 
     // Class data
     if ( this.type === "class" ) this.system.isOriginalClass = this.isOriginalClass;
@@ -449,7 +722,7 @@ export default class ItemRelics extends Item {
     // Action usage
     if ( "actionType" in this.system ) {
       this.labels.abilityCheck = game.i18n.format("ROTV.AbilityPromptTitle", {
-        ability: CONFIG.ROTV.abilities[this.system.ability]
+        ability: CONFIG.ROTV.abilities[this.system.ability]?.label ?? ""
       });
 
       // Saving throws
@@ -457,12 +730,6 @@ export default class ItemRelics extends Item {
 
       // To Hit
       this.getAttackToHit();
-
-      // Limited Uses
-      this.prepareMaxUses();
-
-      // Duration
-      this.prepareDurationValue();
 
       // Damage Label
       this.getDerivedDamageLabel();
@@ -473,24 +740,27 @@ export default class ItemRelics extends Item {
 
   /**
    * Populate a label with the compiled and simplified damage formula based on owned item
-   * actor data. This is only used for display purposes and is not related to `ItemRelics#rollDamage`.
+   * actor data. This is only used for display purposes and is not related to `ItemRotV#rollDamage`.
    * @returns {{damageType: string, formula: string, label: string}[]}
    */
   getDerivedDamageLabel() {
     if ( !this.hasDamage || !this.isOwned ) return [];
     const rollData = this.getRollData();
     const damageLabels = { ...CONFIG.ROTV.damageTypes, ...CONFIG.ROTV.healingTypes };
-    const derivedDamage = this.system.damage?.parts?.map(damagePart => {
+    const derivedDamage = this.system.damage?.parts?.map((damagePart, index) => {
       let formula;
       try {
-        const roll = new Roll(damagePart[0], rollData);
+        formula = damagePart[0];
+        if ( (index === 0) && this.system.magicAvailable ) formula = `${formula} + ${this.system.magicalBonus ?? 0}`;
+        const roll = new Roll(formula, rollData);
         formula = simplifyRollFormula(roll.formula, { preserveFlavor: true });
       }
       catch(err) {
-        console.warn(`Unable to simplify formula for ${this.name}: ${err}`);
+        const parentInfo = this.parent ? ` on ${this.parent.name} (${this.parent.id})` : "";
+        console.warn(`Unable to simplify formula for ${this.name} (${this.id})${parentInfo}`, err);
       }
       const damageType = damagePart[1];
-      return { formula, damageType, label: `${formula} ${damageLabels[damageType] ?? ""}` };
+      return { formula, damageType, label: `${formula} ${damageLabels[damageType]?.label ?? ""}` };
     });
     return this.labels.derivedDamage = derivedDamage;
   }
@@ -507,7 +777,8 @@ export default class ItemRelics extends Item {
 
     // Actor spell-DC based scaling
     if ( save.scaling === "spell" ) {
-      save.dc = this.isOwned ? this.actor.system.attributes.spelldc : null;
+      save.dc = this.isOwned ? this.actor.system.abilities?.[this.system.abilityMod]?.dc
+        ?? this.actor.system.attributes.spelldc : null;
     }
 
     // Ability-score based scaling
@@ -516,7 +787,7 @@ export default class ItemRelics extends Item {
     }
 
     // Update labels
-    const abl = CONFIG.ROTV.abilities[save.ability] ?? "";
+    const abl = CONFIG.ROTV.abilities[save.ability]?.label ?? "";
     this.labels.save = game.i18n.format("ROTV.SaveDC", {dc: save.dc || "", ability: abl});
     return save.dc;
   }
@@ -525,173 +796,72 @@ export default class ItemRelics extends Item {
 
   /**
    * Update a label to the Item detailing its total to hit bonus from the following sources:
-   * - item document's innate attack bonus
    * - item's actor's proficiency bonus if applicable
    * - item's actor's global bonuses to the given item type
+   * - item document's innate & magical attack bonuses
    * - item's ammunition if applicable
    * @returns {{rollData: object, parts: string[]}|null}  Data used in the item's Attack roll.
    */
   getAttackToHit() {
     if ( !this.hasAttack ) return null;
+    const flat = this.system.attack.flat;
     const rollData = this.getRollData();
     const parts = [];
+    let ammo;
 
-    // Include the item's innate attack bonus as the initial value and label
-    const ab = this.system.attackBonus;
-    if ( ab ) {
-      parts.push(ab);
-      this.labels.toHit = !/^[+-]/.test(ab) ? `+ ${ab}` : ab;
+    if ( this.isOwned && !flat ) {
+      // Ability score modifier
+      if ( this.system.ability !== "none" ) parts.push("@mod");
+
+      // Add proficiency bonus.
+      if ( this.system.prof?.hasProficiency ) {
+        parts.push("@prof");
+        rollData.prof = this.system.prof.term;
+      }
+
+      // Actor-level global bonus to attack rolls
+      const actorBonus = this.actor.system.bonuses?.[this.system.actionType] || {};
+      if ( actorBonus.attack ) parts.push(actorBonus.attack);
+
+      ammo = this.hasAmmo ? this.actor.items.get(this.system.consume.target) : null;
     }
 
-    // Take no further action for un-owned items
-    if ( !this.isOwned ) return {rollData, parts};
-
-    // Ability score modifier
-    parts.push("@mod");
-
-
-    // Add proficiency bonus if an explicit proficiency flag is present or for non-item features
-    if ( !["weapon", "consumable"].includes(this.type) || this.system.proficient ) {
-      parts.push("@prof");
-      if ( this.system.prof?.hasProficiency ) rollData.prof = this.system.prof.term;
-    }
-
-    // Actor-level global bonus to attack rolls
-    const actorBonus = this.actor.system.bonuses?.[this.system.actionType] || {};
-    if ( actorBonus.attack ) parts.push(actorBonus.attack);
+    // Include the item's innate & magical attack bonuses
+    if ( this.system.attack.bonus ) parts.push(this.system.attack.bonus);
+    if ( this.system.magicalBonus && this.system.magicAvailable && !flat ) parts.push(this.system.magicalBonus);
 
     // One-time bonus provided by consumed ammunition
-    if ( (this.system.consume?.type === "ammo") && this.actor.items ) {
-      const ammoItem = this.actor.items.get(this.system.consume.target);
-      if ( ammoItem ) {
-        const ammoItemQuantity = ammoItem.system.quantity;
-        const ammoCanBeConsumed = ammoItemQuantity && (ammoItemQuantity - (this.system.consume.amount ?? 0) >= 0);
-        const ammoItemAttackBonus = ammoItem.system.attackBonus;
-        const ammoIsTypeConsumable = (ammoItem.type === "consumable") && (ammoItem.system.consumableType === "ammo");
-        if ( ammoCanBeConsumed && ammoItemAttackBonus && ammoIsTypeConsumable ) {
-          parts.push("@ammo");
-          rollData.ammo = ammoItemAttackBonus;
-        }
+    if ( ammo && !flat ) {
+      const ammoItemQuantity = ammo.system.quantity;
+      const ammoCanBeConsumed = ammoItemQuantity && (ammoItemQuantity - (this.system.consume.amount ?? 0) >= 0);
+      const ammoParts = [
+        Roll.replaceFormulaData(ammo.system.attack.bonus, rollData),
+        ammo.system.magicAvailable ? ammo.system.magicalBonus : null
+      ].filter(b => b);
+      const ammoIsTypeConsumable = (ammo.type === "consumable") && (ammo.system.type.value === "ammo");
+      if ( ammoCanBeConsumed && ammoParts.length && ammoIsTypeConsumable ) {
+        parts.push("@ammo");
+        rollData.ammo = ammoParts.join(" + ");
       }
     }
 
     // Condense the resulting attack bonus formula into a simplified label
     const roll = new Roll(parts.join("+"), rollData);
     const formula = simplifyRollFormula(roll.formula) || "0";
+    this.labels.modifier = simplifyRollFormula(roll.formula, { deterministic: true }) || "0";
     this.labels.toHit = !/^[+-]/.test(formula) ? `+ ${formula}` : formula;
-    return {rollData, parts};
+    return { rollData, parts };
   }
 
   /* -------------------------------------------- */
 
   /**
-   * Retrieve an item's critical hit threshold. Uses the smallest value from among the following sources:
-   * - item document
-   * - item document's actor (if it has one)
-   * - item document's ammunition (if it has any)
-   * - the constant '20'
-   * @returns {number|null}  The minimum value that must be rolled to be considered a critical hit.
+   * Render a rich tooltip for this item.
+   * @param {EnrichmentOptions} [enrichmentOptions={}]  Options for text enrichment.
+   * @returns {Promise<{content: string, classes: string[]}>|null}
    */
-  getCriticalThreshold() {
-    const actorFlags = this.actor.flags.rotv || {};
-    if ( !this.hasAttack ) return null;
-    let actorThreshold = null;
-    let itemThreshold = this.system.critical?.threshold ?? Infinity;
-    let ammoThreshold = Infinity;
-    if ( this.type === "weapon" ) actorThreshold = actorFlags.weaponCriticalThreshold;
-    else if ( this.type === "spell" ) actorThreshold = actorFlags.spellCriticalThreshold;
-    if ( this.system.consume?.type === "ammo" ) {
-      ammoThreshold = this.actor.items.get(this.system.consume.target)?.system.critical.threshold ?? Infinity;
-    }
-    return Math.min(itemThreshold, ammoThreshold, actorThreshold ?? 20);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Populates the max uses of an item.
-   * If the item is an owned item and the `max` is not numeric, calculate based on actor data.
-   */
-  prepareMaxUses() {
-    const uses = this.system.uses;
-    if ( !uses?.max ) return;
-    let max = uses.max;
-    if ( this.isOwned && !Number.isNumeric(max) ) {
-      const property = game.i18n.localize("ROTV.UsesMax");
-      try {
-        const rollData = this.getRollData({ deterministic: true });
-        max = Roll.safeEval(this.replaceFormulaData(max, rollData, { property }));
-      } catch(e) {
-        const message = game.i18n.format("ROTV.FormulaMalformedError", { property, name: this.name });
-        this.actor._preparationWarnings.push({ message, link: this.uuid, type: "error" });
-        console.error(message, e);
-        return;
-      }
-    }
-    uses.max = Number(max);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Populate the duration value of an item. If the item is an owned item and the
-   * duration value is not numeric, calculate based on actor data.
-   */
-  prepareDurationValue() {
-    const duration = this.system.duration;
-    if ( !duration?.value ) return;
-    let value = duration.value;
-
-    // If this is an owned item and the value is not numeric, we need to calculate it
-    if ( this.isOwned && !Number.isNumeric(value) ) {
-      const property = game.i18n.localize("ROTV.Duration");
-      try {
-        const rollData = this.getRollData({ deterministic: true });
-        value = Roll.safeEval(this.replaceFormulaData(value, rollData, { property }));
-      } catch(e) {
-        const message = game.i18n.format("ROTV.FormulaMalformedError", { property, name: this.name });
-        this.actor._preparationWarnings.push({ message, link: this.uuid, type: "error" });
-        console.error(message, e);
-        return;
-      }
-    }
-    duration.value = Number(value);
-
-    // Now that duration value is a number, set the label
-    if ( ["inst", "perm"].includes(duration.units) ) duration.value = null;
-    this.labels.duration = [duration.value, CONFIG.ROTV.timePeriods[duration.units]].filterJoin(" ");
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Replace referenced data attributes in the roll formula with values from the provided data.
-   * If the attribute is not found in the provided data, display a warning on the actor.
-   * @param {string} formula           The original formula within which to replace.
-   * @param {object} data              The data object which provides replacements.
-   * @param {object} options
-   * @param {string} options.property  Name of the property to which this formula belongs.
-   * @returns {string}                 Formula with replaced data.
-   */
-  replaceFormulaData(formula, data, { property }) {
-    const dataRgx = new RegExp(/@([a-z.0-9_-]+)/gi);
-    const missingReferences = new Set();
-    formula = formula.replace(dataRgx, (match, term) => {
-      let value = foundry.utils.getProperty(data, term);
-      if ( value == null ) {
-        missingReferences.add(match);
-        return "0";
-      }
-      return String(value).trim();
-    });
-    if ( (missingReferences.size > 0) && this.actor ) {
-      const listFormatter = new Intl.ListFormat(game.i18n.lang, { style: "long", type: "conjunction" });
-      const message = game.i18n.format("ROTV.FormulaMissingReferenceWarn", {
-        property, name: this.name, references: listFormatter.format(missingReferences)
-      });
-      this.actor._preparationWarnings.push({ message, link: this.uuid, type: "warning" });
-    }
-    return formula;
+  richTooltip(enrichmentOptions={}) {
+    return this.system.richTooltip?.() ?? null;
   }
 
   /* -------------------------------------------- */
@@ -700,14 +870,18 @@ export default class ItemRelics extends Item {
    * Configuration data for an item usage being prepared.
    *
    * @typedef {object} ItemUseConfiguration
-   * @property {boolean} createMeasuredTemplate  Trigger a template creation
-   * @property {boolean} consumeQuantity         Should the item's quantity be consumed?
-   * @property {boolean} consumeRecharge         Should a recharge be consumed?
-   * @property {boolean} consumeResource         Should a linked (non-ammo) resource be consumed?
-   * @property {number|string|null} consumeSpellLevel  Specific spell level to consume, or "pact" for pact level.
-   * @property {boolean} consumeSpellSlot        Should any spell slot be consumed?
-   * @property {boolean} consumeUsage            Should limited uses be consumed?
-   * @property {boolean} needsConfiguration      Is user-configuration needed?
+   * @property {boolean} createMeasuredTemplate     Should this item create a template?
+   * @property {boolean} createSummons              Should this item create a summoned creature?
+   * @property {boolean} consumeResource            Should this item consume a (non-ammo) resource?
+   * @property {boolean} consumeSpellSlot           Should this item (a spell) consume a spell slot?
+   * @property {boolean} consumeUsage               Should this item consume its limited uses or recharge?
+   * @property {string} enchantmentProfile          ID of the enchantment to apply.
+   * @property {boolean} promptEnchantment          Does an enchantment profile need to be selected?
+   * @property {string|number|null} slotLevel       The spell slot type or level to consume by default.
+   * @property {string|null} summonsProfile         ID of the summoning profile to use.
+   * @property {number|null} resourceAmount         The amount to consume by default when scaling with consumption.
+   * @property {boolean} beginConcentrating         Should this item initiate concentration?
+   * @property {string|null} endConcentration       The id of the active effect to end concentration on, if any.
    */
 
   /**
@@ -724,27 +898,16 @@ export default class ItemRelics extends Item {
 
   /**
    * Trigger an item usage, optionally creating a chat message with followup actions.
-   * @param {ItemUseOptions} [options]           Options used for configuring item usage.
-   * @returns {Promise<ChatMessage|object|void>} Chat message if options.createMessage is true, message data if it is
-   *                                             false, and nothing if the roll wasn't performed.
-   * @deprecated since 2.0 in favor of `ItemRelics#use`, targeted for removal in 2.4
-   */
-  async roll(options={}) {
-    foundry.utils.logCompatibilityWarning(
-      "ItemRelics#roll has been renamed ItemRelics#use. Support for the old name will be removed in future versions.",
-      { since: "RotV 2.0", until: "RotV 2.4" }
-    );
-    return this.use(undefined, options);
-  }
-
-  /**
-   * Trigger an item usage, optionally creating a chat message with followup actions.
    * @param {ItemUseConfiguration} [config]      Initial configuration data for the usage.
    * @param {ItemUseOptions} [options]           Options used for configuring item usage.
    * @returns {Promise<ChatMessage|object|void>} Chat message if options.createMessage is true, message data if it is
    *                                             false, and nothing if the roll wasn't performed.
    */
   async use(config={}, options={}) {
+    if ( !this.isOwner ) {
+      ui.notifications.error("ROTV.DocumentUseWarn", { localize: true });
+      return null;
+    }
     let item = this;
     const is = item.system;
     const as = item.actor.system;
@@ -756,93 +919,80 @@ export default class ItemRelics extends Item {
       "flags.rotv.use": {type: this.type, itemId: this.id, itemUuid: this.uuid}
     }, options);
 
-    // Reference aspects of the item data necessary for usage
-    const resource = is.consume || {};        // Resource consumption
-    const isSpell = item.type === "spell";    // Does the item require a spell slot?
-    const requireSpellSlot = isSpell && (is.level > 0) && CONFIG.ROTV.spellUpcastModes.includes(is.preparation.mode);
-
     // Define follow-up actions resulting from the item usage
-    config = foundry.utils.mergeObject({
-      createMeasuredTemplate: item.hasAreaTarget,
-      consumeQuantity: is.uses?.autoDestroy ?? false,
-      consumeRecharge: !!is.recharge?.value,
-      consumeResource: !!resource.target && (!item.hasAttack || (resource.type !== "ammo")),
-      consumeSpellLevel: requireSpellSlot ? is.preparation.mode === "pact" ? "pact" : is.level : null,
-      consumeSpellSlot: requireSpellSlot,
-      consumeUsage: !!is.uses?.per && (is.uses?.max > 0)
-    }, config);
-
-    // Display a configuration dialog to customize the usage
-    if ( config.needsConfiguration === undefined ) config.needsConfiguration = config.createMeasuredTemplate
-      || config.consumeRecharge || config.consumeResource || config.consumeSpellSlot || config.consumeUsage;
+    if ( config.consumeSlotLevel ) {
+      console.warn("You are passing 'consumeSlotLevel' to the ItemUseConfiguration object, which now expects a key as 'slotLevel'.");
+      config.slotLevel = config.consumeSlotLevel;
+      delete config.consumeSlotLevel;
+    }
+    config = foundry.utils.mergeObject(this._getUsageConfig(), config);
 
     /**
      * A hook event that fires before an item usage is configured.
      * @function rotv.preUseItem
      * @memberof hookEvents
-     * @param {ItemRelics} item                  Item being used.
+     * @param {ItemRotV} item                  Item being used.
      * @param {ItemUseConfiguration} config  Configuration data for the item usage being prepared.
      * @param {ItemUseOptions} options       Additional options used for configuring item usage.
      * @returns {boolean}                    Explicitly return `false` to prevent item from being used.
      */
     if ( Hooks.call("rotv.preUseItem", item, config, options) === false ) return;
 
+    // Are any default values necessitating a prompt?
+    const needsConfiguration = Object.values(config).includes(true);
+
     // Display configuration dialog
-    if ( (options.configureDialog !== false) && config.needsConfiguration ) {
-      const configuration = await AbilityUseDialog.create(item);
+    if ( (options.configureDialog !== false) && needsConfiguration ) {
+      const configuration = await AbilityUseDialog.create(item, config);
       if ( !configuration ) return;
       foundry.utils.mergeObject(config, configuration);
     }
 
-    // Handle spell upcasting
-    if ( isSpell && (config.consumeSpellSlot || config.consumeSpellLevel) ) {
-      const upcastLevel = config.consumeSpellLevel === "pact" ? as.spells.pact.level
-        : parseInt(config.consumeSpellLevel);
-      if ( upcastLevel && (upcastLevel !== is.level) ) {
-        item = item.clone({"system.level": upcastLevel}, {keepId: true});
+    // Store selected enchantment profile in flag
+    if ( config.enchantmentProfile ) {
+      foundry.utils.setProperty(options.flags, "rotv.use.enchantmentProfile", config.enchantmentProfile);
+    }
+
+    // Handle upcasting
+    if ( item.type === "spell" ) {
+      let level = null;
+      if ( config.resourceAmount in as.spells ) config.slotLevel = config.resourceAmount;
+      if ( config.slotLevel ) {
+        // A spell slot was consumed.
+        if ( Number.isInteger(config.slotLevel) ) level = config.slotLevel;
+        else if ( config.slotLevel in as.spells ) {
+          if ( /^spell([0-9]+)$/.test(config.slotLevel) ) level = parseInt(config.slotLevel.replace("spell", ""));
+          else level = as.spells[config.slotLevel].level;
+        }
+      } else if ( config.resourceAmount ) {
+        // A quantity of the resource was consumed.
+        const diff = config.resourceAmount - (this.system.consume.amount || 1);
+        level = is.level + diff;
+      }
+      if ( level && (level !== is.level) ) {
+        item = item.clone({"system.level": level}, {keepId: true});
         item.prepareData();
         item.prepareFinalAttributes();
       }
     }
-    if ( isSpell ) foundry.utils.mergeObject(options.flags, {"rotv.use.spellLevel": item.system.level});
+    if ( item.type === "spell" ) foundry.utils.mergeObject(options.flags, {"rotv.use.spellLevel": item.system.level});
 
-    /**
-     * A hook event that fires before an item's resource consumption has been calculated.
-     * @function rotv.preItemUsageConsumption
-     * @memberof hookEvents
-     * @param {ItemRelics} item                  Item being used.
-     * @param {ItemUseConfiguration} config  Configuration data for the item usage being prepared.
-     * @param {ItemUseOptions} options       Additional options used for configuring item usage.
-     * @returns {boolean}                    Explicitly return `false` to prevent item from being used.
-     */
-    if ( Hooks.call("rotv.preItemUsageConsumption", item, config, options) === false ) return;
+    // Calculate and consume item consumption
+    if ( await this.consume(item, config, options) === false ) return;
 
-    // Determine whether the item can be used by testing for resource consumption
-    const usage = item._getUsageUpdates(config);
-    if ( !usage ) return;
-
-    /**
-     * A hook event that fires after an item's resource consumption has been calculated but before any
-     * changes have been made.
-     * @function rotv.itemUsageConsumption
-     * @memberof hookEvents
-     * @param {ItemRelics} item                     Item being used.
-     * @param {ItemUseConfiguration} config     Configuration data for the item usage being prepared.
-     * @param {ItemUseOptions} options          Additional options used for configuring item usage.
-     * @param {object} usage
-     * @param {object} usage.actorUpdates       Updates that will be applied to the actor.
-     * @param {object} usage.itemUpdates        Updates that will be applied to the item being used.
-     * @param {object[]} usage.resourceUpdates  Updates that will be applied to other items on the actor.
-     * @returns {boolean}                       Explicitly return `false` to prevent item from being used.
-     */
-    if ( Hooks.call("rotv.itemUsageConsumption", item, config, options, usage) === false ) return;
-
-    // Commit pending data updates
-    const { actorUpdates, itemUpdates, resourceUpdates } = usage;
-    if ( !foundry.utils.isEmpty(itemUpdates) ) await item.update(itemUpdates);
-    if ( config.consumeQuantity && (item.system.quantity === 0) ) await item.delete();
-    if ( !foundry.utils.isEmpty(actorUpdates) ) await this.actor.update(actorUpdates);
-    if ( resourceUpdates.length ) await this.actor.updateEmbeddedDocuments("Item", resourceUpdates);
+    // Initiate or end concentration.
+    const effects = [];
+    if ( config.beginConcentrating ) {
+      const effect = await item.actor.beginConcentrating(item);
+      if ( effect ) {
+        effects.push(effect);
+        foundry.utils.setProperty(options.flags, "rotv.use.concentrationId", effect.id);
+      }
+      if ( config.endConcentration ) {
+        const deleted = await item.actor.endConcentration(config.endConcentration);
+        effects.push(...deleted);
+      }
+    }
 
     // Prepare card data & display it if options.createMessage is true
     const cardData = await item.displayCard(options);
@@ -852,21 +1002,160 @@ export default class ItemRelics extends Item {
     if ( config.createMeasuredTemplate ) {
       try {
         templates = await (rotv.canvas.AbilityTemplate.fromItem(item))?.drawPreview();
-      } catch(err) {}
+      } catch(err) {
+        Hooks.onError("ItemRotV#use", err, {
+          msg: game.i18n.localize("ROTV.PlaceTemplateError"),
+          log: "error",
+          notify: "error"
+        });
+      }
+    }
+
+    // Initiate summons creation
+    let summoned;
+    if ( config.createSummons ) {
+      try {
+        summoned = await item.system.summons.summon(config.summonsProfile, config.summonsOptions);
+      } catch(err) {
+        Hooks.onError("ItemRotV#use", err, { log: "error", notify: "error" });
+      }
     }
 
     /**
      * A hook event that fires when an item is used, after the measured template has been created if one is needed.
      * @function rotv.useItem
      * @memberof hookEvents
-     * @param {ItemRelics} item                                Item being used.
+     * @param {ItemRotV} item                                Item being used.
      * @param {ItemUseConfiguration} config                Configuration data for the roll.
      * @param {ItemUseOptions} options                     Additional options for configuring item usage.
      * @param {MeasuredTemplateDocument[]|null} templates  The measured templates if they were created.
+     * @param {ActiveEffectRotV[]} effects                   The active effects that were created or deleted.
+     * @param {TokenDocumeetRotV[]|null} summoned            Summoned tokens if they were created.
      */
-    Hooks.callAll("rotv.useItem", item, config, options, templates ?? null);
+    Hooks.callAll("rotv.useItem", item, config, options, templates ?? null, effects, summoned ?? null);
 
     return cardData;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Handle item's consumption.
+   * @param {ItemRotV} item  Item or clone to use when calculating updates.
+   * @param {ItemUseConfiguration} config  Configuration data for the item usage being prepared.
+   * @param {ItemUseOptions} options       Additional options used for configuring item usage.
+   * @returns {false|void}                 Returns `false` if any further usage should be canceled.
+   */
+  async consume(item, config, options) {
+    /**
+     * A hook event that fires before an item's resource consumption has been calculated.
+     * @function rotv.preItemUsageConsumption
+     * @memberof hookEvents
+     * @param {ItemRotV} item                  Item being used.
+     * @param {ItemUseConfiguration} config  Configuration data for the item usage being prepared.
+     * @param {ItemUseOptions} options       Additional options used for configuring item usage.
+     * @returns {boolean}                    Explicitly return `false` to prevent item from being used.
+     */
+    if ( Hooks.call("rotv.preItemUsageConsumption", item, config, options) === false ) return false;
+
+    // Determine whether the item can be used by testing the chosen values of the config.
+    const usage = item._getUsageUpdates(config);
+    if ( !usage ) return false;
+
+    options.flags ??= {};
+    if ( config.consumeUsage ) foundry.utils.setProperty(options.flags, "rotv.use.consumedUsage", true);
+    if ( config.consumeResource ) foundry.utils.setProperty(options.flags, "rotv.use.consumedResource", true);
+    if ( config.consumeSpellSlot ) foundry.utils.setProperty(options.flags, "rotv.use.consumedSpellSlot", true);
+
+    /**
+     * A hook event that fires after an item's resource consumption has been calculated but before any
+     * changes have been made.
+     * @function rotv.itemUsageConsumption
+     * @memberof hookEvents
+     * @param {ItemRotV} item                     Item being used.
+     * @param {ItemUseConfiguration} config     Configuration data for the item usage being prepared.
+     * @param {ItemUseOptions} options          Additional options used for configuring item usage.
+     * @param {object} usage
+     * @param {object} usage.actorUpdates       Updates that will be applied to the actor.
+     * @param {object} usage.itemUpdates        Updates that will be applied to the item being used.
+     * @param {object[]} usage.resourceUpdates  Updates that will be applied to other items on the actor.
+     * @param {Set<string>} usage.deleteIds     Item ids for those which consumption will delete.
+     * @returns {boolean}                       Explicitly return `false` to prevent item from being used.
+     */
+    if ( Hooks.call("rotv.itemUsageConsumption", item, config, options, usage) === false ) return false;
+
+    // Commit pending data updates
+    const { actorUpdates, itemUpdates, resourceUpdates, deleteIds } = usage;
+    if ( !foundry.utils.isEmpty(itemUpdates) ) await item.update(itemUpdates);
+    if ( !foundry.utils.isEmpty(deleteIds) ) await this.actor.deleteEmbeddedDocuments("Item", [...deleteIds]);
+    if ( !foundry.utils.isEmpty(actorUpdates) ) await this.actor.update(actorUpdates);
+    if ( !foundry.utils.isEmpty(resourceUpdates) ) await this.actor.updateEmbeddedDocuments("Item", resourceUpdates);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Prepare an object of possible and default values for item usage. A value that is `null` is ignored entirely.
+   * @returns {ItemUseConfiguration}  Configuration data for the roll.
+   */
+  _getUsageConfig() {
+    const { consume, uses, summons, target, level, preparation } = this.system;
+
+    const config = {
+      createMeasuredTemplate: null,
+      createSummons: null,
+      consumeResource: null,
+      consumeSpellSlot: null,
+      consumeUsage: null,
+      enchantmentProfile: null,
+      promptEnchantment: null,
+      slotLevel: null,
+      summonsProfile: null,
+      resourceAmount: null,
+      beginConcentrating: null,
+      endConcentration: null
+    };
+
+    const scaling = this.usageScaling;
+    if ( scaling === "slot" ) {
+      const spells = this.actor.system.spells ?? {};
+      config.consumeSpellSlot = true;
+      config.slotLevel = (preparation?.mode in spells) ? preparation.mode : `spell${level}`;
+    } else if ( scaling === "resource" ) {
+      config.resourceAmount = consume.amount || 1;
+    }
+    if ( this.hasLimitedUses ) config.consumeUsage = uses.prompt;
+    if ( this.hasResource ) {
+      config.consumeResource = true;
+      // Do not suggest consuming your own uses if also consuming them through resources.
+      if ( consume.target === this.id ) config.consumeUsage = null;
+    }
+    if ( game.user.can("TEMPLATE_CREATE") && this.hasAreaTarget && canvas.scene ) {
+      config.createMeasuredTemplate = target.prompt;
+    }
+    if ( this.system.isEnchantment ) {
+      const availableEnchantments = EnchantmentData.availableEnchantments(this);
+      config.promptEnchantment = availableEnchantments.length > 1;
+      config.enchantmentProfile = availableEnchantments[0]?.id;
+    }
+    if ( this.system.hasSummoning && this.system.summons.canSummon && canvas.scene ) {
+      config.createSummons = summons.prompt;
+      config.summonsProfile = this.system.summons.profiles[0]._id;
+    }
+    if ( this.requiresConcentration && !game.settings.get("rotv", "disableConcentration") ) {
+      config.beginConcentrating = true;
+      const { effects } = this.actor.concentration;
+      const limit = this.actor.system.attributes?.concentration?.limit ?? 0;
+      if ( limit && (limit <= effects.size) ) {
+        const id = effects.find(e => {
+          const data = e.flags.rotv?.itemData ?? {};
+          return (data === this.id) || (data._id === this.id);
+        })?.id ?? effects.first()?.id ?? null;
+        config.endConcentration = id;
+      }
+    }
+
+    return config;
   }
 
   /* -------------------------------------------- */
@@ -878,86 +1167,125 @@ export default class ItemRelics extends Item {
    * @returns {object|boolean}             A set of data changes to apply when the item is used, or false.
    * @protected
    */
-  _getUsageUpdates({
-    consumeQuantity, consumeRecharge, consumeResource, consumeSpellSlot,
-    consumeSpellLevel, consumeUsage}) {
+  _getUsageUpdates(config) {
     const actorUpdates = {};
     const itemUpdates = {};
     const resourceUpdates = [];
+    const deleteIds = new Set();
 
-    // Consume Recharge
-    if ( consumeRecharge ) {
-      const recharge = this.system.recharge || {};
-      if ( recharge.charged === false ) {
-        ui.notifications.warn(game.i18n.format("ROTV.ItemNoUses", {name: this.name}));
-        return false;
-      }
-      itemUpdates["system.recharge.charged"] = false;
+    // Consume own limited uses or recharge
+    if ( config.consumeUsage ) {
+      const canConsume = this._handleConsumeUses(itemUpdates, actorUpdates, resourceUpdates, deleteIds);
+      if ( canConsume === false ) return false;
     }
 
     // Consume Limited Resource
-    if ( consumeResource ) {
-      const canConsume = this._handleConsumeResource(itemUpdates, actorUpdates, resourceUpdates);
+    if ( config.consumeResource ) {
+      const canConsume = this._handleConsumeResource(config, itemUpdates, actorUpdates, resourceUpdates, deleteIds);
       if ( canConsume === false ) return false;
     }
 
     // Consume Spell Slots
-    if ( consumeSpellSlot && consumeSpellLevel ) {
-      if ( Number.isNumeric(consumeSpellLevel) ) consumeSpellLevel = `spell${consumeSpellLevel}`;
-      const level = this.actor?.system.spells[consumeSpellLevel];
+    if ( config.consumeSpellSlot ) {
+      const spellData = this.actor?.system.spells ?? {};
+      const level = spellData[config.slotLevel];
       const spells = Number(level?.value ?? 0);
       if ( spells === 0 ) {
-        const labelKey = consumeSpellLevel === "pact" ? "ROTV.SpellProgPact" : `ROTV.SpellLevel${this.system.level}`;
+        const isLeveled = /spell\d+/.test(config.slotLevel || "");
+        const labelKey = isLeveled ? `ROTV.SpellLevel${this.system.level}`: `ROTV.SpellProg${config.slotLevel?.capitalize()}`;
         const label = game.i18n.localize(labelKey);
         ui.notifications.warn(game.i18n.format("ROTV.SpellCastNoSlots", {name: this.name, level: label}));
         return false;
       }
-      actorUpdates[`system.spells.${consumeSpellLevel}.value`] = Math.max(spells - 1, 0);
+      actorUpdates[`system.spells.${config.slotLevel}.value`] = Math.max(spells - 1, 0);
     }
 
-    // Consume Limited Usage
-    if ( consumeUsage ) {
-      const uses = this.system.uses || {};
-      const available = Number(uses.value ?? 0);
-      let used = false;
-      const remaining = Math.max(available - 1, 0);
-      if ( available >= 1 ) {
-        used = true;
-        itemUpdates["system.uses.value"] = remaining;
-      }
+    // Determine whether the item can be used by testing for available concentration.
+    if ( config.beginConcentrating ) {
+      const { effects } = this.actor.concentration;
 
-      // Reduce quantity if not reducing usages or if usages hit zero, and we are set to consumeQuantity
-      if ( consumeQuantity && (!used || (remaining === 0)) ) {
-        const q = Number(this.system.quantity ?? 1);
-        if ( q >= 1 ) {
-          used = true;
-          itemUpdates["system.quantity"] = Math.max(q - 1, 0);
-          itemUpdates["system.uses.value"] = uses.max ?? 1;
+      // Case 1: Replacing.
+      if ( config.endConcentration ) {
+        const replacedEffect = effects.find(i => i.id === config.endConcentration);
+        if ( !replacedEffect ) {
+          ui.notifications.warn("ROTV.ConcentratingMissingItem", {localize: true});
+          return false;
         }
       }
 
-      // If the item was not used, return a warning
-      if ( !used ) {
-        ui.notifications.warn(game.i18n.format("ROTV.ItemNoUses", {name: this.name}));
+      // Case 2: Starting concentration, but at limit.
+      else if ( effects.size >= this.actor.system.attributes.concentration.limit ) {
+        ui.notifications.warn("ROTV.ConcentratingLimited", {localize: true});
         return false;
       }
     }
 
     // Return the configured usage
-    return {itemUpdates, actorUpdates, resourceUpdates};
+    return {itemUpdates, actorUpdates, resourceUpdates, deleteIds};
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Handle update actions required when consuming an item's uses or recharge
+   * @param {object} itemUpdates        An object of data updates applied to this item
+   * @param {object} actorUpdates       An object of data updates applied to the item owner (Actor)
+   * @param {object[]} resourceUpdates  An array of updates to apply to other items owned by the actor
+   * @param {Set<string>} deleteIds     A set of item ids that will be deleted off the actor
+   * @returns {boolean|void}            Return false to block further progress, or return nothing to continue
+   * @protected
+   */
+  _handleConsumeUses(itemUpdates, actorUpdates, resourceUpdates, deleteIds) {
+    const recharge = this.system.recharge || {};
+    const uses = this.system.uses || {};
+    const quantity = this.system.quantity ?? 1;
+    let used = false;
+
+    // Consume recharge.
+    if ( recharge.value ) {
+      if ( recharge.charged ) {
+        itemUpdates["system.recharge.charged"] = false;
+        used = true;
+      }
+    }
+
+    // Consume uses (or quantity).
+    else if ( uses.max && uses.per && (uses.value > 0) ) {
+      const remaining = Math.max(uses.value - 1, 0);
+
+      if ( remaining > 0 || (!remaining && !uses.autoDestroy) ) {
+        used = true;
+        itemUpdates["system.uses.value"] = remaining;
+      } else if ( quantity >= 2 ) {
+        used = true;
+        itemUpdates["system.quantity"] = quantity - 1;
+        itemUpdates["system.uses.value"] = uses.max;
+      } else if ( quantity === 1 ) {
+        used = true;
+        deleteIds.add(this.id);
+      }
+    }
+
+    // If the item was not used, return a warning
+    if ( !used ) {
+      ui.notifications.warn(game.i18n.format("ROTV.ItemNoUses", {name: this.name}));
+      return false;
+    }
   }
 
   /* -------------------------------------------- */
 
   /**
    * Handle update actions required when consuming an external resource
-   * @param {object} itemUpdates        An object of data updates applied to this item
-   * @param {object} actorUpdates       An object of data updates applied to the item owner (Actor)
-   * @param {object[]} resourceUpdates  An array of updates to apply to other items owned by the actor
-   * @returns {boolean|void}            Return false to block further progress, or return nothing to continue
+   * @param {ItemUseConfiguration} usageConfig  Configuration data for an item usage being prepared.
+   * @param {object} itemUpdates                An object of data updates applied to this item
+   * @param {object} actorUpdates               An object of data updates applied to the item owner (Actor)
+   * @param {object[]} resourceUpdates          An array of updates to apply to other items owned by the actor
+   * @param {Set<string>} deleteIds             A set of item ids that will be deleted off the actor
+   * @returns {boolean|void}                    Return false to block further progress, or return nothing to continue
    * @protected
    */
-  _handleConsumeResource(itemUpdates, actorUpdates, resourceUpdates) {
+  _handleConsumeResource(usageConfig, itemUpdates, actorUpdates, resourceUpdates, deleteIds) {
     const consume = this.system.consume || {};
     if ( !consume.type ) return;
 
@@ -968,13 +1296,17 @@ export default class ItemRelics extends Item {
       return false;
     }
 
+    const as = this.actor.system;
     // Identify the consumed resource and its current quantity
     let resource = null;
-    let amount = Number(consume.amount ?? 1);
+    let amount = usageConfig.resourceAmount ? usageConfig.resourceAmount : (consume.amount || 0);
+    if ( as.spells && (amount in as.spells) ) amount = consume.amount || 0;
     let quantity = 0;
     switch ( consume.type ) {
       case "attribute":
-        resource = foundry.utils.getProperty(this.actor.system, consume.target);
+        const amt = usageConfig.resourceAmount;
+        const target = as.spells && (amt in as.spells) ? `spells.${amt}.value` : consume.target;
+        resource = foundry.utils.getProperty(as, target);
         quantity = resource || 0;
         break;
       case "ammo":
@@ -1015,7 +1347,9 @@ export default class ItemRelics extends Item {
     // Define updates to provided data objects
     switch ( consume.type ) {
       case "attribute":
-        actorUpdates[`system.${consume.target}`] = remaining;
+        const amt = usageConfig.resourceAmount;
+        const target = (amt in as.spells) ? `spells.${amt}.value` : consume.target;
+        actorUpdates[`system.${target}`] = remaining;
         break;
       case "ammo":
       case "material":
@@ -1027,7 +1361,7 @@ export default class ItemRelics extends Item {
           if ( consume.target === "largest" ) sort *= -1;
           return sort;
         });
-        let toConsume = consume.amount;
+        let toConsume = amount;
         for ( const cls of resource ) {
           const available = (toConsume > 0 ? cls.system.levels : 0) - cls.system.hitDiceUsed;
           const delta = toConsume > 0 ? Math.min(toConsume, available) : Math.max(toConsume, available);
@@ -1042,6 +1376,16 @@ export default class ItemRelics extends Item {
         const uses = resource.system.uses || {};
         const recharge = resource.system.recharge || {};
         const update = {_id: consume.target};
+        // Reduce quantity of, or delete, the external resource.
+        if ( uses.per && uses.max && uses.autoDestroy && (remaining === 0) ) {
+          update["system.quantity"] = Math.max(resource.system.quantity - 1, 0);
+          update["system.uses.value"] = uses.max ?? 1;
+          if ( update["system.quantity"] === 0 ) deleteIds.add(resource.id);
+          else resourceUpdates.push(update);
+          break;
+        }
+
+        // Regular consumption.
         if ( uses.per && uses.max ) update["system.uses.value"] = remaining;
         else if ( recharge.value ) update["system.recharge.charged"] = false;
         resourceUpdates.push(update);
@@ -1061,11 +1405,19 @@ export default class ItemRelics extends Item {
 
     // Render the chat card template
     const token = this.actor.token;
+    const consumeUsage = this.hasLimitedUses && !options.flags?.rotv?.use?.consumedUsage;
+    const consumeResource = this.hasResource && !options.flags?.rotv?.use?.consumedResource;
+    const hasButtons = this.hasAttack || this.hasDamage || this.isVersatile || this.hasSave || this.system.formula
+      || this.hasAreaTarget || (this.type === "tool") || this.hasAbilityCheck || this.system.hasSummoning
+      || consumeUsage || consumeResource;
     const templateData = {
+      hasButtons,
       actor: this.actor,
+      config: CONFIG.ROTV,
       tokenId: token?.uuid || null,
       item: this,
-      data: await this.getChatData(),
+      effects: this.effects.filter(e => (e.getFlag("rotv", "type") !== "enchantment") && !e.getFlag("rotv", "rider")),
+      data: await this.system.getCardData(),
       labels: this.labels,
       hasAttack: this.hasAttack,
       isHealing: this.isHealing,
@@ -1075,16 +1427,16 @@ export default class ItemRelics extends Item {
       hasSave: this.hasSave,
       hasAreaTarget: this.hasAreaTarget,
       isTool: this.type === "tool",
-      hasAbilityCheck: this.hasAbilityCheck
+      hasAbilityCheck: this.hasAbilityCheck,
+      consumeUsage,
+      consumeResource
     };
     const html = await renderTemplate("systems/rotv/templates/chat/item-card.hbs", templateData);
 
     // Create the ChatMessage data object
     const chatData = {
       user: game.user.id,
-      type: CONST.CHAT_MESSAGE_TYPES.OTHER,
       content: html,
-      flavor: this.system.chatFlavor || this.name,
       speaker: ChatMessage.getSpeaker({actor: this.actor, token}),
       flags: {"core.canPopout": true}
     };
@@ -1101,7 +1453,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires before an item chat card is created.
      * @function rotv.preDisplayCard
      * @memberof hookEvents
-     * @param {ItemRelics} item             Item for which the chat card is being displayed.
+     * @param {ItemRotV} item             Item for which the chat card is being displayed.
      * @param {object} chatData         Data used to create the chat message.
      * @param {ItemUseOptions} options  Options which configure the display of the item chat card.
      */
@@ -1117,7 +1469,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires after an item chat card is created.
      * @function rotv.displayCard
      * @memberof hookEvents
-     * @param {ItemRelics} item              Item for which the chat card is being displayed.
+     * @param {ItemRotV} item              Item for which the chat card is being displayed.
      * @param {ChatMessage|object} card  The created ChatMessage instance or ChatMessageData depending on whether
      *                                   options.createMessage was set to `true`.
      */
@@ -1137,170 +1489,22 @@ export default class ItemRelics extends Item {
    */
   async getChatData(htmlOptions={}) {
     const data = this.toObject().system;
-    const labels = this.labels;
 
     // Rich text description
     data.description.value = await TextEditor.enrichHTML(data.description.value, {
-      async: true,
       relativeTo: this,
       rollData: this.getRollData(),
       ...htmlOptions
     });
 
-    // Item type specific properties
-    const props = [];
-    switch ( this.type ) {
-      case "consumable":
-        this._consumableChatData(data, labels, props); break;
-      case "equipment":
-        this._equipmentChatData(data, labels, props); break;
-      case "feat":
-        this._featChatData(data, labels, props); break;
-      case "loot":
-        this._lootChatData(data, labels, props); break;
-      case "spell":
-        this._spellChatData(data, labels, props); break;
-      case "tool":
-        this._toolChatData(data, labels, props); break;
-      case "weapon":
-        this._weaponChatData(data, labels, props); break;
-    }
+    // Type specific properties
+    data.properties = [
+      ...this.system.chatProperties ?? [],
+      ...this.system.equippableItemCardProperties ?? [],
+      ...this.system.activatedEffectCardProperties ?? []
+    ].filter(p => p);
 
-    // Equipment properties
-    if ( data.hasOwnProperty("equipped") && !["loot", "tool"].includes(this.type) ) {
-      if ( data.attunement === CONFIG.ROTV.attunementTypes.REQUIRED ) {
-        props.push(CONFIG.ROTV.attunements[CONFIG.ROTV.attunementTypes.REQUIRED]);
-      }
-      props.push(
-        game.i18n.localize(data.equipped ? "ROTV.Equipped" : "ROTV.Unequipped"),
-        game.i18n.localize(data.proficient ? "ROTV.Proficient" : "ROTV.NotProficient")
-      );
-    }
-
-    // Ability activation properties
-    if ( data.hasOwnProperty("activation") ) {
-      props.push(
-        labels.activation + (data.activation?.condition ? ` (${data.activation.condition})` : ""),
-        labels.target,
-        labels.range,
-        labels.duration
-      );
-    }
-
-    // Filter properties and return
-    data.properties = props.filter(p => !!p);
     return data;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare chat card data for consumable type items.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _consumableChatData(data, labels, props) {
-    props.push(
-      CONFIG.ROTV.consumableTypes[data.consumableType],
-      `${data.uses.value}/${data.uses.max} ${game.i18n.localize("ROTV.Charges")}`
-    );
-    data.hasCharges = data.uses.value >= 0;
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare chat card data for equipment type items.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _equipmentChatData(data, labels, props) {
-    props.push(
-      CONFIG.ROTV.equipmentTypes[data.armor.type],
-      labels.armor || null,
-      data.stealth ? game.i18n.localize("ROTV.StealthDisadvantage") : null
-    );
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare chat card data for items of the Feat type.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _featChatData(data, labels, props) {
-    props.push(data.requirements);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare chat card data for loot type items.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _lootChatData(data, labels, props) {
-    props.push(
-      game.i18n.localize("ITEM.TypeLoot"),
-      data.weight ? `${data.weight} ${game.i18n.localize("ROTV.AbbreviationLbs")}` : null
-    );
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Render a chat card for Spell type data.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _spellChatData(data, labels, props) {
-    props.push(
-      labels.level,
-      labels.components.vsm + (labels.materials ? ` (${labels.materials})` : ""),
-      ...labels.components.tags
-    );
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare chat card data for tool type items.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _toolChatData(data, labels, props) {
-    props.push(
-      CONFIG.ROTV.abilities[data.ability] || null,
-      CONFIG.ROTV.proficiencyLevels[data.proficient || 0]
-    );
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Prepare chat card data for weapon type items.
-   * @param {object} data     Copy of item data being use to display the chat message.
-   * @param {object} labels   Specially prepared item labels.
-   * @param {string[]} props  Existing list of properties to be displayed. *Will be mutated.*
-   * @private
-   */
-  _weaponChatData(data, labels, props) {
-    props.push(
-      CONFIG.ROTV.weaponTypes[data.weaponType]
-    );
   }
 
   /* -------------------------------------------- */
@@ -1324,19 +1528,14 @@ export default class ItemRelics extends Item {
     if ( options.spellLevel ) rollData.item.level = options.spellLevel;
 
     // Handle ammunition consumption
-    delete this._ammo;
-    let ammo = null;
     let ammoUpdate = [];
     const consume = this.system.consume;
-    if ( consume?.type === "ammo" ) {
-      ammo = this.actor.items.get(consume.target);
-      if ( ammo?.system ) {
-        const q = ammo.system.quantity;
-        const consumeAmount = consume.amount ?? 0;
-        if ( q && (q - consumeAmount >= 0) ) {
-          this._ammo = ammo;
-          title += ` [${ammo.name}]`;
-        }
+    const ammo = this.hasAmmo ? this.actor.items.get(consume.target) : null;
+    if ( ammo ) {
+      const q = ammo.system.quantity;
+      const consumeAmount = consume.amount ?? 0;
+      if ( q && (q - consumeAmount >= 0) ) {
+        title += ` [${ammo.name}]`;
       }
 
       // Get pending ammunition update
@@ -1349,14 +1548,18 @@ export default class ItemRelics extends Item {
     const elvenAccuracy = (flags.elvenAccuracy
       && CONFIG.ROTV.characterFlags.elvenAccuracy.abilities.includes(this.abilityMod)) || undefined;
 
+    // Targets
+    const targets = this.constructor._formatAttackTargets();
+
     // Compose roll options
     const rollConfig = foundry.utils.mergeObject({
       actor: this.actor,
       data: rollData,
-      critical: this.getCriticalThreshold(),
+      critical: this.criticalThreshold,
       title,
       flavor: title,
       elvenAccuracy,
+      targetValue: targets.length === 1 ? targets[0].ac : undefined,
       halflingLucky: flags.halflingLucky,
       dialogOptions: {
         width: 400,
@@ -1364,7 +1567,10 @@ export default class ItemRelics extends Item {
         left: window.innerWidth - 710
       },
       messageData: {
-        "flags.rotv.roll": {type: "attack", itemId: this.id, itemUuid: this.uuid},
+        "flags.rotv": {
+          targets,
+          roll: { type: "attack", itemId: this.id, itemUuid: this.uuid }
+        },
         speaker: ChatMessage.getSpeaker({actor: this.actor})
       }
     }, options);
@@ -1374,7 +1580,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires before an attack is rolled for an Item.
      * @function rotv.preRollAttack
      * @memberof hookEvents
-     * @param {ItemRelics} item                  Item for which the roll is being performed.
+     * @param {ItemRotV} item                  Item for which the roll is being performed.
      * @param {D20RollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                    Explicitly return false to prevent the roll from being performed.
      */
@@ -1387,7 +1593,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires after an attack has been rolled for an Item.
      * @function rotv.rollAttack
      * @memberof hookEvents
-     * @param {ItemRelics} item          Item for which the roll was performed.
+     * @param {ItemRotV} item          Item for which the roll was performed.
      * @param {D20Roll} roll         The resulting roll.
      * @param {object[]} ammoUpdate  Updates that will be applied to ammo Items as a result of this attack.
      */
@@ -1401,6 +1607,32 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
+   * @typedef {object} TargetDescriptorRotV
+   * @property {string} uuid  The UUID of the target.
+   * @property {string} img   The target's image.
+   * @property {string} name  The target's name.
+   * @property {number} ac    The target's armor class.
+   */
+
+  /**
+   * Extract salient information about targeted Actors.
+   * @returns {TargetDescriptorRotV[]}
+   * @protected
+   */
+  static _formatAttackTargets() {
+    const targets = new Map();
+    for ( const token of game.user.targets ) {
+      const { name } = token;
+      const { img, system, uuid } = token.actor ?? {};
+      const ac = system?.attributes?.ac ?? {};
+      if ( uuid && Number.isNumeric(ac.value) ) targets.set(uuid, { name, img, uuid, ac: ac.value });
+    }
+    return Array.from(targets.values());
+  }
+
+  /* -------------------------------------------- */
+
+  /**
    * Place a damage roll using an item (weapon, feat, spell, or equipment)
    * Rely upon the damageRoll logic for the core implementation.
    * @param {object} [config]
@@ -1409,19 +1641,26 @@ export default class ItemRelics extends Item {
    * @param {number} [config.spellLevel]   If the item is a spell, override the level for damage scaling
    * @param {boolean} [config.versatile]   If the item is a weapon, roll damage using the versatile formula
    * @param {DamageRollConfiguration} [config.options]  Additional options passed to the damageRoll function
-   * @returns {Promise<DamageRoll>}        A Promise which resolves to the created Roll instance, or null if the action
+   * @returns {Promise<DamageRoll[]>}      A Promise which resolves to the created Roll instances, or null if the action
    *                                       cannot be performed.
    */
   async rollDamage({critical, event=null, spellLevel=null, versatile=false, options={}}={}) {
     if ( !this.hasDamage ) throw new Error("You may not make a Damage Roll with this Item.");
-    const messageData = {
-      "flags.rotv.roll": {type: "damage", itemId: this.id, itemUuid: this.uuid},
-      speaker: ChatMessage.getSpeaker({actor: this.actor})
-    };
+
+    // Fetch level from tags if not specified
+    let originalLevel = this.system.level;
+    let scaling = this.system.scaling;
+    const levelingFlag = this.getFlag("rotv", "spellLevel");
+    if ( !spellLevel && levelingFlag ) {
+      spellLevel = levelingFlag.value;
+      originalLevel = levelingFlag.base;
+      scaling = levelingFlag.scaling;
+    }
 
     // Get roll data
     const dmg = this.system.damage;
-    const parts = dmg.parts.map(d => d[0]);
+    const properties = Array.from(this.system.properties).filter(p => CONFIG.ROTV.itemProperties[p]?.isPhysical);
+    const rollConfigs = dmg.parts.map(([formula, type]) => ({ parts: [formula], type, properties }));
     const rollData = this.getRollData();
     if ( spellLevel ) rollData.item.level = spellLevel;
 
@@ -1440,42 +1679,62 @@ export default class ItemRelics extends Item {
         top: event ? event.clientY - 80 : null,
         left: window.innerWidth - 710
       },
-      messageData
+      messageData: {
+        "flags.rotv": {
+          targets: this.constructor._formatAttackTargets(),
+          roll: {type: "damage", itemId: this.id, itemUuid: this.uuid}
+        },
+        speaker: ChatMessage.getSpeaker({actor: this.actor})
+      }
     };
 
     // Adjust damage from versatile usage
     if ( versatile && dmg.versatile ) {
-      parts[0] = dmg.versatile;
-      messageData["flags.rotv.roll"].versatile = true;
+      rollConfigs[0].parts[0] = dmg.versatile;
+      rollConfig.messageData["flags.rotv"].roll.versatile = true;
+    }
+
+    // Add magical damage if available
+    if ( this.system.magicalBonus && this.system.magicAvailable ) {
+      rollConfigs[0].parts.push(this.system.magicalBonus);
     }
 
     // Scale damage from up-casting spells
-    const scaling = this.system.scaling;
-    if ( (this.type === "spell") ) {
+    if ( (this.type === "spell") || scaling ) {
       if ( scaling.mode === "cantrip" ) {
         let level;
         if ( this.actor.type === "character" ) level = this.actor.system.details.level;
         else if ( this.system.preparation.mode === "innate" ) level = Math.ceil(this.actor.system.details.cr);
         else level = this.actor.system.details.spellLevel;
-        this._scaleCantripDamage(parts, scaling.formula, level, rollData);
+        rollConfigs.forEach(c => this._scaleCantripDamage(c.parts, scaling.formula, level, rollData));
       }
-      else if ( spellLevel && (scaling.mode === "level") && scaling.formula ) {
-        this._scaleSpellDamage(parts, this.system.level, spellLevel, scaling.formula, rollData);
-      }
+      else if ( spellLevel && (scaling.mode === "level") ) rollConfigs.forEach(c => {
+        if ( scaling.formula || c.parts.length ) {
+          this._scaleSpellDamage(c.parts, originalLevel, spellLevel, scaling.formula || c.parts[0], rollData);
+        }
+      });
     }
 
     // Add damage bonus formula
     const actorBonus = foundry.utils.getProperty(this.actor.system, `bonuses.${this.system.actionType}`) || {};
     if ( actorBonus.damage && (parseInt(actorBonus.damage) !== 0) ) {
-      parts.push(actorBonus.damage);
+      rollConfigs[0].parts.push(actorBonus.damage);
     }
 
     // Only add the ammunition damage if the ammunition is a consumable with type 'ammo'
-    if ( this._ammo && (this._ammo.type === "consumable") && (this._ammo.system.consumableType === "ammo") ) {
-      parts.push("@ammo");
-      rollData.ammo = this._ammo.system.damage.parts.map(p => p[0]).join("+");
-      rollConfig.flavor += ` [${this._ammo.name}]`;
-      delete this._ammo;
+    const ammo = this.hasAmmo ? this.actor.items.get(this.system.consume.target) : null;
+    if ( ammo ) {
+      const properties = Array.from(ammo.system.properties).filter(p => CONFIG.ROTV.itemProperties[p]?.isPhysical);
+      if ( this.system.properties.has("mgc") && !properties.includes("mgc") ) properties.push("mgc");
+      const ammoConfigs = ammo.system.damage.parts.map((([formula, type]) => ({ parts: [formula], type, properties })));
+      if ( ammo.system.magicalBonus && ammo.system.magicAvailable ) {
+        rollConfigs[0].parts.push("@ammo");
+        properties.forEach(p => {
+          if ( !rollConfigs[0].properties.includes(p) ) rollConfigs[0].properties.push(p);
+        });
+        rollData.ammo = ammo.system.magicalBonus;
+      }
+      rollConfigs.push(...ammoConfigs);
     }
 
     // Factor in extra critical damage dice from the Barbarian's "Brutal Critical"
@@ -1487,31 +1746,30 @@ export default class ItemRelics extends Item {
     if ( this.system.critical?.damage ) rollConfig.criticalBonusDamage = this.system.critical.damage;
 
     foundry.utils.mergeObject(rollConfig, options);
-    rollConfig.parts = parts.concat(options.parts ?? []);
+    rollConfig.rollConfigs = rollConfigs.concat(options.rollConfigs ?? []);
 
     /**
      * A hook event that fires before a damage is rolled for an Item.
      * @function rotv.preRollDamage
      * @memberof hookEvents
-     * @param {ItemRelics} item                     Item for which the roll is being performed.
+     * @param {ItemRotV} item                     Item for which the roll is being performed.
      * @param {DamageRollConfiguration} config  Configuration data for the pending roll.
      * @returns {boolean}                       Explicitly return false to prevent the roll from being performed.
      */
     if ( Hooks.call("rotv.preRollDamage", this, rollConfig) === false ) return;
 
-    const roll = await damageRoll(rollConfig);
+    const rolls = await damageRoll(rollConfig);
 
     /**
      * A hook event that fires after a damage has been rolled for an Item.
      * @function rotv.rollDamage
      * @memberof hookEvents
-     * @param {ItemRelics} item      Item for which the roll was performed.
-     * @param {DamageRoll} roll  The resulting roll.
+     * @param {ItemRotV} item                    Item for which the roll was performed.
+     * @param {DamageRoll|DamageRoll[]} rolls  The resulting rolls (or single roll if `returnMultiple` is `false`).
      */
-    if ( roll ) Hooks.callAll("rotv.rollDamage", this, roll);
+    if ( rolls || (rollConfig.returnMultiple && rolls?.length) ) Hooks.callAll("rotv.rollDamage", this, rolls);
 
-    // Call the roll helper utility
-    return roll;
+    return rolls;
   }
 
   /* -------------------------------------------- */
@@ -1605,7 +1863,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires before a formula is rolled for an Item.
      * @function rotv.preRollFormula
      * @memberof hookEvents
-     * @param {ItemRelics} item                 Item for which the roll is being performed.
+     * @param {ItemRotV} item                 Item for which the roll is being performed.
      * @param {object} config               Configuration data for the pending roll.
      * @param {string} config.formula       Formula that will be rolled.
      * @param {object} config.data          Data used when evaluating the roll.
@@ -1614,7 +1872,8 @@ export default class ItemRelics extends Item {
      */
     if ( Hooks.call("rotv.preRollFormula", this, rollConfig) === false ) return;
 
-    const roll = await new Roll(rollConfig.formula, rollConfig.data).roll({async: true});
+    const roll = await new Roll(rollConfig.formula, rollConfig.data)
+      .roll({ allowInteractive: game.settings.get("core", "rollMode") !== CONST.DICE_ROLL_MODES.BLIND });
 
     if ( rollConfig.chatMessage ) {
       roll.toMessage({
@@ -1629,7 +1888,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires after a formula has been rolled for an Item.
      * @function rotv.rollFormula
      * @memberof hookEvents
-     * @param {ItemRelics} item  Item for which the roll was performed.
+     * @param {ItemRotV} item  Item for which the roll was performed.
      * @param {Roll} roll    The resulting roll.
      */
     Hooks.callAll("rotv.rollFormula", this, roll);
@@ -1658,7 +1917,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires before the Item is rolled to recharge.
      * @function rotv.preRollRecharge
      * @memberof hookEvents
-     * @param {ItemRelics} item                 Item for which the roll is being performed.
+     * @param {ItemRotV} item                 Item for which the roll is being performed.
      * @param {object} config               Configuration data for the pending roll.
      * @param {string} config.formula       Formula that will be used to roll the recharge.
      * @param {object} config.data          Data used when evaluating the roll.
@@ -1668,7 +1927,7 @@ export default class ItemRelics extends Item {
      */
     if ( Hooks.call("rotv.preRollRecharge", this, rollConfig) === false ) return;
 
-    const roll = await new Roll(rollConfig.formula, rollConfig.data).roll({async: true});
+    const roll = await new Roll(rollConfig.formula, rollConfig.data).evaluate();
     const success = roll.total >= rollConfig.target;
 
     if ( rollConfig.chatMessage ) {
@@ -1683,7 +1942,7 @@ export default class ItemRelics extends Item {
      * A hook event that fires after the Item has rolled to recharge, but before any changes have been performed.
      * @function rotv.rollRecharge
      * @memberof hookEvents
-     * @param {ItemRelics} item  Item for which the roll was performed.
+     * @param {ItemRotV} item  Item for which the roll was performed.
      * @param {Roll} roll    The resulting roll.
      * @returns {boolean}    Explicitly return false to prevent the item from being recharged.
      */
@@ -1704,79 +1963,13 @@ export default class ItemRelics extends Item {
    */
   async rollToolCheck(options={}) {
     if ( this.type !== "tool" ) throw new Error("Wrong item type!");
-
-    // Prepare roll data
-    const rollData = this.getRollData();
-    const abl = this.system.ability;
-    const parts = ["@mod", "@abilityCheckBonus"];
-    const title = `${this.name} - ${game.i18n.localize("ROTV.ToolCheck")}`;
-
-    // Add proficiency
-    if ( this.system.prof?.hasProficiency ) {
-      parts.push("@prof");
-      rollData.prof = this.system.prof.term;
-    }
-
-    // Add tool bonuses
-    if ( this.system.bonus ) {
-      parts.push("@toolBonus");
-      rollData.toolBonus = Roll.replaceFormulaData(this.system.bonus, rollData);
-    }
-
-    // Add ability-specific check bonus
-    const checkBonus = foundry.utils.getProperty(rollData, `abilities.${abl}.bonuses.check`);
-    if ( checkBonus ) rollData.abilityCheckBonus = Roll.replaceFormulaData(checkBonus, rollData);
-    else rollData.abilityCheckBonus = 0;
-
-    // Add global actor bonus
-    const globalBonus = this.actor.system.bonuses?.abilities || {};
-    if ( globalBonus.check ) {
-      parts.push("@checkBonus");
-      rollData.checkBonus = Roll.replaceFormulaData(globalBonus.check, rollData);
-    }
-
-    // Compose the roll data
-    const rollConfig = foundry.utils.mergeObject({
-      data: rollData,
-      title: title,
-      flavor: title,
-      dialogOptions: {
-        width: 400,
-        top: options.event ? options.event.clientY - 80 : null,
-        left: window.innerWidth - 710
-      },
-      chooseModifier: true,
-      halflingLucky: this.actor.getFlag("rotv", "halflingLucky" ),
-      reliableTalent: (this.system.proficient >= 1) && this.actor.getFlag("rotv", "reliableTalent"),
-      messageData: {
-        speaker: options.speaker || ChatMessage.getSpeaker({actor: this.actor}),
-        "flags.rotv.roll": {type: "tool", itemId: this.id, itemUuid: this.uuid}
-      }
-    }, options);
-    rollConfig.parts = parts.concat(options.parts ?? []);
-
-    /**
-     * A hook event that fires before a tool check is rolled for an Item.
-     * @function rotv.preRollToolCheck
-     * @memberof hookEvents
-     * @param {ItemRelics} item                  Item for which the roll is being performed.
-     * @param {D20RollConfiguration} config  Configuration data for the pending roll.
-     * @returns {boolean}                    Explicitly return false to prevent the roll from being performed.
-     */
-    if ( Hooks.call("rotv.preRollToolCheck", this, rollConfig) === false ) return;
-
-    const roll = await d20Roll(rollConfig);
-
-    /**
-     * A hook event that fires after a tool check has been rolled for an Item.
-     * @function rotv.rollToolCheck
-     * @memberof hookEvents
-     * @param {ItemRelics} item   Item for which the roll was performed.
-     * @param {D20Roll} roll  The resulting roll.
-     */
-    if ( roll ) Hooks.callAll("rotv.rollToolCheck", this, roll);
-
-    return roll;
+    return this.actor?.rollToolCheck(this.system.type.baseItem, {
+      ability: this.system.ability,
+      bonus: this.system.bonus,
+      prof: this.system.prof,
+      item: this,
+      ...options
+    });
   }
 
   /* -------------------------------------------- */
@@ -1788,25 +1981,14 @@ export default class ItemRelics extends Item {
    *                                          either a die term or a flat term.
    */
   getRollData({ deterministic=false }={}) {
-    if ( !this.actor ) return null;
-    const actorRollData = this.actor.getRollData({ deterministic });
-    const rollData = {
-      ...actorRollData,
-      item: this.toObject().system
-    };
-
-    // Include an ability score modifier if one exists
-    const abl = this.abilityMod;
-    if ( abl && ("abilities" in rollData) ) {
-      const ability = rollData.abilities[abl];
-      if ( !ability ) {
-        console.warn(`Item ${this.name} in Actor ${this.actor.name} has an invalid item ability modifier of ${abl} defined`);
-      }
-      rollData.mod = ability?.mod ?? 0;
-
-      rollData.dmgMod = Math.floor((ability?.mod ?? 0)*0.5);
+    let data;
+    if ( this.system.getRollData ) data = this.system.getRollData({ deterministic });
+    else data = { ...(this.actor?.getRollData({ deterministic }) ?? {}), item: { ...this.system } };
+    if ( data?.item ) {
+      data.item.flags = { ...this.flags };
+      data.item.name = this.name;
     }
-    return rollData;
+    return data;
   }
 
   /* -------------------------------------------- */
@@ -1818,8 +2000,17 @@ export default class ItemRelics extends Item {
    * @param {HTML} html  Rendered chat message.
    */
   static chatListeners(html) {
-    html.on("click", ".card-buttons button", this._onChatCardAction.bind(this));
-    html.on("click", ".item-name", this._onChatCardToggleContent.bind(this));
+    html.on("click", ".chat-card button[data-action]", this._onChatCardAction.bind(this));
+    html.on("click", ".item-name, .collapsible", this._onChatCardToggleContent.bind(this));
+    html[0].addEventListener("click", event => {
+      if ( event.target.closest("[data-context-menu]") ) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.target.closest("[data-message-id]").dispatchEvent(new PointerEvent("contextmenu", {
+          view: window, bubbles: true, cancelable: true
+        }));
+      }
+    });
   }
 
   /* -------------------------------------------- */
@@ -1841,67 +2032,208 @@ export default class ItemRelics extends Item {
     const message = game.messages.get(messageId);
     const action = button.dataset.action;
 
-    // Recover the actor for the chat card
-    const actor = await this._getChatCardActor(card);
-    if ( !actor ) return;
+    try {
+      // Recover the actor for the chat card
+      const actor = await this._getChatCardActor(card);
+      if ( !actor ) return;
 
-    // Validate permission to proceed with the roll
-    const isTargetted = action === "save";
-    if ( !( isTargetted || game.user.isGM || actor.isOwner ) ) return;
+      // Validate permission to proceed with the roll
+      const isTargetted = action === "save";
+      if ( !( isTargetted || game.user.isGM || actor.isOwner ) ) return;
 
-    // Get the Item from stored flag data or by the item ID on the Actor
-    const storedData = message.getFlag("rotv", "itemData");
-    const item = storedData ? new this(storedData, {parent: actor}) : actor.items.get(card.dataset.itemId);
-    if ( !item ) {
-      const err = game.i18n.format("ROTV.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name});
-      return ui.notifications.error(err);
+      // Get the Item from stored flag data or by the item ID on the Actor
+      const storedData = message.getFlag("rotv", "itemData");
+      let item = storedData ? new this(storedData, {parent: actor}) : actor.items.get(card.dataset.itemId);
+      if ( !item ) {
+        ui.notifications.error(game.i18n.format("ROTV.ActionWarningNoItem", {
+          item: card.dataset.itemId, name: actor.name
+        }));
+        return null;
+      }
+
+      let spellLevel;
+      if ( item.system.level === 0 ) spellLevel = 0;
+      else spellLevel = parseInt(card.dataset.spellLevel) || null;
+
+      // Handle different actions
+      let targets;
+      let messageUpdates = {};
+      switch ( action ) {
+        case "abilityCheck":
+          targets = this._getChatCardTargets(card);
+          for ( let token of targets ) {
+            const speaker = ChatMessage.getSpeaker({scene: canvas.scene, token: token.document});
+            await token.actor.rollAbilityTest(button.dataset.ability, { event, speaker });
+          }
+          break;
+        case "applyEffect":
+          const li = button.closest("li.effect");
+          let effect = item.effects.get(li.dataset.effectId);
+          if ( !effect ) effect = await fromUuid(li.dataset.uuid);
+          const concentration = actor.effects.get(message.getFlag("rotv", "use.concentrationId"));
+          const effectData = { "flags.rotv.spellLevel": spellLevel };
+          for ( const token of canvas.tokens.controlled ) {
+            try {
+              await this._applyEffectToToken(effect, token, { concentration, effectData });
+            } catch(err) {
+              Hooks.onError("ItemRotV._applyEffectToToken", err, { notify: "warn", log: "warn" });
+            }
+          }
+          break;
+        case "attack":
+          await item.rollAttack({
+            event: event,
+            spellLevel: spellLevel
+          });
+          break;
+        case "consumeUsage":
+          await item.consume(item, { consumeUsage: true }, messageUpdates);
+          break;
+        case "consumeResource":
+          await item.consume(item, { consumeResource: true }, messageUpdates);
+          break;
+        case "damage":
+        case "versatile":
+          await item.rollDamage({
+            event: event,
+            spellLevel: spellLevel,
+            versatile: action === "versatile"
+          });
+          break;
+        case "formula":
+          await item.rollFormula({event, spellLevel});
+          break;
+        case "placeTemplate":
+          try {
+            await rotv.canvas.AbilityTemplate.fromItem(item, {"flags.rotv.spellLevel": spellLevel})?.drawPreview();
+          } catch(err) {
+            Hooks.onError("ItemRotV#_onChatCardAction", err, {
+              msg: game.i18n.localize("ROTV.PlaceTemplateError"),
+              log: "error",
+              notify: "error"
+            });
+          }
+          break;
+        case "save":
+          targets = this._getChatCardTargets(card);
+          for ( let token of targets ) {
+            const dc = parseInt(button.dataset.dc);
+            const speaker = ChatMessage.getSpeaker({scene: canvas.scene, token: token.document});
+            await token.actor.rollAbilitySave(button.dataset.ability, {
+              event, speaker, targetValue: Number.isFinite(dc) ? dc : undefined
+            });
+          }
+          break;
+        case "summon":
+          if ( spellLevel ) item = item.clone({ "system.level": spellLevel }, { keepId: true });
+          await this._onChatCardSummon(message, item);
+          break;
+        case "toolCheck":
+          await item.rollToolCheck({event});
+          break;
+      }
+      if ( !foundry.utils.isEmpty(messageUpdates) ) await message.update(messageUpdates);
+
+    } catch(err) {
+      Hooks.onError("ItemRotV._onChatCardAction", err, { log: "error", notify: "error" });
+    } finally {
+      // Re-enable the button
+      button.disabled = false;
     }
-    const spellLevel = parseInt(card.dataset.spellLevel) || null;
+  }
 
-    // Handle different actions
-    let targets;
-    switch ( action ) {
-      case "attack":
-        await item.rollAttack({
-          event: event,
-          spellLevel: spellLevel
-        });
-        break;
-      case "damage":
-      case "versatile":
-        await item.rollDamage({
-          event: event,
-          spellLevel: spellLevel,
-          versatile: action === "versatile"
-        });
-        break;
-      case "formula":
-        await item.rollFormula({event, spellLevel}); break;
-      case "save":
-        targets = this._getChatCardTargets(card);
-        for ( let token of targets ) {
-          const speaker = ChatMessage.getSpeaker({scene: canvas.scene, token: token.document});
-          await token.actor.rollAbilitySave(button.dataset.ability, { event, speaker });
-        }
-        break;
-      case "toolCheck":
-        await item.rollToolCheck({event}); break;
-      case "placeTemplate":
-        try {
-          await rotv.canvas.AbilityTemplate.fromItem(item)?.drawPreview();
-        } catch(err) {}
-        break;
-      case "abilityCheck":
-        targets = this._getChatCardTargets(card);
-        for ( let token of targets ) {
-          const speaker = ChatMessage.getSpeaker({scene: canvas.scene, token: token.document});
-          await token.actor.rollAbilityTest(button.dataset.ability, { event, speaker });
-        }
-        break;
+  /* -------------------------------------------- */
+
+  /**
+   * Handle applying an Active Effect to a Token.
+   * @param {ActiveEffectRotV} effect                   The effect.
+   * @param {TokenRotV} token                           The token.
+   * @param {object} [options]
+   * @param {ActiveEffectRotV} [options.concentration]  An optional concentration effect to act as the applied effect's
+   *                                                  origin instead.
+   * @param {number} [options.effectData]             Optional data to merge into the created or updated effect.
+   * @returns {Promise<ActiveEffectRotV|false>}
+   * @throws {Error}                                  If the effect could not be applied.
+   * @protected
+   */
+  static async _applyEffectToToken(effect, token, { concentration, effectData={} }={}) {
+    const origin = concentration ?? effect;
+    if ( !game.user.isGM && !token.actor?.isOwner ) {
+      throw new Error(game.i18n.localize("ROTV.EffectApplyWarningOwnership"));
     }
 
-    // Re-enable the button
-    button.disabled = false;
+    // Enable an existing effect on the target if it originated from this effect
+    const existingEffect = token.actor?.effects.find(e => e.origin === origin.uuid);
+    if ( existingEffect ) {
+      return existingEffect.update(foundry.utils.mergeObject({
+        ...effect.constructor.getInitialDuration(),
+        disabled: false
+      }, effectData));
+    }
+
+    if ( !game.user.isGM && concentration && !concentration.actor?.isOwner ) {
+      throw new Error(game.i18n.localize("ROTV.EffectApplyWarningConcentration"));
+    }
+
+    // Otherwise, create a new effect on the target
+    effectData = foundry.utils.mergeObject({
+      ...effect.toObject(),
+      disabled: false,
+      transfer: false,
+      origin: origin.uuid
+    }, effectData);
+    const applied = await ActiveEffect.implementation.create(effectData, { parent: token.actor });
+    if ( concentration ) await concentration.addDependent(applied);
+    return applied;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Handle summoning from a chat card.
+   * @param {ChatMessageRotV} message  The message that was clicked.
+   * @param {ItemRotV} item            The item from which to summon.
+   */
+  static async _onChatCardSummon(message, item) {
+    let summonsProfile;
+    let summonsOptions = {};
+    let needsConfiguration = false;
+
+    // No profile specified and only one profile on item, use that one
+    if ( item.system.summons.profiles.length === 1 ) summonsProfile = item.system.summons.profiles[0]._id;
+    else needsConfiguration = true;
+
+    // More than one creature type requires configuration
+    if ( item.system.summons.creatureSizes.size > 1
+      || item.system.summons.creatureTypes.size > 1 ) needsConfiguration = true;
+
+    // Show the item use dialog to get the profile and other options
+    if ( needsConfiguration ) {
+      let config = await AbilityUseDialog.create(item, {
+        beginConcentrating: null,
+        consumeResource: null,
+        consumeSpellSlot: null,
+        consumeUsage: null,
+        createMeasuredTemplate: null,
+        createSummons: true
+      }, {
+        button: {
+          icon: '<i class="fa-solid fa-spaghetti-monster-flying"></i>',
+          label: game.i18n.localize("ROTV.Summoning.Action.Summon")
+        },
+        disableScaling: true
+      });
+      if ( !config?.summonsProfile ) return;
+      config = foundry.utils.expandObject(config);
+      summonsProfile = config.summonsProfile;
+      summonsOptions = config.summonsOptions;
+    }
+
+    try {
+      await item.system.summons.summon(summonsProfile, summonsOptions);
+    } catch(err) {
+      Hooks.onError("ItemRotV#_onChatCardSummon", err, { log: "error", notify: "error" });
+    }
   }
 
   /* -------------------------------------------- */
@@ -1912,11 +2244,15 @@ export default class ItemRelics extends Item {
    * @private
    */
   static _onChatCardToggleContent(event) {
-    event.preventDefault();
     const header = event.currentTarget;
-    const card = header.closest(".chat-card");
-    const content = card.querySelector(".card-content");
-    content.style.display = content.style.display === "none" ? "block" : "none";
+    if ( header.classList.contains("collapsible") && !event.target.closest(".collapsible-content.card-content") ) {
+      event.preventDefault();
+      header.classList.toggle("collapsed");
+
+      // Clear the height from the chat popout container so that it appropriately resizes.
+      const popout = header.closest(".chat-popout");
+      if ( popout ) popout.style.height = "";
+    }
   }
 
   /* -------------------------------------------- */
@@ -1944,20 +2280,71 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
-   * Get the Actor which is the author of a chat card
-   * @param {HTMLElement} card    The chat card being used
-   * @returns {Actor[]}            An Array of Actor documents, if any
+   * Get token targets for the current chat card action and display warning of none are selected.
+   * @param {HTMLElement} card  The chat card being used.
+   * @returns {TokenRotV[]}       An Array of Token objects, if any.
    * @private
    */
   static _getChatCardTargets(card) {
-    let targets = canvas.tokens.controlled.filter(t => !!t.actor);
-    if ( !targets.length && game.user.character ) targets = targets.concat(game.user.character.getActiveTokens());
-    if ( !targets.length ) ui.notifications.warn(game.i18n.localize("ROTV.ActionWarningNoToken"));
+    const targets = getSceneTargets();
+    if ( !targets.length ) ui.notifications.warn("ROTV.ActionWarningNoToken", {localize: true});
     return targets;
   }
 
   /* -------------------------------------------- */
-  /*  Advancements                                */
+  /*  Activities & Advancements                   */
+  /* -------------------------------------------- */
+
+  /**
+   * Create a new activity of the specified type.
+   * @param {string} type                          Type of activity to create.
+   * @param {object} [data]                        Data to use when creating the activity.
+   * @param {object} [options={}]
+   * @param {boolean} [options.renderSheet=true]  Should the sheet be rendered after creation?
+   * @returns {Promise<ActivitySheet|null>}
+   */
+  async createActivity(type, data={}, { renderSheet=true }={}) {
+    if ( !this.system.activities ) return;
+
+    const config = CONFIG.ROTV.activityTypes[type];
+    if ( !config ) throw new Error(`${type} not found in CONFIG.ROTV.activityTypes`);
+    const cls = config.documentClass;
+
+    const createData = foundry.utils.deepClone(data);
+    const activity = new cls({ type, ...data }, { parent: this });
+    if ( activity._preCreate(createData) === false ) return;
+
+    await this.update({ [`system.activities.${activity.id}`]: activity.toObject() });
+    const created = this.system.activities.get(activity.id);
+    if ( renderSheet ) return created.sheet?.render({ force: true });
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Update an activity belonging to this item.
+   * @param {string} id          ID of the activity to update.
+   * @param {object} updates     Updates to apply to this activity.
+   * @returns {Promise<ItemRotV>}  This item with the changes applied.
+   */
+  updateActivity(id, updates) {
+    if ( !this.system.activities ) return this;
+    if ( !this.system.activities.has(id) ) throw new Error(`Activity of ID ${id} could not be found to update`);
+    return this.update({ [`system.activities.${id}`]: updates });
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Remove an activity from this item.
+   * @param {string} id          ID of the activity to remove.
+   * @returns {Promise<ItemRotV>}  This item with the changes applied.
+   */
+  deleteActivity(id) {
+    if ( !this.system.activities ) return this;
+    return this.update({ [`system.activities.-=${id}`]: null });
+  }
+
   /* -------------------------------------------- */
 
   /**
@@ -1967,26 +2354,30 @@ export default class ItemRelics extends Item {
    * @param {object} [options]
    * @param {boolean} [options.showConfig=true]    Should the new advancement's configuration application be shown?
    * @param {boolean} [options.source=false]       Should a source-only update be performed?
-   * @returns {Promise<AdvancementConfig>|ItemRelics}  Promise for advancement config for new advancement if local
+   * @returns {Promise<AdvancementConfig>|ItemRotV}  Promise for advancement config for new advancement if local
    *                                               is `false`, or item with newly added advancement.
    */
   createAdvancement(type, data={}, { showConfig=true, source=false }={}) {
     if ( !this.system.advancement ) return this;
 
-    const Advancement = CONFIG.ROTV.advancementTypes[type];
-    if ( !Advancement ) throw new Error(`${type} not found in CONFIG.ROTV.advancementTypes`);
+    const config = CONFIG.ROTV.advancementTypes[type];
+    if ( !config ) throw new Error(`${type} not found in CONFIG.ROTV.advancementTypes`);
+    const cls = config.documentClass;
 
-    if ( !Advancement.metadata.validItemTypes.has(this.type) || !Advancement.availableForItem(this) ) {
+    if ( !config.validItemTypes.has(this.type) || !cls.availableForItem(this) ) {
       throw new Error(`${type} advancement cannot be added to ${this.name}`);
     }
 
-    const advancement = new Advancement(data, {parent: this});
+    const createData = foundry.utils.deepClone(data);
+    const advancement = new cls(data, {parent: this});
+    if ( advancement._preCreate(createData) === false ) return;
+
     const advancementCollection = this.toObject().system.advancement;
     advancementCollection.push(advancement.toObject());
     if ( source ) return this.updateSource({"system.advancement": advancementCollection});
     return this.update({"system.advancement": advancementCollection}).then(() => {
       if ( !showConfig ) return this;
-      const config = new Advancement.metadata.apps.config(this.advancement.byId[advancement.id]);
+      const config = new cls.metadata.apps.config(this.advancement.byId[advancement.id]);
       return config.render(true);
     });
   }
@@ -1999,7 +2390,7 @@ export default class ItemRelics extends Item {
    * @param {object} updates                  Updates to apply to this advancement.
    * @param {object} [options={}]
    * @param {boolean} [options.source=false]  Should a source-only update be performed?
-   * @returns {Promise<ItemRelics>|ItemRelics}        This item with the changes applied, promised if source is `false`.
+   * @returns {Promise<ItemRotV>|ItemRotV}        This item with the changes applied, promised if source is `false`.
    */
   updateAdvancement(id, updates, { source=false }={}) {
     if ( !this.system.advancement ) return this;
@@ -2007,16 +2398,18 @@ export default class ItemRelics extends Item {
     if ( idx === -1 ) throw new Error(`Advancement of ID ${id} could not be found to update`);
 
     const advancement = this.advancement.byId[id];
-    advancement.updateSource(updates);
     if ( source ) {
+      advancement.updateSource(updates);
       advancement.render();
       return this;
     }
 
     const advancementCollection = this.toObject().system.advancement;
-    advancementCollection[idx] = advancement.toObject();
+    const clone = new advancement.constructor(advancementCollection[idx], { parent: advancement.parent });
+    clone.updateSource(updates);
+    advancementCollection[idx] = clone.toObject();
     return this.update({"system.advancement": advancementCollection}).then(r => {
-      advancement.render();
+      advancement.render(false, { height: "auto" });
       return r;
     });
   }
@@ -2028,12 +2421,12 @@ export default class ItemRelics extends Item {
    * @param {string} id                       ID of the advancement to remove.
    * @param {object} [options={}]
    * @param {boolean} [options.source=false]  Should a source-only update be performed?
-   * @returns {Promise<ItemRelics>|ItemRelics}        This item with the changes applied.
+   * @returns {Promise<ItemRotV>|ItemRotV}        This item with the changes applied.
    */
   deleteAdvancement(id, { source=false }={}) {
     if ( !this.system.advancement ) return this;
 
-    const advancementCollection = this.system.advancement.filter(a => a._id !== id);
+    const advancementCollection = this.toObject().system.advancement.filter(a => a._id !== id);
     if ( source ) return this.updateSource({"system.advancement": advancementCollection});
     return this.update({"system.advancement": advancementCollection});
   }
@@ -2046,7 +2439,7 @@ export default class ItemRelics extends Item {
    * @param {object} [options]
    * @param {boolean} [options.showConfig=true]     Should the new advancement's configuration application be shown?
    * @param {boolean} [options.source=false]        Should a source-only update be performed?
-   * @returns {Promise<AdvancementConfig>|ItemRelics}   Promise for advancement config for duplicate advancement if source
+   * @returns {Promise<AdvancementConfig>|ItemRotV}   Promise for advancement config for duplicate advancement if source
    *                                                is `false`, or item with newly duplicated advancement.
    */
   duplicateAdvancement(id, options) {
@@ -2066,12 +2459,16 @@ export default class ItemRelics extends Item {
 
   /** @inheritdoc */
   getEmbeddedDocument(embeddedName, id, options) {
-    if ( embeddedName !== "Advancement" ) return super.getEmbeddedDocument(embeddedName, id, options);
-    const advancement = this.advancement.byId[id];
+    let doc;
+    switch ( embeddedName ) {
+      case "Activity": doc = this.system.activities?.get(id); break;
+      case "Advancement": doc = this.advancement.byId[id]; break;
+      default: return super.getEmbeddedDocument(embeddedName, id, options);
+    }
     if ( options?.strict && (advancement === undefined) ) {
       throw new Error(`The key ${id} does not exist in the ${embeddedName} Collection`);
     }
-    return advancement;
+    return doc;
   }
 
   /* -------------------------------------------- */
@@ -2080,7 +2477,7 @@ export default class ItemRelics extends Item {
 
   /** @inheritdoc */
   async _preCreate(data, options, user) {
-    await super._preCreate(data, options, user);
+    if ( (await super._preCreate(data, options, user)) === false ) return false;
 
     // Create class identifier based on name
     if ( ["class", "subclass"].includes(this.type) && !this.system.identifier ) {
@@ -2097,11 +2494,11 @@ export default class ItemRelics extends Item {
       case "spell":
         updates = this._onCreateOwnedSpell(data, isNPC);
         break;
-      case "tool":
-        updates = this._onCreateOwnedTool(data, isNPC);
-        break;
       case "weapon":
         updates = this._onCreateOwnedWeapon(data, isNPC);
+        break;
+      case "feat":
+        updates = this._onCreateOwnedFeature(data, isNPC);
         break;
     }
     if ( updates ) return this.updateSource(updates);
@@ -2125,12 +2522,17 @@ export default class ItemRelics extends Item {
 
   /** @inheritdoc */
   async _preUpdate(changed, options, user) {
-    await super._preUpdate(changed, options, user);
+    if ( (await super._preUpdate(changed, options, user)) === false ) return false;
+
+    if ( foundry.utils.hasProperty(changed, "system.container") ) {
+      options.formerContainer = (await this.container)?.uuid;
+    }
+
     if ( (this.type !== "class") || !("levels" in (changed.system || {})) ) return;
 
     // Check to make sure the updated class level isn't below zero
     if ( changed.system.levels <= 0 ) {
-      ui.notifications.warn(game.i18n.localize("ROTV.MaxClassLevelMinimumWarn"));
+      ui.notifications.warn("ROTV.MaxClassLevelMinimumWarn", {localize: true});
       changed.system.levels = 1;
     }
 
@@ -2152,12 +2554,21 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /** @inheritdoc */
-  _onDelete(options, userId) {
+  async _onDelete(options, userId) {
     super._onDelete(options, userId);
-    if ( (userId !== game.user.id) || !this.parent ) return;
+    if ( userId !== game.user.id ) return;
+
+    // Delete a container's contents when it is deleted
+    const contents = await this.system.allContainedItems;
+    if ( contents?.size && options.deleteContents ) {
+      await Item.deleteDocuments(Array.from(contents.map(i => i.id)), { pack: this.pack, parent: this.parent });
+    }
+
+    // End concentration on any effects.
+    this.parent?.endConcentration?.(this);
 
     // Assign a new original class
-    if ( (this.type === "class") && (this.id === this.parent.system.details.originalClass) ) {
+    if ( this.parent && (this.type === "class") && (this.id === this.parent.system.details.originalClass) ) {
       this.parent._assignPrimaryClass();
     }
   }
@@ -2176,16 +2587,6 @@ export default class ItemRelics extends Item {
     const updates = {};
     if ( foundry.utils.getProperty(data, "system.equipped") === undefined ) {
       updates["system.equipped"] = isNPC;  // NPCs automatically equip equipment
-    }
-    if ( foundry.utils.getProperty(data, "system.proficient") === undefined ) {
-      if ( isNPC ) {
-        updates["system.proficient"] = true;  // NPCs automatically have equipment proficiency
-      } else {
-        const armorProf = CONFIG.ROTV.armorProficienciesMap[this.system.armor?.type]; // Player characters check proficiency
-        const actorArmorProfs = this.parent.system.traits?.armorProf?.value || new Set();
-        updates["system.proficient"] = (armorProf === true) || actorArmorProfs.has(armorProf)
-          || actorArmorProfs.has(this.system.baseItem);
-      }
     }
     return updates;
   }
@@ -2211,56 +2612,73 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
-   * Pre-creation logic for the automatic configuration of owned tool type Items.
+   * Pre-creation logic for the automatic configuration of owned weapon type Items.
+   * @param {object} data       Data for the newly created item.
+   * @param {boolean} isNPC     Is this actor an NPC?
+   * @returns {object|void}     Updates to apply to the item data.
+   * @private
+   */
+  _onCreateOwnedWeapon(data, isNPC) {
+    if ( !isNPC ) return;
+    // NPCs automatically equip items.
+    const updates = {};
+    if ( !foundry.utils.hasProperty(data, "system.equipped") ) updates["system.equipped"] = true;
+    return updates;
+  }
+
+  /**
+   * Pre-creation logic for the automatic configuration of owned feature type Items.
    * @param {object} data       Data for the newly created item.
    * @param {boolean} isNPC     Is this actor an NPC?
    * @returns {object}          Updates to apply to the item data.
    * @private
    */
-  _onCreateOwnedTool(data, isNPC) {
+  _onCreateOwnedFeature(data, isNPC) {
     const updates = {};
-    if ( data.system?.proficient === undefined ) {
-      if ( isNPC ) updates["system.proficient"] = 1;
-      else {
-        const actorToolProfs = this.parent.system.traits?.toolProf?.value || new Set();
-        const proficient = actorToolProfs.has(this.system.toolType) || actorToolProfs.has(this.system.baseItem);
-        updates["system.proficient"] = Number(proficient);
-      }
+    if ( isNPC && !foundry.utils.getProperty(data, "system.type.value") ) {
+      updates["system.type.value"] = "monster"; // Set features on NPCs to be 'monster features'.
     }
     return updates;
   }
 
   /* -------------------------------------------- */
 
-  /**
-   * Pre-creation logic for the automatic configuration of owned weapon type Items.
-   * @param {object} data       Data for the newly created item.
-   * @param {boolean} isNPC     Is this actor an NPC?
-   * @returns {object}          Updates to apply to the item data.
-   * @private
-   */
-  _onCreateOwnedWeapon(data, isNPC) {
-
-    // NPCs automatically equip items and are proficient with them
-    if ( isNPC ) {
-      const updates = {};
-      if ( !foundry.utils.hasProperty(data, "system.equipped") ) updates["system.equipped"] = true;
-      if ( !foundry.utils.hasProperty(data, "system.proficient") ) updates["system.proficient"] = true;
-      return updates;
+  /** @inheritdoc */
+  async deleteDialog(options={}) {
+    // If item has advancement, handle it separately
+    if ( this.actor?.system.metadata?.supportsAdvancement && !game.settings.get("rotv", "disableAdvancements") ) {
+      const manager = AdvancementManager.forDeletedItem(this.actor, this.id);
+      if ( manager.steps.length ) {
+        try {
+          const shouldRemoveAdvancements = await AdvancementConfirmationDialog.forDelete(this);
+          if ( shouldRemoveAdvancements ) return manager.render(true);
+          return this.delete({ shouldRemoveAdvancements });
+        } catch(err) {
+          return;
+        }
+      }
     }
-    if ( data.system?.proficient !== undefined ) return {};
 
-    // Some weapon types are always proficient
-    const weaponProf = CONFIG.ROTV.weaponProficienciesMap[this.system.weaponType];
-    const updates = {};
-    if ( weaponProf === true ) updates["system.proficient"] = true;
-
-    // Characters may have proficiency in this weapon type (or specific base weapon)
-    else {
-      const actorProfs = this.parent.system.traits?.weaponProf?.value || new Set();
-      updates["system.proficient"] = actorProfs.has(weaponProf) || actorProfs.has(this.system.baseItem);
+    // Display custom delete dialog when deleting a container with contents
+    const count = await this.system.contentsCount;
+    if ( count ) {
+      return Dialog.confirm({
+        title: `${game.i18n.format("DOCUMENT.Delete", {type: game.i18n.localize("ROTV.Container")})}: ${this.name}`,
+        content: `<h4>${game.i18n.localize("AreYouSure")}</h4>
+          <p>${game.i18n.format("ROTV.ContainerDeleteMessage", {count})}</p>
+          <label>
+            <input type="checkbox" name="deleteContents">
+            ${game.i18n.localize("ROTV.ContainerDeleteContents")}
+          </label>`,
+        yes: html => {
+          const deleteContents = html.querySelector('[name="deleteContents"]').checked;
+          this.delete({ deleteContents });
+        },
+        options: { ...options, jQuery: false }
+      });
     }
-    return updates;
+
+    return super.deleteDialog(options);
   }
 
   /* -------------------------------------------- */
@@ -2268,37 +2686,225 @@ export default class ItemRelics extends Item {
   /* -------------------------------------------- */
 
   /**
-   * Create a consumable spell scroll Item from a spell Item.
-   * @param {ItemRelics} spell      The spell to be made into a scroll
-   * @returns {ItemRelics}          The created scroll consumable item
+   * Add additional system-specific compendium context menu options for Item documents.
+   * @param {jQuery} html            The compendium HTML.
+   * @param {object{}} entryOptions  The default array of context menu options.
    */
-  static async createScrollFromSpell(spell) {
+  static addCompendiumContextOptions(html, entryOptions) {
+    const makeUuid = li => {
+      const pack = li[0].closest("[data-pack]")?.dataset.pack;
+      return `Compendium.${pack}.Item.${li.data("documentId")}`;
+    };
+    entryOptions.push({
+      name: "ROTV.Scroll.CreateScroll",
+      icon: '<i class="fa-solid fa-scroll"></i>',
+      callback: async li => {
+        const spell = await fromUuid(makeUuid(li));
+        const scroll = await ItemRotV.createScrollFromSpell(spell);
+        if ( scroll ) ItemRotV.create(scroll);
+      },
+      condition: li => {
+        const item = fromUuidSync(makeUuid(li));
+        return (item?.type === "spell") && game.user.hasPermission("ITEM_CREATE");
+      },
+      group: "system"
+    });
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Add additional system-specific sidebar directory context menu options for Item documents.
+   * @param {jQuery} html            The sidebar HTML.
+   * @param {object[]} entryOptions  The default array of context menu options.
+   */
+  static addDirectoryContextOptions(html, entryOptions) {
+    entryOptions.push({
+      name: "ROTV.Scroll.CreateScroll",
+      icon: '<i class="fa-solid fa-scroll"></i>',
+      callback: async li => {
+        const spell = game.items.get(li.data("documentId"));
+        const scroll = await ItemRotV.createScrollFromSpell(spell);
+        if ( scroll ) ItemRotV.create(scroll);
+      },
+      condition: li => {
+        const item = game.items.get(li.data("documentId"));
+        return (item.type === "spell") && game.user.hasPermission("ITEM_CREATE");
+      },
+      group: "system"
+    });
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Prepare creation data for the provided items and any items contained within them. The data created by this method
+   * can be passed to `createDocuments` with `keepId` always set to true to maintain links to container contents.
+   * @param {ItemRotV[]} items                     Items to create.
+   * @param {object} [context={}]                Context for the item's creation.
+   * @param {ItemRotV} [context.container]         Container in which to create the item.
+   * @param {boolean} [context.keepId=false]     Should IDs be maintained?
+   * @param {Function} [context.transformAll]    Method called on provided items and their contents.
+   * @param {Function} [context.transformFirst]  Method called only on provided items.
+   * @returns {Promise<object[]>}                Data for items to be created.
+   */
+  static async createWithContents(items, { container, keepId=false, transformAll, transformFirst }={}) {
+    let depth = 0;
+    if ( container ) {
+      depth = 1 + (await container.system.allContainers()).length;
+      if ( depth > PhysicalItemTemplate.MAX_DEPTH ) {
+        ui.notifications.warn(game.i18n.format("ROTV.ContainerMaxDepth", { depth: PhysicalItemTemplate.MAX_DEPTH }));
+        return;
+      }
+    }
+
+    const createItemData = async (item, containerId, depth) => {
+      let newItemData = transformAll ? await transformAll(item) : item;
+      if ( transformFirst && (depth === 0) ) newItemData = await transformFirst(newItemData);
+      if ( !newItemData ) return;
+      if ( newItemData instanceof Item ) newItemData = newItemData.toObject();
+      foundry.utils.mergeObject(newItemData, {"system.container": containerId} );
+      if ( !keepId ) newItemData._id = foundry.utils.randomID();
+
+      created.push(newItemData);
+
+      const contents = await item.system.contents;
+      if ( contents && (depth < PhysicalItemTemplate.MAX_DEPTH) ) {
+        for ( const doc of contents ) await createItemData(doc, newItemData._id, depth + 1);
+      }
+    };
+
+    const created = [];
+    for ( const item of items ) await createItemData(item, container?.id, depth);
+    return created;
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Configuration options for spell scroll creation.
+   *
+   * @typedef {object} SpellScrollConfiguration
+   * @property {boolean} [dialog=true]                           Present scroll creation dialog?
+   * @property {"full"|"reference"|"none"} [explanation="full"]  Length of spell scroll rules text to include.
+   * @property {number} [level]                                  Level at which the spell should be cast.
+   */
+
+  /**
+   * Create a consumable spell scroll Item from a spell Item.
+   * @param {ItemRotV|object} spell                   The spell or item data to be made into a scroll.
+   * @param {object} [options]                      Additional options that modify the created scroll.
+   * @param {SpellScrollConfiguration} [config={}]  Configuration options for scroll creation.
+   * @returns {Promise<ItemRotV|void>}                The created scroll consumable item.
+   */
+  static async createScrollFromSpell(spell, options={}, config={}) {
+    config = foundry.utils.mergeObject({
+      explanation: game.user.getFlag("rotv", "creation.scrollExplanation") ?? "reference",
+      level: spell.system.level
+    }, config);
+
+    if ( config.dialog !== false ) {
+      const anchor = spell instanceof ItemRotV ? spell.toAnchor().outerHTML : `<span>${spell.name}</span>`;
+      const result = await Dialog.prompt({
+        title: game.i18n.format("ROTV.Scroll.CreateFrom", { spell: spell.name }),
+        label: game.i18n.localize("ROTV.Scroll.CreateScroll"),
+        content: await renderTemplate("systems/rotv/templates/apps/spell-scroll-dialog.hbs", {
+          ...config, anchor, spellLevels: Object.entries(CONFIG.ROTV.spellLevels).reduce((obj, [k, v]) => {
+            if ( Number(k) >= spell.system.level ) obj[k] = v;
+            return obj;
+          }, {})
+        }),
+        callback: dialog => (new FormDataExtended(dialog.querySelector("form"))).object,
+        rejectClose: false,
+        options: { jQuery: false }
+      });
+      if ( result === null ) return;
+      foundry.utils.mergeObject(config, result);
+      await game.user.setFlag("rotv", "creation.scrollExplanation", config.explanation);
+    }
 
     // Get spell data
-    const itemData = (spell instanceof ItemRelics) ? spell.toObject() : spell;
+    const flags = {};
+    const itemData = (spell instanceof ItemRotV) ? spell.toObject() : spell;
+    if ( Number.isNumeric(config.level) ) {
+      flags.rotv = { spellLevel: {
+        value: config.level,
+        base: spell.system.level,
+        scaling: spell.system.scaling
+      } };
+      itemData.system.level = config.level;
+    }
+
+    /**
+     * A hook event that fires before the item data for a scroll is created.
+     * @function rotv.preCreateScrollFromSpell
+     * @memberof hookEvents
+     * @param {object} itemData                  The initial item data of the spell to convert to a scroll.
+     * @param {object} options                   Additional options that modify the created scroll.
+     * @param {SpellScrollConfiguration} config  Configuration options for scroll creation.
+     * @returns {boolean}                        Explicitly return false to prevent the scroll to be created.
+     */
+    if ( Hooks.call("rotv.preCreateScrollFromSpell", itemData, options, config) === false ) return;
+
     let {
-      actionType, description, source, activation, duration, target, range, damage, formula, save, level, attackBonus
+      actionType, description, source, activation, duration, target, summons,
+      range, damage, formula, save, level, attack, ability, properties
     } = itemData.system;
 
     // Get scroll data
-    const scrollUuid = `Compendium.${CONFIG.ROTV.sourcePacks.ITEMS}.${CONFIG.ROTV.spellScrollIds[level]}`;
+    let scrollUuid;
+    const id = CONFIG.ROTV.spellScrollIds[level];
+    if ( foundry.data.validators.isValidId(id) ) {
+      scrollUuid = game.packs.get(CONFIG.ROTV.sourcePacks.ITEMS).index.get(id).uuid;
+    } else {
+      scrollUuid = id;
+    }
     const scrollItem = await fromUuid(scrollUuid);
     const scrollData = scrollItem.toObject();
     delete scrollData._id;
-
-    // Split the scroll description into an intro paragraph and the remaining details
-    const scrollDescription = scrollData.system.description.value;
-    const pdel = "</p>";
-    const scrollIntroEnd = scrollDescription.indexOf(pdel);
-    const scrollIntro = scrollDescription.slice(0, scrollIntroEnd + pdel.length);
-    const scrollDetails = scrollDescription.slice(scrollIntroEnd + pdel.length);
+    const isConc = properties.includes("concentration");
 
     // Create a composite description from the scroll description and the spell details
-    const desc = `${scrollIntro}<hr/><h3>${itemData.name} (Level ${level})</h3><hr/>${description.value}<hr/><h3>Scroll Details</h3><hr/>${scrollDetails}`;
+    let desc;
+    switch ( config.explanation ) {
+      case "full":
+        // Split the scroll description into an intro paragraph and the remaining details
+        const scrollDescription = scrollData.system.description.value;
+        const pdel = "</p>";
+        const scrollIntroEnd = scrollDescription.indexOf(pdel);
+        const scrollIntro = scrollDescription.slice(0, scrollIntroEnd + pdel.length);
+        const scrollDetails = scrollDescription.slice(scrollIntroEnd + pdel.length);
+        desc = [
+          scrollIntro,
+          "<hr>",
+          `<h3>${itemData.name} (${game.i18n.format("ROTV.LevelNumber", {level})})</h3>`,
+          isConc ? `<p><em>${game.i18n.localize("ROTV.Scroll.RequiresConcentration")}</em></p>` : null,
+          "<hr>",
+          description.value,
+          "<hr>",
+          `<h3>${game.i18n.localize("ROTV.Scroll.Details")}</h3>`,
+          "<hr>",
+          scrollDetails
+        ].filterJoin("");
+        break;
+      case "reference":
+        desc = [
+          "<p><em>",
+          CONFIG.ROTV.spellLevels[level] ?? level,
+          " &Reference[Spell Scroll]",
+          isConc ? `, ${game.i18n.localize("ROTV.Scroll.RequiresConcentration")}` : null,
+          "</em></p>",
+          description.value
+        ].filterJoin("");
+        break;
+      default:
+        desc = description.value;
+        break;
+    }
 
     // Used a fixed attack modifier and saving throw according to the level of spell scroll.
-    if ( ["mwak", "rwak"].includes(actionType) ) {
-      attackBonus = `${scrollData.system.attackBonus} - @mod`;
+    if ( ["mwak", "rwak", "msak", "rsak"].includes(actionType) ) {
+      attack = { bonus: scrollData.system.attack.bonus };
     }
     if ( save.ability ) {
       save.scaling = "flat";
@@ -2309,11 +2915,118 @@ export default class ItemRelics extends Item {
     const spellScrollData = foundry.utils.mergeObject(scrollData, {
       name: `${game.i18n.localize("ROTV.SpellScroll")}: ${itemData.name}`,
       img: itemData.img,
+      effects: itemData.effects ?? [],
+      flags,
       system: {
-        description: {value: desc.trim()}, source, actionType, activation, duration, target, range, damage, formula,
-        save, level, attackBonus
+        description: {value: desc.trim()}, source, actionType, activation, duration, target, summons,
+        range, damage, formula, save, level, ability, properties, attack: {bonus: attack.bonus, flat: true}
       }
     });
+    foundry.utils.mergeObject(spellScrollData, options);
+    spellScrollData.system.properties = [
+      "mgc",
+      ...scrollData.system.properties,
+      ...properties ?? [],
+      ...options.system?.properties ?? []
+    ];
+
+    /**
+     * A hook event that fires after the item data for a scroll is created but before the item is returned.
+     * @function rotv.createScrollFromSpell
+     * @memberof hookEvents
+     * @param {ItemRotV|object} spell              The spell or item data to be made into a scroll.
+     * @param {object} spellScrollData           The final item data used to make the scroll.
+     * @param {SpellScrollConfiguration} config  Configuration options for scroll creation.
+     */
+    Hooks.callAll("rotv.createScrollFromSpell", spell, spellScrollData, config);
+
     return new this(spellScrollData);
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Spawn a dialog for creating a new Item.
+   * @param {object} [data]  Data to pre-populate the Item with.
+   * @param {object} [context]
+   * @param {ActorRotV} [context.parent]       A parent for the Item.
+   * @param {string|null} [context.pack]     A compendium pack the Item should be placed in.
+   * @param {string[]|null} [context.types]  A list of types to restrict the choices to, or null for no restriction.
+   * @returns {Promise<ItemRotV|null>}
+   */
+  static async createDialog(data={}, { parent=null, pack=null, types=null, ...options }={}) {
+    types ??= game.documentTypes[this.documentName].filter(t => (t !== CONST.BASE_DOCUMENT_TYPE) && (t !== "backpack"));
+    if ( !types.length ) return null;
+    const collection = parent ? null : pack ? game.packs.get(pack) : game.collections.get(this.documentName);
+    const folders = collection?._formatFolderSelectOptions() ?? [];
+    const label = game.i18n.localize(this.metadata.label);
+    const title = game.i18n.format("DOCUMENT.Create", { type: label });
+    const name = data.name || game.i18n.format("DOCUMENT.New", { type: label });
+    let type = data.type || CONFIG[this.documentName]?.defaultType;
+    if ( !types.includes(type) ) type = types[0];
+    const content = await renderTemplate("systems/rotv/templates/apps/document-create.hbs", {
+      folders, name, type,
+      folder: data.folder,
+      hasFolders: folders.length > 0,
+      types: types.reduce((arr, type) => {
+        const label = CONFIG[this.documentName]?.typeLabels?.[type] ?? type;
+        arr.push({
+          type,
+          label: game.i18n.has(label) ? game.i18n.localize(label) : type,
+          icon: this.getDefaultArtwork({ type })?.img ?? "icons/svg/item-bag.svg"
+        });
+        return arr;
+      }, []).sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang))
+    });
+    return Dialog.prompt({
+      title, content,
+      label: title,
+      render: html => {
+        const app = html.closest(".app");
+        const folder = app.querySelector("select");
+        if ( folder ) app.querySelector(".dialog-buttons").insertAdjacentElement("afterbegin", folder);
+        app.querySelectorAll(".window-header .header-button").forEach(btn => {
+          const label = btn.innerText;
+          const icon = btn.querySelector("i");
+          btn.innerHTML = icon.outerHTML;
+          btn.dataset.tooltip = label;
+          btn.setAttribute("aria-label", label);
+        });
+        app.querySelector(".document-name").select();
+      },
+      callback: html => {
+        const form = html.querySelector("form");
+        const fd = new FormDataExtended(form);
+        const createData = foundry.utils.mergeObject(data, fd.object, { inplace: false });
+        if ( !createData.folder ) delete createData.folder;
+        if ( !createData.name?.trim() ) createData.name = this.defaultName();
+        return this.create(createData, { parent, pack, renderSheet: true });
+      },
+      rejectClose: false,
+      options: { ...options, jQuery: false, width: 350, classes: ["rotv2", "create-document", "dialog"] }
+    });
+  }
+
+  /* -------------------------------------------- */
+
+  /** @inheritDoc */
+  static getDefaultArtwork(itemData={}) {
+    const { type } = itemData;
+    const { img } = super.getDefaultArtwork(itemData);
+    return { img: CONFIG.ROTV.defaultArtwork.Item[type] ?? img };
+  }
+
+  /* -------------------------------------------- */
+  /*  Migrations & Deprecations                   */
+  /* -------------------------------------------- */
+
+  /** @inheritdoc */
+  static migrateData(source) {
+    source = super.migrateData(source);
+    if ( source.type === "class" ) ClassData._migrateTraitAdvancement(source);
+    else if ( source.type === "container" ) ContainerData._migrateWeightlessData(source);
+    else if ( source.type === "equipment" ) EquipmentData._migrateStealth(source);
+    else if ( source.type === "spell" ) SpellData._migrateComponentData(source);
+    return source;
   }
 }

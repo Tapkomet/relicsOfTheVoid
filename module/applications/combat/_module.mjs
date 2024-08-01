@@ -1,1 +1,1 @@
-export {default as CombatTrackerRelics} from "./combat-tracker.mjs";
+export {default as CombatTrackerRotV} from "./combat-tracker.mjs";

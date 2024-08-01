@@ -1,0 +1,166 @@
+<form autocomplete="off">
+    <h3 class="form-header flexrow">
+        {{ localize "ROTV.Summoning.Profile.LabelPl" }}
+        <button type="button" class="unbutton" data-action="add-profile">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            {{ localize 'ROTV.Summoning.Action.Add' }}
+        </button>
+    </h3>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Mode.Label" }}</label>
+        <select name="mode">
+            {{ selectOptions modes selected=summons.mode localize=true blank=(localize "ROTV.Summoning.Mode.Direct") }}
+        </select>
+    </div>
+    <ul class="rotv2 separated-list profiles flexcol">
+        {{#each profiles}}
+        <li class="profile rotv2" data-profile-id="{{ id }}">
+            <div class="details flexrow">
+                <input type="text" name="profiles.{{ id }}.count" value="{{ count }}" placeholder="1"
+                    aria-label="{{ localize 'ROTV.Summoning.Count.Label' }}">
+                <span class="sep">&times;</span>
+                {{#if (eq @root.summons.mode "cr")}}
+                <label>
+                    <strong>{{ localize 'ROTV.AbbreviationCR' }}</strong>
+                    <input type="text" name="profiles.{{ id }}.cr" value="{{ cr }}">
+                </label>
+                {{else}}
+                {{#if document}}
+                {{{ rotv-linkForUuid uuid }}}
+                {{else}}
+                <div class="drop-area">
+                    {{ localize "ROTV.Summoning.DropHint" }}
+                </div>
+                {{/if}}
+                {{/if}}
+                <input type="text" name="profiles.{{ id }}.name" value="{{ name }}" aria-label="{{ localize 'Name' }}"
+                       placeholder="{{#if document}}{{ document.name }}{{else}}
+                       {{~ localize 'ROTV.Summoning.DisplayName' }}{{/if}}">
+                <div class="list-controls">
+                    <button type="button" class="unbutton" data-action="delete-profile"
+                            data-tooltip="ROTV.Summoning.Action.Remove"
+                            aria-label="{{ localize 'ROTV.Summoning.Action.Remove' }}">
+                        <i class="fa-solid fa-trash fa-fw" inert></i>
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" name="profiles.{{ id }}._id" value="{{ id }}">
+            <input type="hidden" name="profiles.{{ id }}.uuid" value="{{ uuid }}">
+            <div class="additional-tray collapsible {{ collapsed }}">
+                <label class="roboto-upper">
+                    <i class="fa-solid fa-gears" inert></i>
+                    <span>{{ localize "ROTV.AdditionalSettings" }}</span>
+                    <i class="fas fa-caret-down" inert></i>
+                </label>
+                <div class="collapsible-content">
+                    <div class="wrapper">
+                        {{#if (eq @root.summons.mode "cr")}}
+                        <div class="form-group">
+                            <label>{{ localize "ROTV.Summoning.CreatureTypes.Label" }}</label>
+                            <multi-select name="profiles.{{ id }}.types">
+                                {{#each creatureTypes}}
+                                <option value="{{ @key }}" {{ selected }}>{{ label }}</option>
+                                {{/each}}
+                            </multi-select>
+                        </div>
+                        {{/if}}
+                        <div class="form-group">
+                            <label>{{ localize "ROTV.LevelLimit.Label" }}</label>
+                            <div class="form-fields">
+                                <input type="number" name="profiles.{{ id }}.level.min" min="1" step="1" placeholder="0"
+                                       value="{{ level.min }}" aria-label="{{ localize 'ROTV.LevelLimit.Min' }}">
+                                <span class="sep">&ndash;</span>
+                                <input type="number" name="profiles.{{ id }}.level.max" min="1" step="1" placeholder="∞"
+                                       value="{{ level.max }}" aria-label="{{ localize 'ROTV.LevelLimit.Max' }}">
+                            </div>
+                            <p class="hint">{{ localize "ROTV.Summoning.Level.Hint" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </li>
+        {{else}}
+        <li class="empty">
+            {{#unless summons.mode}}{{ localize "ROTV.Summoning.Profile.EmptyDrop" }}
+            {{~else}}{{ localize "ROTV.Summoning.Profile.Empty" }}{{/unless}}
+        </li>
+        {{/each}}
+    </ul>
+
+    {{#unless @root.isSpell}}
+    <div class="form-group">
+        <label>{{ localize "ROTV.ClassIdentifier" }}</label>
+        <input type="text" name="classIdentifier" value="{{ summons.classIdentifier }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Level.IdentifierHint" }}</p>
+    </div>
+    {{/unless}}
+
+    <h3 class="form-header">{{ localize "ROTV.Summoning.CreatureChanges.Label" }}</h3>
+    <p class="hint">{{ localize "ROTV.Summoning.CreatureChanges.Hint" }}</p>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Match.Proficiency.Label" }}</label>
+        <input type="checkbox" name="match.proficiency" {{ checked summons.match.proficiency }}>
+        <p class="hint">{{ localize "ROTV.Summoning.Match.Proficiency.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Bonuses.ArmorClass.Label" }}</label>
+        <input type="text" name="bonuses.ac" value="{{ summons.bonuses.ac }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Bonuses.ArmorClass.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Bonuses.HitDice.Label" }}</label>
+        <input type="text" name="bonuses.hd" value="{{ summons.bonuses.hd }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Bonuses.HitDice.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Bonuses.HitPoints.Label" }}</label>
+        <input type="text" name="bonuses.hp" value="{{ summons.bonuses.hp }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Bonuses.HitPoints.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.CreatureSizes.Label" }}</label>
+        <multi-select name="creatureSizes">
+            {{#each creatureSizes}}
+            <option value="{{ @key }}" {{ selected }}>{{ label }}</option>
+            {{/each}}
+        </multi-select>
+        <p class="hint">{{ localize "ROTV.Summoning.CreatureSizes.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.CreatureTypes.Label" }}</label>
+        <multi-select name="creatureTypes">
+            {{#each creatureTypes}}
+            <option value="{{ @key }}" {{ selected }}>{{ label }}</option>
+            {{/each}}
+        </multi-select>
+        <p class="hint">{{ localize "ROTV.Summoning.CreatureTypes.Hint" }}</p>
+    </div>
+
+    <h3 class="form-header">{{ localize "ROTV.Summoning.ItemChanges.Label" }}</h3>
+    <p class="hint">{{ localize "ROTV.Summoning.ItemChanges.Hint" }}</p>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Match.Attacks.Label" }}</label>
+        <input type="checkbox" name="match.attacks" {{ checked summons.match.attacks }}>
+        <p class="hint">{{ localize "ROTV.Summoning.Match.Attacks.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Match.Saves.Label" }}</label>
+        <input type="checkbox" name="match.saves" {{ checked summons.match.saves }}>
+        <p class="hint">{{ localize "ROTV.Summoning.Match.Saves.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Bonuses.Attack.Label" }}</label>
+        <input type="text" name="bonuses.attackDamage" value="{{ summons.bonuses.attackDamage }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Bonuses.Attack.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Bonuses.Saves.Label" }}</label>
+        <input type="text" name="bonuses.saveDamage" value="{{ summons.bonuses.saveDamage }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Bonuses.Saves.Hint" }}</p>
+    </div>
+    <div class="form-group">
+        <label>{{ localize "ROTV.Summoning.Bonuses.Healing.Label" }}</label>
+        <input type="text" name="bonuses.healing" value="{{ summons.bonuses.healing }}">
+        <p class="hint">{{ localize "ROTV.Summoning.Bonuses.Healing.Hint" }}</p>
+    </div>
+</form>
