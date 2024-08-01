@@ -39,7 +39,6 @@ const { SchemaField, NumberField, StringField, BooleanField, ArrayField, Integer
  * @property {number} attributes.death.success            Number of successful death saves.
  * @property {number} attributes.death.failure            Number of failed death saves.
  * @property {number} attributes.exhaustion               Number of levels of exhaustion.
- * @property {number} attributes.inspiration              Does this character have inspiration?
  * @property {object} details
  * @property {ItemRotV|string} details.background           Character's background item or name.
  * @property {string} details.originalClass               ID of first class taken by character.

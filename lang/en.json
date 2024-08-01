@@ -768,6 +768,7 @@
 "ROTV.CurrencyGP": "Gold",
 "ROTV.CurrencyPP": "Platinum",
 "ROTV.CurrencySP": "Silver",
+"ROTV.CurrencyCR": "Credits",
 "ROTV.CurrencyManager": {
   "Title": "Manage Currency",
   "Convert": {
