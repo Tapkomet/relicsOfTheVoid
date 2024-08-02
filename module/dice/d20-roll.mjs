@@ -141,13 +141,13 @@ export default class D20Roll extends Roll {
     d20.modifiers = [];
 
     // Halfling Lucky
-    if ( this.options.halflingLucky ) d20.modifiers.push("r1=1");
+    //if ( this.options.halflingLucky ) d20.modifiers.push("r1=1");
 
     // Reliable Talent
-    if ( this.options.reliableTalent ) d20.modifiers.push("min10");
+    //if ( this.options.reliableTalent ) d20.modifiers.push("min10");
 
     // Handle Advantage or Disadvantage
-    if ( this.hasAdvantage ) {
+    /*if ( this.hasAdvantage ) {
       d20.number = this.options.elvenAccuracy ? 3 : 2;
       d20.modifiers.push("kh");
       d20.options.advantage = true;
@@ -156,13 +156,26 @@ export default class D20Roll extends Roll {
       d20.number = 2;
       d20.modifiers.push("kl");
       d20.options.disadvantage = true;
-    }
-    else d20.number = 1;
+    }*/
+    d20.number = 1;
+
 
     // Assign critical and fumble thresholds
     if ( this.options.critical ) d20.options.critical = this.options.critical;
     if ( this.options.fumble ) d20.options.fumble = this.options.fumble;
     if ( this.options.targetValue ) d20.options.target = this.options.targetValue;
+
+
+    if (advantageMode == D20Roll.ADV_MODE.ADVANTAGE) {
+        this.terms.push(new OperatorTerm({operator: "-"}));
+        this.terms.push(new NumericTerm({number: "9"}));
+    }
+
+
+    if (advantageMode == D20Roll.ADV_MODE.DISADVANTAGE) {
+        this.terms.push(new OperatorTerm({operator: "-"}));
+        this.terms.push(new NumericTerm({number: "6"}));
+    }
 
     // Re-compile the underlying formula
     this._formula = this.constructor.getFormula(this.terms);
