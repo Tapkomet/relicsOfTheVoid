@@ -221,7 +221,7 @@ export default class AttributesFields {
 
           if (base > 6) base = 5;
 
-          return (base * multiplier).toNearest(0.1) + bonus;
+          return (base * multiplier).toNearest(0.01) + bonus;
       /*const bonus = simplifyBonus(encumbrance.bonuses?.[threshold], rollData)
         + simplifyBonus(encumbrance.bonuses?.overall, rollData);
       let multiplier = simplifyBonus(encumbrance.multipliers[threshold], rollData)
@@ -234,14 +234,14 @@ export default class AttributesFields {
     };
 
     // Populate final Encumbrance values
-    encumbrance.value = weight.toNearest(0.1);
+    encumbrance.value = weight.toNearest(0.01);
     encumbrance.thresholds = {
       encumbered: calculateThreshold("encumbered"),
       heavilyEncumbered: calculateThreshold("heavilyEncumbered"),
       maximum: calculateThreshold("maximum")
     };
     encumbrance.max = encumbrance.thresholds.maximum;
-    encumbrance.mod = (sizeMod * maximumMultiplier).toNearest(0.1);
+    encumbrance.mod = (sizeMod * maximumMultiplier).toNearest(0.01);
     encumbrance.stops = {
       encumbered: Math.clamp((encumbrance.thresholds.encumbered * 100) / encumbrance.max, 0, 100),
       heavilyEncumbered: Math.clamp((encumbrance.thresholds.heavilyEncumbered * 100) / encumbrance.max, 0, 100)
