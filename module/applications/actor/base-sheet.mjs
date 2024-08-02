@@ -77,8 +77,8 @@ export default class ActorSheetRotV extends ActorSheetMixin(ActorSheet) {
         ".center-pane"
       ],
       tabs: [{navSelector: ".tabs", contentSelector: ".sheet-body", initial: "description"}],
-      width: 720,
-      height: Math.max(680, Math.max(
+      width: 700,
+      height: Math.max(657, Math.max(
         237 + (Object.keys(CONFIG.ROTV.abilities).length * 70),
         240 + (Object.keys(CONFIG.ROTV.skills).length * 24)
       )),

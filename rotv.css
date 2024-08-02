@@ -3404,8 +3404,8 @@ p:empty:has(+ .content-embed),
 /*  Basic Structure                          */
 /* ----------------------------------------- */
 .rotv.sheet.actor.character {
-  min-width: 720px;
-  min-height: 680px;
+  min-width: 700px;
+  min-height: 657px;
   /* ----------------------------------------- */
   /*  Sheet Header                             */
   /* ----------------------------------------- */
@@ -3591,8 +3591,8 @@ p:empty:has(+ .content-embed),
   width: 1em;
 }
 .rotv.sheet.actor.vehicle {
-  min-width: 720px;
-  min-height: 680px;
+  min-width: 700px;
+  min-height: 657px;
 }
 .rotv.sheet.actor.vehicle .source {
   display: flex;
