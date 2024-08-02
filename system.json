@@ -7,9 +7,9 @@
     "minimum": "12.329",
     "verified": "12"
   },
-  "url": "https://github.com/foundryvtt/rotv/",
-  "manifest": "https://raw.githubusercontent.com/foundryvtt/rotv/master/system.json",
-  "download": "https://github.com/foundryvtt/rotv/releases/download/release-4.0.0/rotv-release-4.0.0.zip",
+  "url": "https://github.com/Tapkomet/relicsOfTheVoid",
+  "manifest": "https://raw.githubusercontent.com/Tapkomet/relicsOfTheVoid/main/system.json",
+  "download": "https://github.com/Tapkomet/relicsOfTheVoid/archive/refs/heads/main.zip",
   "authors": [
     {
       "name": "Tapkomet",
