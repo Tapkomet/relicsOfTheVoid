@@ -85,10 +85,10 @@ export default class CharacterData extends CreatureTemplate {
         }, {label: "ROTV.ArmorClass"}),
         hp: new SchemaField({
           value: new NumberField({
-            nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.HitPointsCurrent"
+            nullable: false, integer: true, min: 0, initial: 10, label: "ROTV.HitPointsCurrent"
           }),
           max: new NumberField({
-            nullable: true, integer: true, min: 0, initial: null, label: "ROTV.HitPointsOverride"
+            nullable: true, integer: true, min: 0, initial: 10, label: "ROTV.HitPointsOverride"
           }),
           temp: new NumberField({integer: true, initial: 0, min: 0, label: "ROTV.HitPointsTemp"}),
           tempmax: new NumberField({integer: true, initial: 0, label: "ROTV.HitPointsTempMax"}),
