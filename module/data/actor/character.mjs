@@ -51,6 +51,7 @@ const { SchemaField, NumberField, StringField, BooleanField, ArrayField, Integer
  * @property {string} details.ideal                       Character's ideals.
  * @property {string} details.bond                        Character's bonds.
  * @property {string} details.flaw                        Character's flaws.
+ * @property {string} details.passion                     Character's passion.
  * @property {object} traits
  * @property {SimpleTraitData} traits.weaponProf          Character's weapon proficiencies.
  * @property {SimpleTraitData} traits.armorProf           Character's armor proficiencies.
