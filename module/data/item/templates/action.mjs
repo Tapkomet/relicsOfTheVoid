@@ -140,12 +140,7 @@ export default class ActionTemplate extends ItemDataModel {
    */
   get abilityMod() {
     if ( this.ability === "none" ) return null;
-    return this.ability || this._typeAbilityMod || {
-      mwak: "str",
-      rwak: "dex",
-      msak: this.parent?.actor?.system.attributes.spellcasting || "int",
-      rsak: this.parent?.actor?.system.attributes.spellcasting || "int"
-    }[this.actionType] || null;
+    return "con";
   }
 
   /* -------------------------------------------- */
