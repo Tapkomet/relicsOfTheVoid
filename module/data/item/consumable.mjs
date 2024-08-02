@@ -44,7 +44,7 @@ export default class ConsumableData extends ItemDataModel.mixin(
         autoDestroy: new BooleanField({required: true, label: "ROTV.ItemDestroyEmpty"})
       }),
       proficient: new NumberField({
-        required: true, min: 0, max: 1, integer: true, initial: true, label: "ROTV.ProficiencyLevel"
+        required: true, min: 0, max: 1, integer: true, initial: 1, label: "ROTV.ProficiencyLevel"
       })
     });
   }
