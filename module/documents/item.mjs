@@ -815,8 +815,6 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
 
 
 
-      // modifier for damage
-      parts.push("@dmgMod");
 
       // Add proficiency bonus.
       if ( this.system.prof?.hasProficiency ) {
