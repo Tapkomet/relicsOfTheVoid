@@ -16,9 +16,9 @@ import TraitsFields from "./templates/traits.mjs";
  * @property {string} attributes.ac.formula            Custom formula to use.
  * @property {string} attributes.ac.motionless         Changes to vehicle AC when not moving.
  * @property {object} attributes.damRed
- * @property {object} attributes.damRed.front
- * @property {object} attributes.damRed.side
- * @property {object} attributes.damRed.rear
+ * @property {number} attributes.damRed.front
+ * @property {number} attributes.damRed.side
+ * @property {number} attributes.damRed.rear
  * @property {object} attributes.hp
  * @property {number} attributes.hp.value              Current hit points.
  * @property {number} attributes.hp.max                Maximum allowed HP value.
@@ -65,9 +65,15 @@ export default class VehicleData extends CommonTemplate {
           motionless: new foundry.data.fields.StringField({required: true, label: "ROTV.ArmorClassMotionless"})
         }, {label: "ROTV.ArmorClass"}),
         damRed: new foundry.data.fields.SchemaField({
-          front: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.DRFront"}),
-          side: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.DRSide"}),
-          rear: new foundry.data.fields.NumberField({integer: true, min: 0, label: "ROTV.DRRear"}),
+          front: new foundry.data.fields.NumberField({
+          integer: true, min: 0, label: "ROTV.DRFront"
+          }),
+          side: new foundry.data.fields.NumberField({
+          integer: true, min: 0, label: "ROTV.DRSide"
+          }),
+          rear: new foundry.data.fields.NumberField({
+          integer: true, min: 0, label: "ROTV.DRRear"
+          }),
         }, {label: "ROTV.DR"}),
         hp: new foundry.data.fields.SchemaField({
           value: new foundry.data.fields.NumberField({
