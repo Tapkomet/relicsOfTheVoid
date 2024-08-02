@@ -275,6 +275,7 @@ export default class ActionTemplate extends ItemDataModel {
     if ( data && key && ("abilities" in data) ) {
       const ability = data.abilities[key];
       data.mod = ability?.mod ?? 0;
+      data.dmgMod = Math.floor((ability?.mod ?? 0)*0.5);
     }
     return data;
   }

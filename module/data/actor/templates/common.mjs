@@ -133,6 +133,7 @@ export default class CommonTemplate extends ActorDataModel.mixin(CurrencyTemplat
     for ( const [id, abl] of Object.entries(this.abilities) ) {
       if ( flags.diamondSoul ) abl.proficient = 1;  // Diamond Soul is proficient in all saves
       abl.mod = abl.value;
+      abl.dmgMod = Math.floor(abl.value*0.5);
 
       const isRA = this.parent._isRemarkableAthlete(id);
       abl.checkProf = new Proficiency(prof, (isRA || flags.jackOfAllTrades) ? 0.5 : 0, !isRA);
