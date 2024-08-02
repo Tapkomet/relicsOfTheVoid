@@ -3535,7 +3535,7 @@ p:empty:has(+ .content-embed),
 /* ----------------------------------------- */
 .rotv.sheet.actor.npc {
   min-width: 600px;
-  min-height: 680px;
+  min-height: 657px;
 }
 .rotv.sheet.actor.npc .header-exp {
   flex: 0 0 80px;
