@@ -27,6 +27,8 @@ const { SchemaField, NumberField, StringField, BooleanField, ArrayField, Integer
  * @property {number} attributes.ac.flat                  Flat value used for flat or natural armor calculation.
  * @property {string} attributes.ac.calc                  Name of one of the built-in formulas to use.
  * @property {string} attributes.ac.formula               Custom formula to use.
+ * @property {object} attributes.damRed
+ * @property {object} attributes.stress
  * @property {object} attributes.hp
  * @property {number} attributes.hp.value                 Current hit points.
  * @property {number} attributes.hp.max                   Override for maximum HP.
@@ -83,6 +85,10 @@ export default class CharacterData extends CreatureTemplate {
           calc: new StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
           formula: new FormulaField({deterministic: true, label: "ROTV.ArmorClassFormula"})
         }, {label: "ROTV.ArmorClass"}),
+        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        }),
+        stress: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: -2, initial: 0, label: "ROTV.Exhaustion"
+        }),
         hp: new SchemaField({
           value: new NumberField({
             nullable: false, integer: true, min: 0, initial: 10, label: "ROTV.HitPointsCurrent"

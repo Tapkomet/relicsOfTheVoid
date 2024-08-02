@@ -72,8 +72,8 @@ export default class AttributesFields {
       spellcasting: new foundry.data.fields.StringField({
         required: true, blank: true, initial: "int", label: "ROTV.SpellAbility"
       }),
-      exhaustion: new foundry.data.fields.NumberField({
-        required: true, nullable: false, integer: true, min: -2, initial: 0, label: "ROTV.Exhaustion"
+      stress: new foundry.data.fields.NumberField({
+        required: true, nullable: false, integer: true, min: -2, initial: 0, label: "ROTV.Current"
       }),
       concentration: new RollConfigField({
         ability: "",

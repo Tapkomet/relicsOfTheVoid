@@ -2961,9 +2961,10 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
 
     // Specific additional adjustments
     d.system.details.alignment = o.system.details.alignment; // Don't change alignment
-    d.system.attributes.exhaustion = o.system.attributes.exhaustion; // Keep your prior exhaustion level
     d.system.spells = o.system.spells; // Keep spell slots
     d.system.attributes.ac.flat = target.system.attributes.ac.value; // Override AC
+    d.system.attributes.stress = o.system.attributes.stress; // Keep your prior stress level
+    d.system.attributes.damRed = o.system.attributes.damRed; // Keep your prior damRed
 
     // Token appearance updates
     for ( const k of ["width", "height", "alpha", "lockRotation"] ) {

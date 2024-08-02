@@ -18,6 +18,7 @@ const { BooleanField, NumberField, SchemaField, StringField } = foundry.data.fie
  * @property {number} attributes.ac.flat         Flat value used for flat or natural armor calculation.
  * @property {string} attributes.ac.calc         Name of one of the built-in formulas to use.
  * @property {string} attributes.ac.formula      Custom formula to use.
+ * @property {object} attributes.damRed
  * @property {object} attributes.hd
  * @property {number} attributes.hd.spent        Number of hit dice spent.
  * @property {object} attributes.hp
@@ -75,6 +76,8 @@ export default class NPCData extends CreatureTemplate {
           calc: new StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
           formula: new FormulaField({deterministic: true, label: "ROTV.ArmorClassFormula"})
         }, {label: "ROTV.ArmorClass"}),
+        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        }),
         hd: new SchemaField({
           spent: new NumberField({integer: true, min: 0, initial: 0})
         }, {label: "ROTV.HitDice"}),

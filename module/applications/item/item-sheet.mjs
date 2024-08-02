@@ -129,6 +129,10 @@ export default class ItemSheetRotV extends ItemSheet {
       // Armor Class
       hasDexModifier: item.isArmor && (item.system.type.value !== "shield"),
 
+
+      // Damage Reduction
+      hasDR: item.isArmor,
+
       // Advancement
       advancement: this._getItemAdvancement(item),
 

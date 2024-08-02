@@ -28,6 +28,7 @@ const { NumberField, SchemaField, SetField, StringField } = foundry.data.fields;
  * @property {number} armor.value         Base armor class or shield bonus.
  * @property {number} armor.dex           Maximum dex bonus added to armor class.
  * @property {number} armor.magicalBonus  Bonus added to AC from the armor's magical nature.
+ * @property {number} damRed
  * @property {object} speed               Speed granted by a piece of vehicle equipment.
  * @property {number} speed.value         Speed granted by this piece of equipment measured in feet or meters
  *                                        depending on system setting.
@@ -60,7 +61,10 @@ export default class EquipmentData extends ItemDataModel.mixin(
       }),
       proficient: new NumberField({
         required: true, min: 0, max: 1, integer: true, initial: null, label: "ROTV.ProficiencyLevel"
-      })
+      }),
+      damRed: new foundry.data.fields.NumberField({
+        required: true, integer: true, min: 0, label: "ROTV.DR"
+      }),
     });
   }
 

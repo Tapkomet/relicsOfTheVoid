@@ -257,6 +257,7 @@ function _configureConsumableAttributes() {
   CONFIG.ROTV.consumableResources = [
     ...Object.keys(ROTV.abilities).map(ability => `abilities.${ability}.value`),
     "attributes.ac.flat",
+    "item.damRed",
     "attributes.hp.value",
     ...Object.keys(ROTV.senses).map(sense => `attributes.senses.${sense}`),
     ...Object.keys(ROTV.movementTypes).map(type => `attributes.movement.${type}`),

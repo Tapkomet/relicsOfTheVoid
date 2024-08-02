@@ -10,6 +10,7 @@ import SystemDataModel from "../../abstract.mjs";
  * @property {number} hp.max         Max hit points.
  * @property {number} hp.dt          Damage threshold.
  * @property {string} hp.conditions  Conditions that are triggered when this equipment takes damage.
+ * @property {number} damRed
  * @mixin
  */
 export default class MountableTemplate extends SystemDataModel {
@@ -20,7 +21,10 @@ export default class MountableTemplate extends SystemDataModel {
         value: new foundry.data.fields.NumberField({
           required: true, integer: true, min: 0, label: "ROTV.ArmorClass"
         })
-      }, {label: "ROTV.ArmorClass"}),
+      }),
+      damRed: new foundry.data.fields.NumberField({
+          required: true, integer: true, min: 0, label: "ROTV.ArmorClass"
+        }),
       hp: new foundry.data.fields.SchemaField({
         value: new foundry.data.fields.NumberField({
           required: true, integer: true, min: 0, label: "ROTV.HitPointsCurrent"

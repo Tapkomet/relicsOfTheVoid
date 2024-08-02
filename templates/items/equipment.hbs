@@ -100,15 +100,18 @@
                 </div>
             </div>
 
-            {{#if properties.mgc.selected}}
-            <div class="form-group">
-                <label>{{ localize "ROTV.MagicalBonus" }}</label>
-                <div class="form-fields">
-                    {{ numberInput system.armor.magicalBonus name="system.armor.magicalBonus"
-                       min="0" step="1" placeholder="0" }}
-                </div>
-            </div>
             {{/if}}
+
+
+
+            {{!-- Damage Reduction --}}
+            {{#if hasDR}}
+                <div class="form-group">
+                    <label>{{ localize "ROTV.DR" }}</label>
+                    <div class="form-fields">
+                        {{numberInput system.damRed name="system.damRed"}}
+                    </div>
+                </div>
             {{/if}}
 
             {{#if hasDexModifier}}
