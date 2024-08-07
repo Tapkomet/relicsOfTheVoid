@@ -259,6 +259,7 @@ export default class ActorSheetRotVCharacter2 extends ActorSheetV2Mixin(ActorShe
       sections: features,
       filters: [
         { key: "action", label: "ROTV.Action" },
+        { key: "move", label: "ROTV.MoveAction" },
         { key: "bonus", label: "ROTV.BonusAction" },
         { key: "reaction", label: "ROTV.Reaction" },
         { key: "sr", label: "ROTV.ShortRest" },

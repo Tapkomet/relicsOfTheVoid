@@ -332,6 +332,7 @@ export default function ActorSheetV2Mixin(Base) {
         const cost = system.activation?.cost;
         const abbr = {
           action: "ROTV.ActionAbbr",
+          move: "ROTV.MoveActionAbbr",
           bonus: "ROTV.BonusActionAbbr",
           reaction: "ROTV.ReactionAbbr",
           minute: "ROTV.TimeMinuteAbbr",

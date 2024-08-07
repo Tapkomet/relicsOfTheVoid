@@ -458,6 +458,7 @@ ROTV.staticAbilityActivationTypes = {
 ROTV.abilityActivationTypes = {
   ...ROTV.staticAbilityActivationTypes,
   action: "ROTV.Action",
+  move: "ROTV.MoveAction",
   bonus: "ROTV.BonusAction",
   reaction: "ROTV.Reaction",
   minute: ROTV.timePeriods.minute,
