@@ -66,6 +66,19 @@
                                data-tooltip="ROTV.ArmorClassMotionless">
                     </footer>
                 </li>
+                <li class="attribute">
+                    <h4 class="attribute-name box-title">{{localize 'ROTV.DR'}}</h4>
+                    <div class="attribute-value multiple">
+                        <input name="system.attributes.damRed.front" type="text" data-dtype="Number"
+                               value="{{system.attributes.damRed.front}}" placeholder="0" data-tooltip="ROTV.DRFront">
+                        <span class="sep"> &sol; </span>
+                        <input name="system.attributes.damRed.side" type="text" data-dtype="Number"
+                               value="{{system.attributes.damRed.side}}" placeholder="0" data-tooltip="ROTV.DRSide">
+                        <span class="sep"> &sol; </span>
+                        <input name="system.attributes.damRed.rear" type="text" data-dtype="Number"
+                               value="{{system.attributes.damRed.rear}}" placeholder="0" data-tooltip="ROTV.DRRear">
+                    </div>
+                </li>
                 <li class="attribute movement">
                     <h4 class="attribute-name box-title">{{ localize "ROTV.Movement" }}</h4>
                     <a class="config-button" data-action="movement" data-tooltip="ROTV.MovementConfig">

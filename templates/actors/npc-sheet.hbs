@@ -92,8 +92,10 @@
                         data-attribution-caption="ROTV.ArmorClass" data-tooltip-direction="DOWN">
                         <span>{{system.attributes.ac.value}}</span>
                     </div>
-                    <footer class="attribute-footer">
-                        <span>{{labels.armorType}}</span>
+                    <footer class="attribute-footer flexrow">
+                        <span>{{localize "ROTV.DR"}}</span>
+                        <input name="system.attributes.damRed" type="text"
+                               data-dtype="Number" value="{{system.attributes.damRed}}" placeholder="0">
                     </footer>
                 </li>
 
@@ -117,7 +119,6 @@
     <nav class="sheet-navigation tabs" data-group="primary">
         <a class="item active" data-tab="attributes">{{ localize "ROTV.Attributes" }}</a>
         <a class="item" data-tab="features">{{ localize "ROTV.Features" }}</a>
-        <a class="item" data-tab="spellbook">{{ localize "ROTV.Spellbook" }}</a>
         <a class="item" data-tab="effects">{{ localize "ROTV.Effects" }}</a>
         <a class="item" data-tab="biography">{{ localize "ROTV.Biography" }}</a>
     </nav>
@@ -132,7 +133,7 @@
                 <li class="ability {{#if ability.proficient}}proficient{{/if}}" data-ability="{{id}}">
                     <h4 class="ability-name box-title rollable">{{ability.label}}</h4>
                     <input type="text" value="{{ability.value}}" name="{{concat "system.abilities." id ".value"}}"
-                        class="ability-score" placeholder="10" data-dtype="Number">
+                        class="ability-score" placeholder="0" data-dtype="Number">
                     <div class="ability-modifiers flexrow">
                         <span class="ability-mod" data-tooltip="ROTV.Modifier">
                             {{numberFormat ability.mod decimals=0 sign=true}}
@@ -240,11 +241,6 @@
         {{!-- Features Tab --}}
         <div class="tab features flexcol" data-group="primary" data-tab="features">
             {{> "rotv.actor-features" sections=features}}
-        </div>
-
-        {{!-- Spellbook Tab --}}
-        <div class="tab spellbook flexcol" data-group="primary" data-tab="spellbook">
-            {{> "rotv.actor-spellbook"}}
         </div>
 
         {{!-- Effects Tab --}}

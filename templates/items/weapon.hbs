@@ -26,16 +26,6 @@
                         {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
                     {{/if}}
                 </label>
-                <label class="identified">
-                    <input type="checkbox" name="system.identified" {{checked system.identified}}>
-                    {{#if system.identified}}
-                        {{ localize "ROTV.Identified" }}
-                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
-                    {{else}}
-                        {{ localize "ROTV.Unidentified.Title" }}
-                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
-                    {{/if}}
-                </label>
             </div>
 
             <ul class="summary flexrow">
@@ -91,18 +81,6 @@
             </div>
 
             {{#unless system.isMountable}}
-            <div class="form-group input-select">
-                <label>{{localize "ROTV.Attunement"}}</label>
-                <div class="form-fields">
-                    <input type="checkbox" name="system.attuned" {{ checked system.attuned }}
-                           {{ disabled (not system.attunement) }}
-                           data-tooltip="ROTV.Attuned" aria-label="{{ localize 'ROTV.Attuned' }}">
-                    <select name="system.attunement">
-                        {{selectOptions config.attunementTypes selected=system.attunement
-                                        blank=(localize "ROTV.AttunementNone")}}
-                    </select>
-                </div>
-            </div>
 
             <div class="form-group">
                 <label>{{localize "ROTV.Proficiency"}}</label>

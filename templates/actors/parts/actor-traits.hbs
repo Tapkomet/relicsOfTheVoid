@@ -35,58 +35,7 @@
         </ul>
     </div>
 
-    <div class="form-group {{traits.traits.languages.cssClass}}">
-        <label>{{localize "ROTV.Languages"}}</label>
-        <a class="trait-selector" data-trait="languages"
-           data-tooltip="{{localize 'ROTV.TraitConfig' trait=(localize 'ROTV.Languages')}}" tabindex="0">
-            <i class="fas fa-edit"></i>
-        </a>
-        <ul class="traits-list">
-        {{#each traits.traits.languages.selected as |v k|}}
-            <li class="tag {{k}}">{{v}}</li>
-        {{/each}}
-        </ul>
-    </div>
     {{/unless}}
-
-    <div class="form-group {{traits.traits.di.cssClass}}">
-        <label>{{localize "ROTV.DamImm"}}</label>
-        <a class="trait-selector" data-trait="di"
-           data-tooltip="{{localize 'ROTV.TraitConfig' trait=(localize 'ROTV.DamImm')}}" tabindex="0">
-            <i class="fas fa-edit"></i>
-        </a>
-        <ul class="traits-list">
-        {{#each traits.traits.di.selected as |v k|}}
-            <li class="tag {{k}}">{{v}}</li>
-        {{/each}}
-        </ul>
-    </div>
-
-    <div class="form-group {{traits.traits.dr.cssClass}}">
-        <label>{{localize "ROTV.DamRes"}}</label>
-        <a class="trait-selector" data-trait="dr"
-           data-tooltip="{{localize 'ROTV.TraitConfig' trait=(localize 'ROTV.DamRes')}}" tabindex="0">
-            <i class="fas fa-edit"></i>
-        </a>
-        <ul class="traits-list">
-        {{#each traits.traits.dr.selected as |v k|}}
-            <li class="tag {{k}}">{{v}}</li>
-        {{/each}}
-        </ul>
-    </div>
-
-    <div class="form-group {{traits.traits.dv.cssClass}}">
-        <label>{{localize "ROTV.DamVuln"}}</label>
-        <a class="trait-selector" data-trait="dv"
-           data-tooltip="{{localize 'ROTV.TraitConfig' trait=(localize 'ROTV.DamVuln')}}">
-            <i class="fas fa-edit"></i>
-        </a>
-        <ul class="traits-list">
-        {{#each traits.traits.dv.selected as |v k|}}
-            <li class="tag {{k}}">{{v}}</li>
-        {{/each}}
-        </ul>
-    </div>
 
     <div class="form-group {{traits.traits.ci.cssClass}}">
         <label>{{localize "ROTV.ConImm"}}</label>
@@ -128,26 +77,6 @@
         </ul>
     </div>
 
-    <div class="form-group {{traits.traits.toolProf.cssClass}}">
-        <label>{{localize "ROTV.TraitToolProf"}}</label>
-        <a class="trait-selector" data-trait="tool"
-           data-tooltip="{{localize 'ROTV.TraitConfig' trait=(localize 'ROTV.TraitToolProf')}}">
-            <i class="fas fa-edit"></i>
-        </a>
-        <ul class="traits-list">
-        {{#each tools}}
-            <li class="tag tool proficiency-row" data-property="tools" data-key="{{@key}}">
-                <input type="hidden" name="system.tools.{{@key}}.value" value="{{baseValue}}" data-dtype="Number">
-                <input type="hidden" name="system.tools.{{@key}}.ability" value="{{ability}}">
-                <a class="proficiency-toggle tool-proficiency" data-tooltip="{{hover}}">{{{icon}}}</a>
-                <h4 class="tool-name rollable">{{label}}</h4>
-                <a class="config-button" data-action="tool" data-tooltip="ROTV.ToolConfigure">
-                    <i class="fas fa-cog"></i>
-                </a>
-            </li>
-        {{/each}}
-        </ul>
-    </div>
     {{/if}}
 
     {{#unless isVehicle}}
