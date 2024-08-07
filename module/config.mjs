@@ -1,6 +1,4 @@
-import BaseActivityData from "./data/activity/base-activity.mjs";
 import MapLocationControlIcon from "./canvas/map-location-control-icon.mjs";
-import * as activities from "./documents/activity/_module.mjs";
 import * as advancement from "./documents/advancement/_module.mjs";
 import { preLocalize } from "./utils.mjs";
 
@@ -102,6 +100,41 @@ ROTV.defaultAbilities = {
   hitPoints: "str",
   concentration: "con"
 };
+
+Object.defineProperties(ROTV, {
+  hitPointsAbility: {
+    get: function() {
+      foundry.utils.logCompatibilityWarning(
+        "ROTV.hitPointsAbility has been deprecated and is now accessible through ROTV.defaultAbilities.hitPoints.",
+        { since: "RotV 3.1", until: "RotV 3.3" }
+      );
+      return ROTV.defaultAbilities.hitPoints;
+    },
+    set: function(value) {
+      foundry.utils.logCompatibilityWarning(
+        "ROTV.hitPointsAbility has been deprecated and is now accessible through ROTV.defaultAbilities.hitPoints.",
+        { since: "RotV 3.1", until: "RotV 3.3" }
+      );
+      ROTV.defaultAbilities.hitPoints = value;
+    }
+  },
+  initiativeAbility: {
+    get: function() {
+      foundry.utils.logCompatibilityWarning(
+        "ROTV.initiativeAbility has been deprecated and is now accessible through ROTV.defaultAbilities.initiative.",
+        { since: "RotV 3.1", until: "RotV 3.3" }
+      );
+      return ROTV.defaultAbilities.initiative;
+    },
+    set: function(value) {
+      foundry.utils.logCompatibilityWarning(
+        "ROTV.initiativeAbility has been deprecated and is now accessible through ROTV.defaultAbilities.initiative.",
+        { since: "RotV 3.1", until: "RotV 3.3" }
+      );
+      ROTV.defaultAbilities.initiative = value;
+    }
+  }
+});
 
 /* -------------------------------------------- */
 
@@ -440,71 +473,6 @@ preLocalize("abilityActivationTypes");
 /* -------------------------------------------- */
 
 /**
- * @typedef {ActivityActivationTypeConfig}
- * @property {string} label            Localized label for the activation type.
- * @property {string} [group]          Localized label for the presentational group.
- * @property {boolean} [scalar=false]  Does this activation type have a numeric value attached?
- */
-
-/**
- * Configuration data for activation types on activities.
- * @enum {ActivityActivationTypeConfig}
- */
-ROTV.activityActivationTypes = {
-  action: {
-    label: "ROTV.Action",
-    group: "ROTV.Activation.Category.Standard"
-  },
-  bonus: {
-    label: "ROTV.BonusAction",
-    group: "ROTV.Activation.Category.Standard"
-  },
-  reaction: {
-    label: "ROTV.Reaction",
-    group: "ROTV.Activation.Category.Standard"
-  },
-  minute: {
-    label: "ROTV.TimeMinute",
-    group: "ROTV.Activation.Category.Time",
-    scalar: true
-  },
-  hour: {
-    label: "ROTV.TimeHour",
-    group: "ROTV.Activation.Category.Time",
-    scalar: true
-  },
-  day: {
-    label: "ROTV.TimeDay",
-    group: "ROTV.Activation.Category.Time",
-    scalar: true
-  },
-  legendary: {
-    label: "ROTV.LegendaryActionLabel",
-    group: "ROTV.Activation.Category.Monster",
-    scalar: true
-  },
-  mythic: {
-    label: "ROTV.MythicActionLabel",
-    group: "ROTV.Activation.Category.Monster",
-    scalar: true
-  },
-  lair: {
-    label: "ROTV.LairActionLabel",
-    group: "ROTV.Activation.Category.Monster"
-  },
-  crew: {
-    label: "ROTV.VehicleCrewAction",
-    group: "ROTV.Activation.Category.Vehicle",
-    scalar: true
-  },
-  special: {
-    label: "ROTV.Special"
-  }
-};
-
-/* -------------------------------------------- */
-
-/**
  * Different things that an ability can consume upon use.
  * @enum {string}
  */
@@ -516,58 +484,6 @@ ROTV.abilityConsumptionTypes = {
   charges: "ROTV.ConsumeCharges"
 };
 preLocalize("abilityConsumptionTypes", { sort: true });
-
-/* -------------------------------------------- */
-
-/**
- * @typedef {object} ActivityConsumptionTargetConfig
- * @property {string} label                                     Localized label for the target type.
- * @property {{value: string, label: string}[]} [scalingModes]  Additional scaling modes for this consumption type in
- *                                                              addition to the default "amount" scaling.
- * @property {boolean} [targetRequiresEmbedded]                 Use text input rather than select when not embedded.
- * @property {ConsumptionValidTargetsFunction} [validTargets]   Method for creating an array of consumption targets.
- */
-
-/**
- * @callback ConsumptionValidTargetsFunction
- * @this {Activity}
- * @returns {FormSelectOption[]}
- */
-
-/**
- * Configuration information for different consumption targets.
- * @enum {ActivityConsumptionTargetConfig}
- */
-ROTV.activityConsumptionTypes = {
-  activityUses: {
-    label: "ROTV.Consumption.Type.ActivityUses.Label"
-  },
-  itemUses: {
-    label: "ROTV.Consumption.Type.ItemUses.Label",
-    targetRequiresEmbedded: true,
-    validTargets: BaseActivityData.validItemUsesTargets
-  },
-  material: {
-    label: "ROTV.Consumption.Type.Material.Label",
-    targetRequiresEmbedded: true,
-    validTargets: BaseActivityData.validMaterialTargets
-  },
-  hitDice: {
-    label: "ROTV.Consumption.Type.HitDice.Label",
-    validTargets: BaseActivityData.validHitDiceTargets
-  },
-  spellSlots: {
-    label: "ROTV.Consumption.Type.SpellSlots.Label",
-    scalingModes: [{ value: "level", label: "ROTV.Consumption.Scaling.SlotLevel" }],
-    validTargets: BaseActivityData.validSpellSlotsTargets
-  },
-  attribute: {
-    label: "ROTV.Consumption.Type.Attribute.Label",
-    targetRequiresEmbedded: true,
-    validTargets: BaseActivityData.validAttributeTargets
-  }
-};
-preLocalize("activityConsumptionTypes", { key: "label" });
 
 /* -------------------------------------------- */
 
@@ -852,6 +768,19 @@ preLocalize("itemRarity");
 /* -------------------------------------------- */
 
 /**
+ * The limited use periods that support a recovery formula.
+ * @deprecated since RotV 3.1, available until RotV 3.3
+ * @enum {string}
+ */
+ROTV.limitedUseFormulaPeriods = {
+  charges: "ROTV.Charges",
+  dawn: "ROTV.Dawn",
+  dusk: "ROTV.Dusk"
+};
+
+/* -------------------------------------------- */
+
+/**
  * Configuration data for limited use periods.
  *
  * @typedef {object} LimitedUsePeriodConfiguration
@@ -894,6 +823,7 @@ ROTV.limitedUsePeriods = {
   }
 };
 preLocalize("limitedUsePeriods", { keys: ["label", "abbreviation"] });
+patchConfig("limitedUsePeriods", "label", { since: "RotV 3.1", until: "RotV 3.3" });
 
 /* -------------------------------------------- */
 
@@ -2042,6 +1972,16 @@ ROTV.spellPreparationModes = {
   }
 };
 preLocalize("spellPreparationModes", { key: "label" });
+patchConfig("spellPreparationModes", "label", { since: "RotV 3.1", until: "RotV 3.3" });
+
+/* -------------------------------------------- */
+
+/**
+ * Subset of `ROTV.spellPreparationModes` that consume spell slots.
+ * @deprecated since RotV 3.1, available until RotV 3.3
+ * @type {string[]}
+ */
+ROTV.spellUpcastModes = ["always", "pact", "prepared"];
 
 /* -------------------------------------------- */
 
@@ -2149,6 +2089,74 @@ ROTV.spellScalingModes = {
   level: "ROTV.SpellLevel"
 };
 preLocalize("spellScalingModes", { sort: true });
+
+/* -------------------------------------------- */
+
+/**
+ * Configuration data for spell components.
+ *
+ * @typedef {object} SpellComponentConfiguration
+ * @property {string} label         Localized label.
+ * @property {string} abbr          Localized abbreviation.
+ * @property {string} [reference]   Reference to a rule page describing this component.
+ */
+
+/**
+ * Types of components that can be required when casting a spell.
+ * @deprecated since RotV 3.0, available until RotV 3.3
+ * @enum {SpellComponentConfiguration}
+ */
+ROTV.spellComponents = {
+  vocal: {
+    label: "ROTV.ComponentVerbal",
+    abbr: "ROTV.ComponentVerbalAbbr",
+    reference: "Compendium.rotv.rules.JournalEntry.NizgRXLNUqtdlC1s.JournalEntryPage.6UXTNWMCQ0nSlwwx"
+  },
+  somatic: {
+    label: "ROTV.ComponentSomatic",
+    abbr: "ROTV.ComponentSomaticAbbr",
+    reference: "Compendium.rotv.rules.JournalEntry.NizgRXLNUqtdlC1s.JournalEntryPage.qwUNgUNilEmZkSC9"
+  },
+  material: {
+    label: "ROTV.ComponentMaterial",
+    abbr: "ROTV.ComponentMaterialAbbr",
+    reference: "Compendium.rotv.rules.JournalEntry.NizgRXLNUqtdlC1s.JournalEntryPage.AeH5eDS4YeM9RETC"
+  }
+};
+preLocalize("spellComponents", { keys: ["label", "abbr"] });
+
+/* -------------------------------------------- */
+
+/**
+ * Configuration data for spell tags.
+ *
+ * @typedef {object} SpellTagConfiguration
+ * @property {string} label         Localized label.
+ * @property {string} abbr          Localized abbreviation.
+ * @property {string} icon          Icon representing this tag.
+ * @property {string} [reference]   Reference to a rule page describing this tag.
+ */
+
+/**
+ * Supplementary rules keywords that inform a spell's use.
+ * @deprecated since RotV 3.0, available until RotV 3.3
+ * @enum {SpellTagConfiguration}
+ */
+ROTV.spellTags = {
+  concentration: {
+    label: "ROTV.Concentration",
+    abbr: "ROTV.ConcentrationAbbr",
+    icon: "systems/rotv/icons/svg/statuses/concentrating.svg",
+    reference: "Compendium.rotv.rules.JournalEntry.NizgRXLNUqtdlC1s.JournalEntryPage.ow58p27ctAnr4VPH"
+  },
+  ritual: {
+    label: "ROTV.Ritual",
+    abbr: "ROTV.RitualAbbr",
+    icon: "systems/rotv/icons/svg/items/spell.svg",
+    reference: "Compendium.rotv.rules.JournalEntry.NizgRXLNUqtdlC1s.JournalEntryPage.FjWqT5iyJ89kohdA"
+  }
+};
+preLocalize("spellTags", { keys: ["label", "abbr"] });
 
 /* -------------------------------------------- */
 
@@ -2894,21 +2902,6 @@ ROTV.groupTypes = {
   encounter: "ROTV.Group.TypeEncounter"
 };
 preLocalize("groupTypes");
-
-/* -------------------------------------------- */
-
-/**
- * Configuration information for activity types.
- *
- * @typedef {object} ActivityTypeConfiguration
- * @property {typeof Activity} documentClass  The activity's document class.
- * @property {boolean} [hidden]               Should this activity type be hidden in the selection dialog?
- */
-ROTV.activityTypes = {
-  utility: {
-    documentClass: activities.UtilityActivity
-  }
-};
 
 /* -------------------------------------------- */
 

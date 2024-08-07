@@ -6,7 +6,12 @@
 
         <div class="header-details flexrow">
             <h1 class="charname">
+                {{#if system.identified}}
                 <input name="name" type="text" value="{{item.name}}" placeholder="{{ localize 'ROTV.ItemName' }}">
+                {{else}}
+                <input name="system.unidentified.name" type="text" value="{{system.unidentified.name}}"
+                       placeholder="{{ localize 'ROTV.NameUnidentified' }}">
+                {{/if}}
             </h1>
 
             <div class="item-subtitle">
@@ -18,6 +23,16 @@
                         {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
                     {{else}}
                         {{ localize "ROTV.Unequipped" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
+                    {{/if}}
+                </label>
+                <label class="identified">
+                    <input type="checkbox" name="system.identified" {{checked system.identified}}>
+                    {{#if system.identified}}
+                        {{ localize "ROTV.Identified" }}
+                        {{#if editable}}<i class="fa-solid fa-toggle-on"></i>{{/if}}
+                    {{else}}
+                        {{ localize "ROTV.Unidentified.Title" }}
                         {{#if editable}}<i class="fa-solid fa-toggle-off"></i>{{/if}}
                     {{/if}}
                 </label>
@@ -56,6 +71,7 @@
 
         {{!-- Details Tab --}}
         <div class="tab details" data-group="primary" data-tab="details">
+            {{#rotv-concealSection concealDetails}}
 
             <h3 class="form-header">{{ localize "ROTV.ItemWeaponDetails" }}</h3>
 
@@ -67,6 +83,26 @@
                 </select>
             </div>
 
+            <div class="form-group">
+                <label>{{ localize "ROTV.ItemWeaponBase" }}</label>
+                <select name="system.type.baseItem">
+                    {{selectOptions baseItems selected=system.type.baseItem blank=""}}
+                </select>
+            </div>
+
+            {{#unless system.isMountable}}
+            <div class="form-group input-select">
+                <label>{{localize "ROTV.Attunement"}}</label>
+                <div class="form-fields">
+                    <input type="checkbox" name="system.attuned" {{ checked system.attuned }}
+                           {{ disabled (not system.attunement) }}
+                           data-tooltip="ROTV.Attuned" aria-label="{{ localize 'ROTV.Attuned' }}">
+                    <select name="system.attunement">
+                        {{selectOptions config.attunementTypes selected=system.attunement
+                                        blank=(localize "ROTV.AttunementNone")}}
+                    </select>
+                </div>
+            </div>
 
             <div class="form-group">
                 <label>{{localize "ROTV.Proficiency"}}</label>
@@ -75,6 +111,7 @@
                                     blank=(localize "ROTV.Automatic")}}
                 </select>
             </div>
+            {{/unless}}
 
             {{!-- Weapon Properties --}}
             <div class="form-group stacked weapon-properties">
@@ -116,6 +153,8 @@
 
             {{!-- Item Action Template --}}
             {{> "rotv.item-action"}}
+
+            {{/rotv-concealSection}}
         </div>
 
         {{!-- Effects Tab --}}

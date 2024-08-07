@@ -1,9 +1,7 @@
 import { filteredKeys } from "../../utils.mjs";
 import { ItemDataModel } from "../abstract.mjs";
-import UsesField from "../shared/uses-field.mjs";
 import ActionTemplate from "./templates/action.mjs";
 import ActivatedEffectTemplate from "./templates/activated-effect.mjs";
-import ActivitiesTemplate from "./templates/activities.mjs";
 import EquippableItemTemplate from "./templates/equippable-item.mjs";
 import IdentifiableTemplate from "./templates/identifiable.mjs";
 import ItemDescriptionTemplate from "./templates/item-description.mjs";
@@ -22,7 +20,6 @@ const { BooleanField, NumberField, SetField, StringField } = foundry.data.fields
  * @mixes EquippableItemTemplate
  * @mixes ActivatedEffectTemplate
  * @mixes ActionTemplate
- * @mixes ActivitiesTemplate
  *
  * @property {number} magicalBonus       Magical bonus added to attack & damage rolls by ammunition.
  * @property {Set<string>} properties    Ammunition properties.
@@ -32,7 +29,7 @@ const { BooleanField, NumberField, SetField, StringField } = foundry.data.fields
  */
 export default class ConsumableData extends ItemDataModel.mixin(
   ItemDescriptionTemplate, IdentifiableTemplate, ItemTypeTemplate, PhysicalItemTemplate, EquippableItemTemplate,
-  ActivatedEffectTemplate, ActionTemplate, ActivitiesTemplate
+  ActivatedEffectTemplate, ActionTemplate
 ) {
   /** @inheritdoc */
   static defineSchema() {
@@ -40,9 +37,9 @@ export default class ConsumableData extends ItemDataModel.mixin(
       type: new ItemTypeField({value: "potion", baseItem: false}, {label: "ROTV.ItemConsumableType"}),
       magicalBonus: new NumberField({min: 0, integer: true, label: "ROTV.MagicalBonus"}),
       properties: new SetField(new StringField(), { label: "ROTV.ItemAmmoProperties" }),
-      uses: new UsesField({
+      uses: new ActivatedEffectTemplate.ItemUsesField({
         autoDestroy: new BooleanField({required: true, label: "ROTV.ItemDestroyEmpty"})
-      }),
+      }, {label: "ROTV.LimitedUses"}),
       proficient: new NumberField({
         required: true, min: 0, max: 1, integer: true, initial: 1, label: "ROTV.ProficiencyLevel"
       })
@@ -84,7 +81,6 @@ export default class ConsumableData extends ItemDataModel.mixin(
   /** @inheritdoc */
   static _migrateData(source) {
     super._migrateData(source);
-    ActivitiesTemplate.migrateActivities(source);
     ConsumableData.#migratePropertiesData(source);
   }
 
@@ -120,7 +116,6 @@ export default class ConsumableData extends ItemDataModel.mixin(
   /** @inheritDoc */
   prepareFinalData() {
     this.prepareFinalActivatedEffectData();
-    this.prepareFinalActivityData(this.parent.getRollData({ deterministic: true }));
     this.prepareFinalEquippableData();
   }
 

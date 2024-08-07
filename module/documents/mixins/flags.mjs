@@ -20,7 +20,7 @@ export default Base => class extends Base {
   prepareData() {
     super.prepareData();
     if ( ("rotv" in this.flags) && this._systemFlagsDataModel ) {
-      this.flags.rotv = new this._systemFlagsDataModel(this._source.flags.rotv, { parent: this });
+      this.flags.rotv = new this._systemFlagsDataModel(this.flags.rotv, { parent: this });
     }
   }
 

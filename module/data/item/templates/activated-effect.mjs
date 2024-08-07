@@ -25,6 +25,10 @@ const { BooleanField, NumberField, SchemaField, StringField } = foundry.data.fie
  * @property {number} range.value           Regular targeting distance for item's effect.
  * @property {number} range.long            Maximum targeting distance for features that have a separate long range.
  * @property {string} range.units           Units used for value and long as defined in `ROTV.distanceUnits`.
+ * @property {object} uses                  Effect's limited uses.
+ * @property {number} uses.value            Current available uses.
+ * @property {string} uses.max              Maximum possible uses or a formula to derive that number.
+ * @property {string} uses.per              Recharge time for limited uses as defined in `ROTV.limitedUsePeriods`.
  * @property {object} consume               Effect's resource consumption.
  * @property {string} consume.type          Type of resource to consume as defined in `ROTV.abilityConsumptionTypes`.
  * @property {string} consume.target        Item ID or resource key path of resource to consume.
@@ -60,6 +64,7 @@ export default class ActivatedEffectTemplate extends SystemDataModel {
         long: new NumberField({required: true, min: 0, label: "ROTV.RangeLong"}),
         units: new StringField({required: true, blank: true, label: "ROTV.RangeUnits"})
       }, {label: "ROTV.Range"}),
+      uses: new this.ItemUsesField({}, {label: "ROTV.LimitedUses"}),
       consume: new SchemaField({
         type: new StringField({required: true, blank: true, label: "ROTV.ConsumeType"}),
         target: new StringField({
@@ -179,8 +184,12 @@ export default class ActivatedEffectTemplate extends SystemDataModel {
     const property = game.i18n.localize(label);
     try {
       const formula = replaceFormulaData(value, rollData, { item: this.parent, property });
-      const roll = new Roll(formula);
-      foundry.utils.setProperty(this, keyPath, roll.evaluateSync().total);
+      if ( game.release.generation < 12 ) {
+        foundry.utils.setProperty(this, keyPath, Roll.safeEval(formula));
+      } else {
+        const roll = new Roll(formula);
+        foundry.utils.setProperty(this, keyPath, roll.evaluateSync().total);
+      }
     } catch(err) {
       if ( this.parent.isEmbedded ) {
         const message = game.i18n.format("ROTV.FormulaMalformedError", { property, name: this.parent.name });

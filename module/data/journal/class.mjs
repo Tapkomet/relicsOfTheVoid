@@ -1,5 +1,3 @@
-const { HTMLField, SchemaField, SetField, StringField } = foundry.data.fields;
-
 /**
  * Data definition for Class Summary journal entry pages.
  *
@@ -13,37 +11,37 @@ const { HTMLField, SchemaField, SetField, StringField } = foundry.data.fields;
  * @property {string} subclassHeader                   Subclass header to replace the default.
  * @property {Set<string>} subclassItems               UUIDs of all subclasses to display.
  */
-export default class ClassJournalPageData extends foundry.abstract.TypeDataModel {
+export default class ClassJournalPageData extends foundry.abstract.DataModel {
   /** @inheritDoc */
   static defineSchema() {
     return {
-      item: new StringField({required: true, label: "JOURNALENTRYPAGE.ROTV.Class.Item"}),
-      description: new SchemaField({
-        value: new HTMLField({
+      item: new foundry.data.fields.StringField({required: true, label: "JOURNALENTRYPAGE.ROTV.Class.Item"}),
+      description: new foundry.data.fields.SchemaField({
+        value: new foundry.data.fields.HTMLField({
           label: "JOURNALENTRYPAGE.ROTV.Class.Description",
           hint: "JOURNALENTRYPAGE.ROTV.Class.DescriptionHint"
         }),
-        additionalHitPoints: new HTMLField({
+        additionalHitPoints: new foundry.data.fields.HTMLField({
           label: "JOURNALENTRYPAGE.ROTV.Class.AdditionalHitPoints",
           hint: "JOURNALENTRYPAGE.ROTV.Class.AdditionalHitPointsHint"
         }),
-        additionalTraits: new HTMLField({
+        additionalTraits: new foundry.data.fields.HTMLField({
           label: "JOURNALENTRYPAGE.ROTV.Class.AdditionalTraits",
           hint: "JOURNALENTRYPAGE.ROTV.Class.AdditionalTraitsHint"
         }),
-        additionalEquipment: new HTMLField({
+        additionalEquipment: new foundry.data.fields.HTMLField({
           label: "JOURNALENTRYPAGE.ROTV.Class.AdditionalEquipment",
           hint: "JOURNALENTRYPAGE.ROTV.Class.AdditionalEquipmentHint"
         }),
-        subclass: new HTMLField({
+        subclass: new foundry.data.fields.HTMLField({
           label: "JOURNALENTRYPAGE.ROTV.Class.SubclassDescription",
           hint: "JOURNALENTRYPAGE.ROTV.Class.SubclassDescriptionHint"
         })
       }),
-      subclassHeader: new StringField({
+      subclassHeader: new foundry.data.fields.StringField({
         label: "JOURNALENTRYPAGE.ROTV.Class.SubclassHeader"
       }),
-      subclassItems: new SetField(new StringField(), {
+      subclassItems: new foundry.data.fields.SetField(new foundry.data.fields.StringField(), {
         label: "JOURNALENTRYPAGE.ROTV.Class.SubclassItems"
       })
     };

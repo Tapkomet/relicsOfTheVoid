@@ -1,16 +1,14 @@
-const { StringField } = foundry.data.fields;
-
 /**
  * Data definition for Map Location journal entry pages.
  *
  * @property {string} code  Code for the location marker on the map.
  */
-export default class MapLocationJournalPageData extends foundry.abstract.TypeDataModel {
+export default class MapLocationJournalPageData extends foundry.abstract.DataModel {
 
   /** @inheritDoc */
   static defineSchema() {
     return {
-      code: new StringField()
+      code: new foundry.data.fields.StringField()
     };
   }
 
@@ -41,12 +39,5 @@ export default class MapLocationJournalPageData extends foundry.abstract.TypeDat
       {inplace: false}
     );
     return new IconClass({code: this.code, ...options, ...style});
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  async toEmbed(config, options={}) {
-    return this.parent._embedTextPage(config, options);
   }
 }

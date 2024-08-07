@@ -6,7 +6,7 @@ const { HTMLField, StringField } = foundry.data.fields;
  * @property {string} tooltip  Content to display in tooltip in place of page's text content.
  * @property {string} type     Type of rule represented. Should match an entry defined in `CONFIG.ROTV.ruleTypes`.
  */
-export default class RuleJournalPageData extends foundry.abstract.TypeDataModel {
+export default class RuleJournalPageData extends foundry.abstract.DataModel {
 
   /** @inheritDoc */
   static defineSchema() {
@@ -28,19 +28,12 @@ export default class RuleJournalPageData extends foundry.abstract.TypeDataModel 
       page: this.parent,
       type: CONFIG.ROTV.ruleTypes[this.type].label,
       content: await TextEditor.enrichHTML(this.tooltip || this.parent.text.content, {
-        secrets: false, relativeTo: this.parent, ...enrichmentOptions
+        secrets: false, async: true, relativeTo: this.parent, ...enrichmentOptions
       })
     };
     return {
       content: await renderTemplate("systems/rotv/templates/journal/page-rule-tooltip.hbs", context),
       classes: ["rotv-tooltip", "rule-tooltip"]
     };
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  async toEmbed(config, options={}) {
-    return this.parent._embedTextPage(config, options);
   }
 }

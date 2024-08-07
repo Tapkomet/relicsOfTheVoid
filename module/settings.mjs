@@ -28,6 +28,7 @@ export function registerSystemSettings() {
     }
   });
 
+
   game.settings.register("rotv", "attackRollVisibility", {
     name: "SETTINGS.RotVAttackRollVisibility.Name",
     hint: "SETTINGS.RotVAttackRollVisibility.Hint",
@@ -73,22 +74,20 @@ export function registerSystemSettings() {
   });
 
   // Diagonal Movement Rule
-  if ( game.release.generation < 12 ) {
-    game.settings.register("rotv", "diagonalMovement", {
-      name: "SETTINGS.RotVDiagN",
-      hint: "SETTINGS.RotVDiagL",
-      scope: "world",
-      config: true,
-      default: "555",
-      type: String,
-      choices: {
-        555: "SETTINGS.RotVDiagPHB",
-        5105: "SETTINGS.RotVDiagDMG",
-        EUCL: "SETTINGS.RotVDiagEuclidean"
-      },
-      onChange: rule => canvas.grid.diagonalRule = rule
-    });
-  }
+  game.settings.register("rotv", "diagonalMovement", {
+    name: "SETTINGS.RotVDiagN",
+    hint: "SETTINGS.RotVDiagL",
+    scope: "world",
+    config: true,
+    default: "555",
+    type: String,
+    choices: {
+      555: "SETTINGS.RotVDiagPHB",
+      5105: "SETTINGS.RotVDiagDMG",
+      EUCL: "SETTINGS.RotVDiagEuclidean"
+    },
+    onChange: rule => canvas.grid.diagonalRule = rule
+  });
 
   // Allow rotating square templates
   game.settings.register("rotv", "gridAlignedSquareTemplates", {
@@ -376,7 +375,7 @@ export function registerDeferredSettings() {
     name: "SETTINGS.ROTV.THEME.Name",
     hint: "SETTINGS.ROTV.THEME.Hint",
     scope: "client",
-    config: false,
+    config: game.release.generation < 12,
     default: "",
     type: String,
     choices: {
@@ -394,13 +393,16 @@ export function registerDeferredSettings() {
   });
 
   // Hook into core color scheme setting.
-  const setting = game.settings.settings.get("core.colorScheme");
-  const { onChange } = setting ?? {};
-  if ( onChange ) setting.onChange = s => {
-    onChange();
-    setTheme(document.body, s);
-  };
-  setTheme(document.body, game.settings.get("core", "colorScheme"));
+  if ( game.release.generation > 11 ) {
+    const setting = game.settings.settings.get("core.colorScheme");
+    const { onChange } = setting ?? {};
+    if ( onChange ) setting.onChange = s => {
+      onChange();
+      setTheme(document.body, s);
+    };
+    setTheme(document.body, game.settings.get("core", "colorScheme"));
+  }
+  else setTheme(document.body, game.settings.get("rotv", "theme"));
 }
 
 /* -------------------------------------------- */

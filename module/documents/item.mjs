@@ -813,9 +813,6 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
       // Ability score modifier
       if ( this.system.ability !== "none" ) parts.push("@mod");
 
-
-
-
       // Add proficiency bonus.
       if ( this.system.prof?.hasProficiency ) {
         parts.push("@prof");
@@ -854,6 +851,26 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
     this.labels.modifier = simplifyRollFormula(roll.formula, { deterministic: true }) || "0";
     this.labels.toHit = !/^[+-]/.test(formula) ? `+ ${formula}` : formula;
     return { rollData, parts };
+  }
+
+  /* -------------------------------------------- */
+
+  /**
+   * Replace referenced data attributes in the roll formula with values from the provided data.
+   * If the attribute is not found in the provided data, display a warning on the actor.
+   * @param {string} formula           The original formula within which to replace.
+   * @param {object} data              The data object which provides replacements.
+   * @param {object} options
+   * @param {string} options.property  Name of the property to which this formula belongs.
+   * @returns {string}                 Formula with replaced data.
+   * @deprecated since RotV 3.2, available until RotV 3.4
+   */
+  replaceFormulaData(formula, data, { property }) {
+    foundry.utils.logCompatibilityWarning(
+      "ItemRotV#replaceFormulaData has been moved to rotv.utils.replaceFormulaData.",
+      { since: "RotV 3.2", until: "RotV 3.4" }
+    );
+    return rotv.utils.replaceFormulaData(formula, data, { actor: this.actor, property });
   }
 
   /* -------------------------------------------- */
@@ -1033,7 +1050,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
      * @param {ItemUseOptions} options                     Additional options for configuring item usage.
      * @param {MeasuredTemplateDocument[]|null} templates  The measured templates if they were created.
      * @param {ActiveEffectRotV[]} effects                   The active effects that were created or deleted.
-     * @param {TokenDocumeetRotV[]|null} summoned            Summoned tokens if they were created.
+     * @param {TokenDocumentRotV[]|null} summoned            Summoned tokens if they were created.
      */
     Hooks.callAll("rotv.useItem", item, config, options, templates ?? null, effects, summoned ?? null);
 
@@ -1443,6 +1460,8 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
       speaker: ChatMessage.getSpeaker({actor: this.actor, token}),
       flags: {"core.canPopout": true}
     };
+    // TODO: Remove when v11 support is dropped.
+    if ( game.release.generation < 12 ) chatData.type = CONST.CHAT_MESSAGE_TYPES.OTHER;
 
     // If the Item was destroyed in the process of displaying its card - embed the item data in the chat message
     if ( (this.type === "consumable") && !this.actor.items.has(this.id) ) {
@@ -1495,6 +1514,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
 
     // Rich text description
     data.description.value = await TextEditor.enrichHTML(data.description.value, {
+      async: true,
       relativeTo: this,
       rollData: this.getRollData(),
       ...htmlOptions
@@ -1930,7 +1950,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
      */
     if ( Hooks.call("rotv.preRollRecharge", this, rollConfig) === false ) return;
 
-    const roll = await new Roll(rollConfig.formula, rollConfig.data).evaluate();
+    const roll = await new Roll(rollConfig.formula, rollConfig.data).roll({async: true});
     const success = roll.total >= rollConfig.target;
 
     if ( rollConfig.chatMessage ) {
@@ -2295,59 +2315,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
   }
 
   /* -------------------------------------------- */
-  /*  Activities & Advancements                   */
-  /* -------------------------------------------- */
-
-  /**
-   * Create a new activity of the specified type.
-   * @param {string} type                          Type of activity to create.
-   * @param {object} [data]                        Data to use when creating the activity.
-   * @param {object} [options={}]
-   * @param {boolean} [options.renderSheet=true]  Should the sheet be rendered after creation?
-   * @returns {Promise<ActivitySheet|null>}
-   */
-  async createActivity(type, data={}, { renderSheet=true }={}) {
-    if ( !this.system.activities ) return;
-
-    const config = CONFIG.ROTV.activityTypes[type];
-    if ( !config ) throw new Error(`${type} not found in CONFIG.ROTV.activityTypes`);
-    const cls = config.documentClass;
-
-    const createData = foundry.utils.deepClone(data);
-    const activity = new cls({ type, ...data }, { parent: this });
-    if ( activity._preCreate(createData) === false ) return;
-
-    await this.update({ [`system.activities.${activity.id}`]: activity.toObject() });
-    const created = this.system.activities.get(activity.id);
-    if ( renderSheet ) return created.sheet?.render({ force: true });
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Update an activity belonging to this item.
-   * @param {string} id          ID of the activity to update.
-   * @param {object} updates     Updates to apply to this activity.
-   * @returns {Promise<ItemRotV>}  This item with the changes applied.
-   */
-  updateActivity(id, updates) {
-    if ( !this.system.activities ) return this;
-    if ( !this.system.activities.has(id) ) throw new Error(`Activity of ID ${id} could not be found to update`);
-    return this.update({ [`system.activities.${id}`]: updates });
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Remove an activity from this item.
-   * @param {string} id          ID of the activity to remove.
-   * @returns {Promise<ItemRotV>}  This item with the changes applied.
-   */
-  deleteActivity(id) {
-    if ( !this.system.activities ) return this;
-    return this.update({ [`system.activities.-=${id}`]: null });
-  }
-
+  /*  Advancements                                */
   /* -------------------------------------------- */
 
   /**
@@ -2363,8 +2331,18 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
   createAdvancement(type, data={}, { showConfig=true, source=false }={}) {
     if ( !this.system.advancement ) return this;
 
-    const config = CONFIG.ROTV.advancementTypes[type];
+    let config = CONFIG.ROTV.advancementTypes[type];
     if ( !config ) throw new Error(`${type} not found in CONFIG.ROTV.advancementTypes`);
+    if ( config.prototype instanceof Advancement ) {
+      foundry.utils.logCompatibilityWarning(
+        "Advancement type configuration changed into an object with `documentClass` defining the advancement class.",
+        { since: "RotV 3.1", until: "RotV 3.3", once: true }
+      );
+      config = {
+        documentClass: config,
+        validItemTypes: config.metadata.validItemTypes
+      };
+    }
     const cls = config.documentClass;
 
     if ( !config.validItemTypes.has(this.type) || !cls.availableForItem(this) ) {
@@ -2462,16 +2440,12 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
 
   /** @inheritdoc */
   getEmbeddedDocument(embeddedName, id, options) {
-    let doc;
-    switch ( embeddedName ) {
-      case "Activity": doc = this.system.activities?.get(id); break;
-      case "Advancement": doc = this.advancement.byId[id]; break;
-      default: return super.getEmbeddedDocument(embeddedName, id, options);
-    }
+    if ( embeddedName !== "Advancement" ) return super.getEmbeddedDocument(embeddedName, id, options);
+    const advancement = this.advancement.byId[id];
     if ( options?.strict && (advancement === undefined) ) {
       throw new Error(`The key ${id} does not exist in the ${embeddedName} Collection`);
     }
-    return doc;
+    return advancement;
   }
 
   /* -------------------------------------------- */
@@ -2703,8 +2677,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
       icon: '<i class="fa-solid fa-scroll"></i>',
       callback: async li => {
         const spell = await fromUuid(makeUuid(li));
-        const scroll = await ItemRotV.createScrollFromSpell(spell);
-        if ( scroll ) ItemRotV.create(scroll);
+        ItemRotV.create(await ItemRotV.createScrollFromSpell(spell));
       },
       condition: li => {
         const item = fromUuidSync(makeUuid(li));
@@ -2727,8 +2700,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
       icon: '<i class="fa-solid fa-scroll"></i>',
       callback: async li => {
         const spell = game.items.get(li.data("documentId"));
-        const scroll = await ItemRotV.createScrollFromSpell(spell);
-        if ( scroll ) ItemRotV.create(scroll);
+        ItemRotV.create(await ItemRotV.createScrollFromSpell(spell));
       },
       condition: li => {
         const item = game.items.get(li.data("documentId"));
@@ -2798,7 +2770,7 @@ export default class ItemRotV extends SystemDocumentMixin(Item) {
    * @param {ItemRotV|object} spell                   The spell or item data to be made into a scroll.
    * @param {object} [options]                      Additional options that modify the created scroll.
    * @param {SpellScrollConfiguration} [config={}]  Configuration options for scroll creation.
-   * @returns {Promise<ItemRotV|void>}                The created scroll consumable item.
+   * @returns {Promise<ItemRotV>}                     The created scroll consumable item.
    */
   static async createScrollFromSpell(spell, options={}, config={}) {
     config = foundry.utils.mergeObject({

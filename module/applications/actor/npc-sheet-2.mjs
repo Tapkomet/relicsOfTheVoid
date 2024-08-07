@@ -47,20 +47,17 @@ export default class ActorSheetRotVNPC2 extends ActorSheetV2Mixin(ActorSheetRotV
   /** @inheritDoc */
   async _renderOuter() {
     const html = await super._renderOuter();
-    const elements = document.createElement("div");
-    elements.classList.add("header-elements");
-    elements.innerHTML = `
-      <div class="source-book">
-        <a class="config-button" data-action="source" data-tooltip="ROTV.SourceConfig"
-           aria-label="${game.i18n.localize("ROTV.SourceConfig")}">
-          <i class="fas fa-cog"></i>
-        </a>
-        <span></span>
-      </div>
-      <div class="cr-xp"></div>
+    const source = document.createElement("div");
+    source.classList.add("source-book");
+    source.innerHTML = `
+      <span></span>
+      <a class="config-button" data-action="source" data-tooltip="ROTV.SourceConfig"
+         aria-label="${game.i18n.localize("ROTV.SourceConfig")}">
+        <i class="fas fa-cog"></i>
+      </a>
     `;
-    html[0].querySelector(".window-title")?.insertAdjacentElement("afterend", elements);
-    elements.querySelector(".config-button").addEventListener("click", this._onConfigMenu.bind(this));
+    html[0].querySelector(".window-title")?.insertAdjacentElement("afterend", source);
+    source.querySelector(".config-button").addEventListener("click", this._onConfigMenu.bind(this));
     return html;
   }
 
@@ -69,18 +66,11 @@ export default class ActorSheetRotVNPC2 extends ActorSheetV2Mixin(ActorSheetRotV
   /** @inheritDoc */
   async _render(force=false, options={}) {
     await super._render(force, options);
-    const [elements] = this.element.find(".header-elements");
-    if ( !elements ) return;
-    const { details } = this.actor.system;
-    const editable = this.isEditable && (this._mode === this.constructor.MODES.EDIT);
-    const sourceLabel = details.source.label;
-    elements.querySelector(".config-button")?.toggleAttribute("hidden", !editable);
-    elements.querySelector(".source-book > span").innerText = editable
-      ? (sourceLabel || game.i18n.localize("ROTV.Source"))
-      : sourceLabel;
-    elements.querySelector(".cr-xp").innerText = game.i18n.format("ROTV.ExperiencePointsFormat", {
-      value: new Intl.NumberFormat(game.i18n.lang).format(details.xp.value)
-    });
+    const [source] = this.element.find(".source-book");
+    if ( !source ) return;
+    const sourceEditable = this.isEditable && (this._mode === this.constructor.MODES.EDIT);
+    source.querySelector(".config-button")?.toggleAttribute("hidden", !sourceEditable);
+    source.querySelector(":scope > span").innerText = this.actor.system.details.source.label;
   }
 
   /* -------------------------------------------- */
@@ -147,7 +137,7 @@ export default class ActorSheetRotVNPC2 extends ActorSheetV2Mixin(ActorSheetRotV
 
     // Biographies
     const enrichmentOptions = {
-      secrets: this.actor.isOwner, relativeTo: this.actor, rollData: context.rollData
+      secrets: this.actor.isOwner, async: true, relativeTo: this.actor, rollData: context.rollData
     };
 
     context.enriched = {

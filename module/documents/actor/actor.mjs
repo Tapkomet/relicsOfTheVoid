@@ -103,7 +103,7 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
    * @type {ItemRotV|null}
    */
   get armor() {
-    return this.system.attributes?.ac?.equippedArmor ?? null;
+    return this.system.attributes.ac.equippedArmor ?? null;
   }
 
   /* -------------------------------------------- */
@@ -113,7 +113,7 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
    * @type {ItemRotV|null}
    */
   get shield() {
-    return this.system.attributes?.ac?.equippedShield ?? null;
+    return this.system.attributes.ac.equippedShield ?? null;
   }
 
   /* -------------------------------------------- */
@@ -259,9 +259,11 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     this._prepareSpellcasting();
 
     // Apply condition immunities
-    const conditionImmunities = this.system.traits?.ci?.value;
-    if ( conditionImmunities ) {
-      for ( const condition of conditionImmunities ) this.statuses.delete(condition);
+    if ( game.release.generation >= 12 ) {
+      const conditionImmunities = this.system.traits?.ci?.value;
+      if ( conditionImmunities ) {
+        for ( const condition of conditionImmunities ) this.statuses.delete(condition);
+      }
     }
   }
 
@@ -547,13 +549,15 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
           const replaced = replaceFormulaData(formula, rollData, {
             actor: this, missing: null, property: game.i18n.localize("ROTV.ArmorClass")
           });
-          ac.base = replaced ? new Roll(replaced).evaluateSync().total : 0;
+          ac.base = replaced ? game.release.generation < 12
+            ? Roll.safeEval(replaced) : new Roll(replaced).evaluateSync().total
+            : 0;
         } catch(err) {
           this._preparationWarnings.push({
             message: game.i18n.format("ROTV.WarnBadACFormula", { formula }), link: "armor", type: "error"
           });
           const replaced = Roll.replaceFormulaData(CONFIG.ROTV.armorClasses.default.formula, rollData);
-          ac.base = new Roll(replaced).evaluateSync().total;
+          ac.base = game.release.generation < 12 ? Roll.safeEval(replaced) : new Roll(replaced).evaluateSync().total;
         }
         break;
     }
@@ -599,7 +603,7 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     const initBonus = simplifyBonus(init.bonus, bonusData);
     const abilityBonus = simplifyBonus(ability.bonuses?.check, bonusData);
     init.total = init.mod + initBonus + abilityBonus + globalCheckBonus
-      + (flags.initiativeAlert ? 3 : 0)
+      + (flags.initiativeAlert ? 5 : 0)
       + (Number.isNumeric(init.prof.term) ? init.prof.flat : 0);
   }
 
@@ -1991,42 +1995,18 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
   /* -------------------------------------------- */
 
   /**
-   * @typedef {BasicRollProcessConfiguration} HitDieRollProcessConfiguration
-   * @property {string} [denomination]  The denomination of hit die to roll with the leading letter (e.g. `d8`).
-   *                                    If no denomination is provided, the first available hit die will be used.
-   * @property {boolean} [modifyHitDice=true]    Should the actor's spent hit dice count be updated?
-   * @property {boolean} [modifyHitPoints=true]  Should the actor's hit points be updated after the roll?
-   */
-
-  /**
    * Roll a hit die of the appropriate type, gaining hit points equal to the die roll plus your CON modifier.
-   * @param {HitDieRollProcessConfiguration} config  Configuration information for the roll.
-   * @param {BasicRollDialogConfiguration} dialog    Configuration for the roll dialog.
-   * @param {BasicRollMessageConfiguration} message  Configuration for the roll message.
-   * @returns {Promise<BasicRoll[]|null>}            The created Roll instances, or `null` if no hit die was rolled.
+   * @param {string} [denomination]  The hit denomination of hit die to roll. Example "d8".
+   *                                 If no denomination is provided, the first available HD will be used
+   * @param {object} options         Additional options which modify the roll.
+   * @returns {Promise<Roll|null>}   The created Roll instance, or null if no hit die was rolled
    */
-  async rollHitDie(config={}, dialog={}, message={}) {
-    let formula;
-    let oldFormat = false;
-
-    // Handle deprecated calling pattern
-    if ( config && (foundry.utils.getType(config) !== "Object") ) {
-      foundry.utils.logCompatibilityWarning(
-        "ActorRotV.rollHitDie now takes roll, dialog, and message config objects as parameters.",
-        { since: "RotV 4.0", until: "RotV 4.4" }
-      );
-      oldFormat = true;
-      formula = dialog.formula;
-      config = { denomination: config, data: dialog.data };
-      message = { create: dialog.chatMessage, data: dialog.messageData };
-      dialog = {};
-    }
-
+  async rollHitDie(denomination, options={}) {
     let cls = null;
 
-    // NPCs only have one denomination
+    // NPCs only have on denomination
     if ( this.type === "npc" ) {
-      config.denomination = `d${this.system.attributes.hd.denomination}`;
+      denomination = `d${this.system.attributes.hd.denomination}`;
 
       // If no hit dice are available, display an error notification
       if ( !this.system.attributes.hd.value ) {
@@ -2038,112 +2018,81 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     // Otherwise check classes
     else {
       // If no denomination was provided, choose the first available
-      if ( !config.denomination ) {
+      if ( !denomination ) {
         cls = this.system.attributes.hd.classes.find(c => c.system.hitDiceUsed < c.system.levels);
         if ( !cls ) return null;
-        config.denomination = cls.system.hitDice;
+        denomination = cls.system.hitDice;
       }
 
       // Otherwise, locate a class (if any) which has an available hit die of the requested denomination
       else cls = this.system.attributes.hd.classes.find(i => {
-        return (i.system.hitDice === config.denomination) && (i.system.hitDiceUsed < i.system.levels);
+        return (i.system.hitDice === denomination) && (i.system.hitDiceUsed < i.system.levels);
       });
 
       // If no class is available, display an error notification
       if ( !cls ) {
-        ui.notifications.error(game.i18n.format("ROTV.HitDiceWarn", {name: this.name, formula: config.denomination}));
+        ui.notifications.error(game.i18n.format("ROTV.HitDiceWarn", {name: this.name, formula: denomination}));
         return null;
       }
     }
 
-    formula ??= `max(0, 1${config.denomination} + @abilities.con.mod)`;
-    const rollConfig = foundry.utils.deepClone(config);
-    rollConfig.origin = this;
-    rollConfig.rolls = [{ parts: [formula], data: this.getRollData() }].concat(config.rolls ?? []);
-
-    const dialogConfig = foundry.utils.mergeObject({
-      configure: false
-    }, dialog);
-
+    // Prepare roll data
     const flavor = game.i18n.localize("ROTV.HitDiceRoll");
-    const messageConfig = foundry.utils.mergeObject({
-      rollMode: game.settings.get("core", "rollMode"),
-      data: {
+    const rollConfig = foundry.utils.mergeObject({
+      formula: `max(0, 1${denomination} + @abilities.con.mod)`,
+      data: this.getRollData(),
+      chatMessage: true,
+      messageData: {
         speaker: ChatMessage.implementation.getSpeaker({actor: this}),
         flavor,
         title: `${flavor}: ${this.name}`,
+        rollMode: game.settings.get("core", "rollMode"),
         "flags.rotv.roll": {type: "hitDie"}
       }
-    }, message);
+    }, options);
 
     /**
      * A hook event that fires before a hit die is rolled for an Actor.
      * @function rotv.preRollHitDie
      * @memberof hookEvents
-     * @param {ActorRotV} actor                          Actor performing the roll.
-     * @param {HitDieRollProcessConfiguration} config  Configuration information for the roll.
-     * @param {BasicRollDialogConfiguration} dialog    Configuration for the roll dialog.
-     * @param {BasicRollMessageConfiguration} message  Configuration for the roll message.
-     * @returns {boolean}                              Explicitly return `false` to prevent hit die from being rolled.
+     * @param {ActorRotV} actor               Actor for which the hit die is to be rolled.
+     * @param {object} config               Configuration data for the pending roll.
+     * @param {string} config.formula       Formula that will be rolled.
+     * @param {object} config.data          Data used when evaluating the roll.
+     * @param {boolean} config.chatMessage  Should a chat message be created for this roll?
+     * @param {object} config.messageData   Data used to create the chat message.
+     * @param {string} denomination         Size of hit die to be rolled.
+     * @returns {boolean}                   Explicitly return `false` to prevent hit die from being rolled.
      */
-    if ( Hooks.call("rotv.preRollHitDieV2", this, rollConfig, dialogConfig, messageConfig) === false ) return;
+    if ( Hooks.call("rotv.preRollHitDie", this, rollConfig, denomination) === false ) return;
 
-    if ( "rotv.preRollHitDie" in Hooks.events ) {
-      foundry.utils.logCompatibilityWarning(
-        "The `rotv.preRollHitDie` hook has been deprecated and replaced with `rotv.preRollHitDieV2`.",
-        { since: "RotV 4.0", until: "RotV 4.4" }
-      );
-      const hookData = {
-        formula: rollConfig.rolls[0].parts[0], data: rollConfig.rolls[0].data,
-        chatMessage: messageConfig.create, messageData: messageConfig.data
-      };
-      if ( Hooks.call("rotv.preRollHitDie", this, hookData, rollConfig.denomination) === false ) return;
-      rollConfig.rolls[0].parts[0] = hookData.formula;
-      rollConfig.rolls[0].data = hookData.data;
-      messageConfig.create = hookData.chatMessage;
-      messageConfig.data = hookData.messageData;
-    }
+    const roll = await new Roll(rollConfig.formula, rollConfig.data).roll({async: true});
+    if ( rollConfig.chatMessage ) roll.toMessage(rollConfig.messageData);
 
-    const rolls = await CONFIG.Dice.BasicRoll.build(rollConfig, dialogConfig, messageConfig);
-    const returnValue = oldFormat && rolls?.length ? rolls[0] : rolls;
-
-    const updates = { actor: {}, class: {} };
-    if ( rollConfig.modifyHitDice !== false ) {
-      if ( cls ) updates.class["system.hitDiceUsed"] = cls.system.hitDiceUsed + 1;
-      else updates.actor["system.attributes.hd.spent"] = this.system.attributes.hd.spent + 1;
-    }
     const hp = this.system.attributes.hp;
-    if ( rollConfig.modifyHitPoints !== false ) {
-      const dhp = Math.min(Math.max(0, hp.effectiveMax) - hp.value, rolls.reduce((t, r) => t + r.total, 0));
-      updates.actor["system.attributes.hp.value"] = hp.value + dhp;
-    }
+    const dhp = Math.min(Math.max(0, hp.effectiveMax) - hp.value, roll.total);
+    const updates = { actor: {"system.attributes.hp.value": hp.value + dhp} };
+    if ( cls ) updates.class = {"system.hitDiceUsed": cls.system.hitDiceUsed + 1};
+    else updates.actor["system.attributes.hd.spent"] = this.system.attributes.hd.spent + 1;
 
     /**
      * A hook event that fires after a hit die has been rolled for an Actor, but before updates have been performed.
      * @function rotv.rollHitDie
      * @memberof hookEvents
      * @param {ActorRotV} actor           Actor for which the hit die has been rolled.
-     * @param {BasicRoll[]} rolls       The resulting rolls.
+     * @param {Roll} roll               The resulting roll.
      * @param {object} updates
      * @param {object} updates.actor    Updates that will be applied to the actor.
      * @param {object} [updates.class]  Updates that will be applied to the class.
      * @returns {boolean}               Explicitly return `false` to prevent updates from being performed.
      */
-    if ( Hooks.call("rotv.rollHitDieV2", this, rolls, updates) === false ) return returnValue;
-
-    if ( "rotv.rollHitDie" in Hooks.events ) {
-      foundry.utils.logCompatibilityWarning(
-        "The `rotv.rollHitDie` hook has been deprecated and replaced with `rotv.rollHitDieV2`.",
-        { since: "RotV 4.0", until: "RotV 4.4" }
-      );
-      if ( Hooks.call("rotv.rollHitDie", this, rolls[0], updates) === false ) return;
-    }
+    if ( Hooks.call("rotv.rollHitDie", this, roll, updates) === false ) return roll;
 
     // Perform updates
     if ( !foundry.utils.isEmpty(updates.actor) ) await this.update(updates.actor);
     if ( !foundry.utils.isEmpty(updates.class) ) await cls.update(updates.class);
 
-    return returnValue;
+    return roll;
   }
 
   /* -------------------------------------------- */
@@ -2185,7 +2134,7 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     Hooks.callAll("rotv.preRollClassHitPoints", this, item, rollData, messageData);
 
     const roll = new Roll(rollData.formula, rollData.data);
-    await roll.evaluate();
+    await roll.evaluate({async: true});
 
     /**
      * A hook event that fires after hit points haven been rolled for a character's class.
@@ -2237,7 +2186,7 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     Hooks.callAll("rotv.preRollNPCHitPoints", this, rollData, messageData);
 
     const roll = new Roll(rollData.formula, rollData.data);
-    await roll.evaluate();
+    await roll.evaluate({async: true});
 
     /**
      * A hook event that fires after hit points are rolled for an NPC.
@@ -2396,6 +2345,17 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
    * @private
    */
   async _rest(config, result={}, ...args) {
+    if ( args.length ) {
+      foundry.utils.logCompatibilityWarning(
+        "ActorRotV._rest now takes a config object and a results object as parameters.",
+        { since: "RotV 3.1", until: "RotV 3.3" }
+      );
+      const [longRest, dhd, dhp] = args;
+      config = { chat: config, newDay: result };
+      config.type = longRest ? "long" : "short";
+      result = { dhd, dhp };
+    }
+
     if ( (foundry.utils.getType(this.system.rest) === "function")
       && (await this.system.rest(config, result) === false) ) return;
 
@@ -2961,6 +2921,7 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
 
     // Specific additional adjustments
     d.system.details.alignment = o.system.details.alignment; // Don't change alignment
+    d.system.attributes.inspiration = o.system.attributes.inspiration; // Keep inspiration
     d.system.spells = o.system.spells; // Keep spell slots
     d.system.attributes.ac.flat = target.system.attributes.ac.value; // Override AC
     d.system.attributes.stress = o.system.attributes.stress; // Keep your prior stress level
@@ -2973,7 +2934,14 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
     for ( const k of ["offsetX", "offsetY", "scaleX", "scaleY", "src", "tint"] ) {
       d.prototypeToken.texture[k] = source.prototypeToken.texture[k];
     }
-    d.prototypeToken.ring = source.prototypeToken.ring;
+    if ( game.release.generation >= 12 ) d.prototypeToken.ring = source.prototypeToken.ring;
+    else {
+      foundry.utils.setProperty(d.prototypeToken, "flags.rotv.tokenRing", foundry.utils.mergeObject(
+        foundry.utils.getProperty(d.prototypeToken, "flags.rotv.tokenRing") ?? {},
+        foundry.utils.getProperty(source.prototypeToken, "flags.rotv.tokenRing") ?? {},
+        { inplace: false }
+      ));
+    }
     for ( const k of ["bar1", "bar2", "displayBars", "displayName", "disposition", "rotation", "elevation"] ) {
       d.prototypeToken[k] = o.prototypeToken[k];
     }
@@ -3173,7 +3141,14 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
       for ( const k of ["offsetX", "offsetY", "scaleX", "scaleY", "src", "tint"] ) {
         tokenUpdate.texture[k] = prototypeTokenData.texture[k];
       }
-      tokenUpdate.ring = prototypeTokenData.ring;
+      if ( game.release.generation >= 12 ) tokenUpdate.ring = prototypeTokenData.ring;
+      else {
+        foundry.utils.setProperty(tokenUpdate, "flags.rotv.tokenRing", foundry.utils.mergeObject(
+          foundry.utils.getProperty(tokenUpdate, "flags.rotv.tokenRing") ?? {},
+          foundry.utils.getProperty(prototypeTokenData, "flags.rotv.tokenRing") ?? {},
+          { inplace: false }
+        ));
+      }
       tokenUpdate.sight = prototypeTokenData.sight;
       tokenUpdate.detectionModes = prototypeTokenData.detectionModes;
 
@@ -3207,6 +3182,9 @@ export default class ActorRotV extends SystemDocumentMixin(Actor) {
         update._id = t.id;
         delete update.x;
         delete update.y;
+        if ( (game.release.generation < 12) && !foundry.utils.getProperty(tokenData, "flags.rotv.tokenRing") ) {
+          foundry.utils.setProperty(update, "flags.rotv.tokenRing", {});
+        }
         return update;
       });
       await canvas.scene.updateEmbeddedDocuments("Token", tokenUpdates, { diff: false, recursive: false });

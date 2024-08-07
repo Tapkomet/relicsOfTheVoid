@@ -207,10 +207,7 @@ export default class InventoryElement extends HTMLElement {
       {
         name: "ROTV.Scroll.CreateScroll",
         icon: '<i class="fa-solid fa-scroll"></i>',
-        callback: async li => {
-          const scroll = await ItemRotV.createScrollFromSpell(item);
-          if ( scroll ) ItemRotV.create(scroll, { parent: this.actor });
-        },
+        callback: async li => ItemRotV.create(await ItemRotV.createScrollFromSpell(item), { parent: this.actor }),
         condition: li => (item.type === "spell") && this.actor?.isOwner,
         group: "action"
       },
@@ -285,16 +282,14 @@ export default class InventoryElement extends HTMLElement {
       });
     }
 
-    // Toggle Collapsed State
-    if ( this._app.canExpand?.(item) ) {
-      const expanded = this._app._expanded.has(item.id);
-      options.push({
-        name: expanded ? "Collapse" : "Expand",
-        icon: `<i class="fas fa-${expanded ? "compress" : "expand"}"></i>`,
-        callback: () => element.closest("[data-item-id]")?.querySelector("[data-toggle-description]")?.click(),
-        group: "collapsible"
-      });
-    }
+    // Toggle collapsed state.
+    const expanded = this._app._expanded.has(item.id);
+    options.push({
+      name: expanded ? "Collapse" : "Expand",
+      icon: `<i class="fas fa-${expanded ? "compress" : "expand"}"></i>`,
+      callback: () => element.closest("[data-item-id]")?.querySelector("[data-toggle-description]")?.click(),
+      group: "collapsible"
+    });
 
     return options;
   }

@@ -1,5 +1,8 @@
 import * as Filter from "../filter.mjs";
 
+const ApplicationV2 = foundry.applications?.api?.ApplicationV2 ?? (class {});
+const HandlebarsApplicationMixin = foundry.applications?.api?.HandlebarsApplicationMixin ?? (cls => cls);
+
 /**
  * @typedef {ApplicationConfiguration} CompendiumBrowserConfiguration
  * @property {{locked: CompendiumBrowserFilters, initial: CompendiumBrowserFilters}} filters  Filters to set to start.
@@ -49,10 +52,9 @@ import * as Filter from "../filter.mjs";
  * @mixes HandlebarsApplicationMixin
  * @template CompendiumBrowserConfiguration
  */
-export default class CompendiumBrowser extends foundry.applications.api.HandlebarsApplicationMixin(
-  foundry.applications.api.ApplicationV2
-) {
+export default class CompendiumBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(...args) {
+    if ( game.release.generation < 12 ) throw Error("Compendium Browser only works in Foundry V12 or later");
     super(...args);
 
     this.#filters = this.options.filters?.initial ?? {};
@@ -774,7 +776,7 @@ export default class CompendiumBrowser extends foundry.applications.api.Handleba
     try {
       const { type } = foundry.utils.parseUuid(uuid);
       event.dataTransfer.setData("text/plain", JSON.stringify({ type, uuid }));
-    } catch(e) {
+    } catch (e) {
       console.error(e);
     }
   }
@@ -964,11 +966,8 @@ export default class CompendiumBrowser extends foundry.applications.api.Handleba
   static #onToggleMode(event, target) {
     // TODO: Consider persisting this choice in a client setting.
     this._mode = target.checked ? this.constructor.MODES.ADVANCED : this.constructor.MODES.BASIC;
-    const tabs = foundry.utils.deepClone(this.constructor.TABS.filter(t => !!t.advanced === target.checked));
-    const activeTab = tabs.find(t => t.tab === this.tabGroups.primary) ?? tabs[0];
-    const types = target.checked ? [] : (activeTab?.types ?? ["class"]);
+    const types = target.checked ? [] : ["class"];
     this._applyModeFilters(this._mode);
-    this._applyTabFilters(activeTab?.tab);
     this.render({ parts: ["results", "filters", "types", "tabs"], rotv: { browser: { types } } });
   }
 
@@ -1133,6 +1132,7 @@ export default class CompendiumBrowser extends foundry.applications.api.Handleba
    * @param {HTMLElement} html  HTML of the sidebar being rendered.
    */
   static injectSidebarButton(html) {
+    if ( game.release.generation < 12 ) return;
     const button = document.createElement("button");
     button.type = "button";
     button.classList.add("open-compendium-browser");

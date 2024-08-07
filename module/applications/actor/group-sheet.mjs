@@ -82,6 +82,7 @@ export default class GroupActorSheet extends ActorSheetMixin(ActorSheet) {
     context.descriptionFull = await TextEditor.enrichHTML(this.actor.system.description.full, {
       secrets: this.actor.isOwner,
       rollData: context.rollData,
+      async: true,
       relativeTo: this.actor
     });
 

@@ -83,6 +83,19 @@
         {{editor enriched.description target="system.description.value" editable=false engine="prosemirror"}}
     {{/if}}
 
+    {{#if (and (or editable system.unidentified.description) isIdentifiable user.isGM)}}
+        <h3 class="description-header">
+            <i class="accordion-indicator fa-solid fa-chevron-down"></i>
+            {{localize "ROTV.DescriptionUnidentified"}}
+            {{#if editable}}
+            <a class="description-edit" data-target="system.unidentified.description">
+                <i class="fa-solid fa-edit"></i>
+            </a>
+            {{/if}}
+        </h3>
+        {{editor enriched.unidentified target="system.unidentified.description" editable=false engine="prosemirror"}}
+    {{/if}}
+
     {{#if (or editable system.description.chat)}}
         <h3 class="description-header">
             <i class="accordion-indicator fa-solid fa-chevron-down"></i>

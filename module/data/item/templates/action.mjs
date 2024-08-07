@@ -139,7 +139,6 @@ export default class ActionTemplate extends ItemDataModel {
    * @type {string|null}
    */
   get abilityMod() {
-    if ( this.ability === "none" ) return null;
     return "con";
   }
 

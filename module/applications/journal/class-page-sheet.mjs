@@ -138,7 +138,8 @@ export default class JournalClassPageSheet extends JournalPageSheet {
       .map(async ([id, text]) => {
         const enriched = await TextEditor.enrichHTML(text, {
           relativeTo: this.object,
-          secrets: this.object.isOwner
+          secrets: this.object.isOwner,
+          async: true
         });
         return [id, enriched];
       })
@@ -353,7 +354,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
         document,
         name: document.name,
         description: await TextEditor.enrichHTML(document.system.description.value, {
-          relativeTo: item, secrets: false
+          relativeTo: item, secrets: false, async: true
         })
       };
     };
@@ -397,7 +398,7 @@ export default class JournalClassPageSheet extends JournalPageSheet {
       document: item,
       name: item.name,
       description: await TextEditor.enrichHTML(item.system.description.value, {
-        relativeTo: item, secrets: false
+        relativeTo: item, secrets: false, async: true
       }),
       features: await this._getFeatures(item),
       table: await this._getTable(item, parseInt(initialLevel))

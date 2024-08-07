@@ -39,7 +39,7 @@ export default class DetailsField {
       flaw: new StringField({required: true, label: "ROTV.Flaws"}),
       passion: new StringField({required: true, label: "ROTV.Passion"}),
       race: new LocalDocumentField(foundry.documents.BaseItem, {
-        required: true, fallback: true, label: "ROTV.Species"
+        required: true, fallback: true, label: "ROTV.Race"
       })
     };
   }

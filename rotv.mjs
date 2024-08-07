@@ -52,6 +52,7 @@ Hooks.once("init", function() {
     /aggregateDamageRoll|configureDamage|preprocessFormula|simplifyRollFormula/
   );
   CONFIG.compatibility.excludePatterns.push(/core\.sourceId/);
+  if ( game.release.generation < 12 ) Math.clamp = Math.clamped;
 
   // Record Configuration Values
   CONFIG.ROTV = ROTV;
@@ -60,16 +61,16 @@ Hooks.once("init", function() {
   CONFIG.Actor.documentClass = documents.ActorRotV;
   CONFIG.ChatMessage.documentClass = documents.ChatMessageRotV;
   CONFIG.Combat.documentClass = documents.CombatRotV;
-  CONFIG.Combatant.documentClass = documents.CombataetRotV;
+  CONFIG.Combatant.documentClass = documents.CombatantRotV;
   CONFIG.Item.collection = dataModels.collection.ItemsRotV;
   CONFIG.Item.compendiumIndexFields.push("system.container");
   CONFIG.Item.documentClass = documents.ItemRotV;
-  CONFIG.Token.documentClass = documents.TokenDocumeetRotV;
+  CONFIG.Token.documentClass = documents.TokenDocumentRotV;
   CONFIG.Token.objectClass = canvas.TokenRotV;
+  CONFIG.Token.ringClass = canvas.TokenRing;
   CONFIG.User.documentClass = documents.UserRotV;
   CONFIG.time.roundTime = 6;
   Roll.TOOLTIP_TEMPLATE = "systems/rotv/templates/chat/roll-breakdown.hbs";
-  CONFIG.Dice.BasicRoll = dice.BasicRoll;
   CONFIG.Dice.DamageRoll = dice.DamageRoll;
   CONFIG.Dice.D20Roll = dice.D20Roll;
   CONFIG.MeasuredTemplate.defaults.angle = 53.13; // RotV cone RAW should be 53.13 degrees
@@ -94,7 +95,8 @@ Hooks.once("init", function() {
   if ( !game.settings.get("rotv", "sanityScore") ) delete ROTV.abilities.san;
 
   // Register Roll Extensions
-  CONFIG.Dice.rolls = [dice.BasicRoll, dice.D20Roll, dice.DamageRoll];
+  CONFIG.Dice.rolls.push(dice.D20Roll);
+  CONFIG.Dice.rolls.push(dice.DamageRoll);
 
   // Hook up system data types
   CONFIG.Actor.dataModels = dataModels.actor.config;
@@ -257,7 +259,6 @@ function _configureConsumableAttributes() {
   CONFIG.ROTV.consumableResources = [
     ...Object.keys(ROTV.abilities).map(ability => `abilities.${ability}.value`),
     "attributes.ac.flat",
-    "item.damRed",
     "attributes.hp.value",
     ...Object.keys(ROTV.senses).map(sense => `attributes.senses.${sense}`),
     ...Object.keys(ROTV.movementTypes).map(type => `attributes.movement.${type}`),
@@ -365,6 +366,10 @@ Hooks.once("setup", function() {
   // Apply custom item compendium
   game.packs.filter(p => p.metadata.type === "Item")
     .forEach(p => p.applicationClass = applications.item.ItemCompendiumRotV);
+
+  // Configure token rings
+  CONFIG.ROTV.tokenRings.shaderClass ??= canvas.TokenRingSamplerShaderV11;
+  CONFIG.Token.ringClass.initialize();
 });
 
 /* --------------------------------------------- */
@@ -421,6 +426,27 @@ Hooks.once("ready", function() {
     ui.notifications.error("MIGRATION.RotVVersionTooOldWarning", {localize: true, permanent: true});
   }
   migrations.migrateWorld();
+});
+
+/* -------------------------------------------- */
+/*  Canvas Initialization                       */
+/* -------------------------------------------- */
+
+Hooks.on("canvasInit", gameCanvas => {
+  if ( game.release.generation < 12 ) {
+    gameCanvas.grid.diagonalRule = game.settings.get("rotv", "diagonalMovement");
+    SquareGrid.prototype.measureDistances = canvas.measureDistances;
+  }
+  CONFIG.Token.ringClass.pushToLoad(gameCanvas.loadTexturesOptions.additionalSources);
+});
+
+/* -------------------------------------------- */
+/*  Canvas Draw                                 */
+/* -------------------------------------------- */
+
+Hooks.on("canvasDraw", gameCanvas => {
+  // The sprite sheet has been loaded now, we can create the uvs for each texture
+  CONFIG.Token.ringClass.createAssetsUVs();
 });
 
 /* -------------------------------------------- */

@@ -118,7 +118,7 @@ export default class DamageRoll extends Roll {
     for ( let [i, term] of this.terms.entries() ) {
       // Multiply dice terms
       if ( term instanceof DiceTerm ) {
-        if ( term._number instanceof Roll ) {
+        if ( (game.release.generation > 11) && (term._number instanceof Roll) ) {
           // Complex number term.
           if ( !term._number.isDeterministic ) continue;
           if ( !term._number._evaluated ) term._number.evaluateSync();
@@ -221,6 +221,8 @@ export default class DamageRoll extends Roll {
       sound: CONFIG.sounds.dice
     }, messageData);
     messageData.rolls = rolls;
+    // TODO: Remove when v11 support is dropped.
+    if ( game.release.generation < 12 ) messageData.type = CONST.CHAT_MESSAGE_TYPES.ROLL;
 
     // Either create the message or just return the chat data
     const cls = getDocumentClass("ChatMessage");
@@ -295,7 +297,7 @@ export default class DamageRoll extends Roll {
             callback: html => resolve(rolls.map((r, i) => r._onDialogSubmit(html, false, i === 0)))
           }
         },
-        default: "normal",
+        default: defaultCritical ? "critical" : "normal",
         close: () => resolve(null)
       }, options).render(true);
     });

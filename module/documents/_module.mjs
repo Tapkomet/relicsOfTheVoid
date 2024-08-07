@@ -1,13 +1,12 @@
 // Document Classes
 export {default as ActiveEffectRotV} from "./active-effect.mjs";
 export {default as ActorRotV} from "./actor/actor.mjs";
-export * as activity from "./activity/_module.mjs";
 export * as advancement from "./advancement/_module.mjs";
 export {default as ChatMessageRotV} from "./chat-message.mjs";
 export {default as CombatRotV} from "./combat.mjs";
-export {default as CombataetRotV} from "./combatant.mjs";
+export {default as CombatantRotV} from "./combatant.mjs";
 export {default as ItemRotV} from "./item.mjs";
-export {default as TokenDocumeetRotV} from "./token.mjs";
+export {default as TokenDocumentRotV} from "./token.mjs";
 export {default as UserRotV} from "./user.mjs";
 
 // Helper Methods

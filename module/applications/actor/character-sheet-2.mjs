@@ -1,6 +1,6 @@
 import CharacterData from "../../data/actor/character.mjs";
 import * as Trait from "../../documents/actor/trait.mjs";
-import { simplifyBonus } from "../../utils.mjs";
+import { simplifyBonus, staticID } from "../../utils.mjs";
 import CompendiumBrowser from "../compendium-browser.mjs";
 import ContextMenuRotV from "../context-menu.mjs";
 import SheetConfigRotV from "../sheet-config.mjs";
@@ -245,7 +245,7 @@ export default class ActorSheetRotVCharacter2 extends ActorSheetV2Mixin(ActorShe
     });
 
     if ( this.actor.system.details.race instanceof rotv.documents.ItemRotV ) {
-      features.push({ label: "ROTV.Species.Features", items: [], dataset: { type: "race" } });
+      features.push({ label: "ROTV.FeaturesRace", items: [], dataset: { type: "race" } });
     }
 
     if ( this.actor.system.details.background instanceof rotv.documents.ItemRotV ) {
@@ -425,8 +425,15 @@ export default class ActorSheetRotVCharacter2 extends ActorSheetV2Mixin(ActorShe
    * @protected
    */
   async _onFindItem(type) {
-    const result = await CompendiumBrowser.selectOne({ filters: { locked: { types: new Set([type]) } } });
-    if ( result ) this._onDropItemCreate(await fromUuid(result));
+    if ( game.release.generation < 12 ) {
+      switch ( type ) {
+        case "class": game.packs.get(CONFIG.ROTV.sourcePacks.CLASSES)?.render(true); break;
+        case "race": game.packs.get(CONFIG.ROTV.sourcePacks.RACES)?.render(true); break;
+        case "background": game.packs.get(CONFIG.ROTV.sourcePacks.BACKGROUNDS)?.render(true); break;
+      }
+    } else {
+      new CompendiumBrowser({ filters: { locked: { types: new Set([type]) } } }).render(true);
+    }
   }
 
   /* -------------------------------------------- */
@@ -709,14 +716,5 @@ export default class ActorSheetRotVCharacter2 extends ActorSheetV2Mixin(ActorShe
       else if ( type === "skill" ) ({ icon: img, label: title, reference } = CONFIG.ROTV.skills[id]);
       return { img, title, subtitle, modifier: total, passive, reference };
     }
-  }
-
-  /* -------------------------------------------- */
-  /*  Helpers                                     */
-  /* -------------------------------------------- */
-
-  /** @inheritDoc */
-  canExpand(item) {
-    return !["background", "race"].includes(item.type) && super.canExpand(item);
   }
 }

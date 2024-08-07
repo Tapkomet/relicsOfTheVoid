@@ -5,6 +5,13 @@ import simplifyRollFormula from "../dice/simplify-roll-formula.mjs";
 
 export default class ChatMessageRotV extends ChatMessage {
 
+  /** @inheritDoc */
+  _initialize(options = {}) {
+    super._initialize(options);
+    // TODO: Remove when v11 support is dropped.
+    if ( game.release.generation > 11 ) Object.defineProperty(this, "user", { value: this.author, configurable: true });
+  }
+
   /* -------------------------------------------- */
   /*  Properties                                  */
   /* -------------------------------------------- */
@@ -52,10 +59,10 @@ export default class ChatMessageRotV extends ChatMessage {
    * @type {boolean}
    */
   get shouldDisplayChallenge() {
-    if ( game.user.isGM || (this.author === game.user) ) return true;
+    if ( game.user.isGM || (this.user === game.user) ) return true;
     switch ( game.settings.get("rotv", "challengeVisibility") ) {
       case "all": return true;
-      case "player": return !this.author.isGM;
+      case "player": return !this.user.isGM;
       default: return false;
     }
   }
@@ -128,14 +135,12 @@ export default class ChatMessageRotV extends ChatMessage {
 
       // Conceal effects that the user cannot apply.
       chatCard.find(".effects-tray .effect").each((i, el) => {
-        if ( !game.user.isGM && ((el.dataset.transferred === "false") || (this.author.id !== game.user.id)) ) {
-          el.remove();
-        }
+        if ( !game.user.isGM && ((el.dataset.transferred === "false") || (this.user.id !== game.user.id)) ) el.remove();
       });
 
       // If the user is the message author or the actor owner, proceed
       let actor = game.actors.get(this.speaker.actor);
-      if ( game.user.isGM || actor?.isOwner || (this.author.id === game.user.id) ) {
+      if ( game.user.isGM || actor?.isOwner || (this.user.id === game.user.id) ) {
         const optionallyHide = (selector, hide) => {
           const element = chatCard[0].querySelector(selector);
           if ( element && hide ) element.style.display = "none";
@@ -167,7 +172,6 @@ export default class ChatMessageRotV extends ChatMessage {
     if ( !this.isContentVisible || !this.rolls.length ) return;
     const originatingMessage = game.messages.get(this.getFlag("rotv", "originatingMessage")) ?? this;
     const displayChallenge = originatingMessage?.shouldDisplayChallenge;
-    const displayAttackResult = game.user.isGM || (game.settings.get("rotv", "attackRollVisibility") !== "none");
 
     /**
      * Create an icon to indicate success or failure.
@@ -198,9 +202,7 @@ export default class ChatMessageRotV extends ChatMessage {
       if ( !total ) continue;
       // Only attack rolls and death saves can crit or fumble.
       const canCrit = ["attack", "death"].includes(this.getFlag("rotv", "roll.type"));
-      const isAttack = this.getFlag("rotv", "roll.type") === "attack";
-      const showResult = isAttack ? displayAttackResult : displayChallenge;
-      if ( d.options.target && showResult ) {
+      if ( d.options.target && displayChallenge ) {
         if ( d20Roll.total >= d.options.target ) total.classList.add("success");
         else total.classList.add("failure");
       }
@@ -232,11 +234,11 @@ export default class ChatMessageRotV extends ChatMessage {
     let img;
     let nameText;
     if ( this.isContentVisible ) {
-      img = actor?.img ?? this.author.avatar;
+      img = actor?.img ?? this.user.avatar;
       nameText = this.alias;
     } else {
-      img = this.author.avatar;
-      nameText = this.author.name;
+      img = this.user.avatar;
+      nameText = this.user.name;
     }
 
     const avatar = document.createElement("a");
@@ -251,7 +253,7 @@ export default class ChatMessageRotV extends ChatMessage {
     const subtitle = document.createElement("span");
     subtitle.classList.add("subtitle");
     if ( this.whisper.length ) subtitle.innerText = html.querySelector(".whisper-to")?.innerText ?? "";
-    if ( (nameText !== this.author?.name) && !subtitle.innerText.length ) subtitle.innerText = this.author?.name ?? "";
+    if ( (nameText !== this.user?.name) && !subtitle.innerText.length ) subtitle.innerText = this.user?.name ?? "";
 
     name.appendChild(subtitle);
 
@@ -357,9 +359,7 @@ export default class ChatMessageRotV extends ChatMessage {
   _enrichAttackTargets(html) {
     const attackRoll = this.rolls[0];
     const targets = this.getFlag("rotv", "targets");
-    const visibility = game.settings.get("rotv", "attackRollVisibility");
-    const isVisible = game.user.isGM || (visibility !== "none");
-    if ( !isVisible || !(attackRoll instanceof rotv.dice.D20Roll) || !targets?.length ) return;
+    if ( !game.user.isGM || !(attackRoll instanceof rotv.dice.D20Roll) || !targets?.length ) return;
     const tray = document.createElement("div");
     tray.classList.add("rotv2");
     tray.innerHTML = `
@@ -376,18 +376,15 @@ export default class ChatMessageRotV extends ChatMessage {
     `;
     const evaluation = tray.querySelector("ul");
     evaluation.innerHTML = targets.map(({ name, ac, uuid }) => {
-      if ( !game.user.isGM && (visibility !== "all") ) ac = "";
       const isMiss = !attackRoll.isCritical && ((attackRoll.total < ac) || attackRoll.isFumble);
       return [`
         <li data-uuid="${uuid}" class="target ${isMiss ? "miss" : "hit"}">
           <i class="fas ${isMiss ? "fa-times" : "fa-check"}"></i>
           <div class="name">${name}</div>
-          ${ac ? `
           <div class="ac">
             <i class="fas fa-shield-halved"></i>
             <span>${ac}</span>
           </div>
-          ` : ""}
         </li>
       `, isMiss];
     }).sort((a, b) => (a[1] === b[1]) ? 0 : a[1] ? 1 : -1).reduce((str, [li]) => str + li, "");
@@ -413,15 +410,15 @@ export default class ChatMessageRotV extends ChatMessage {
     let { formula, total, breakdown } = aggregatedRolls.reduce((obj, r) => {
       obj.formula.push(CONFIG.ROTV.aggregateDamageDisplay ? r.formula : ` + ${r.formula}`);
       obj.total += r.total;
-      obj.breakdown.push(this._simplifyDamageRoll(r));
+      this._aggregateDamageRoll(r, obj.breakdown);
       return obj;
-    }, { formula: [], total: 0, breakdown: [] });
+    }, { formula: [], total: 0, breakdown: {} });
     formula = formula.join("").replace(/^ \+ /, "");
     html.querySelectorAll(".dice-roll").forEach(el => el.remove());
     const roll = document.createElement("div");
     roll.classList.add("dice-roll");
 
-    const tooltipContents = breakdown.reduce((str, { type, total, constant, dice }) => {
+    const tooltipContents = Object.entries(breakdown).reduce((str, [type, { total, constant, dice }]) => {
       const config = CONFIG.ROTV.damageTypes[type] ?? CONFIG.ROTV.healingTypes[type];
       return `${str}
         <section class="tooltip-part">
@@ -472,13 +469,13 @@ export default class ChatMessageRotV extends ChatMessage {
   /* -------------------------------------------- */
 
   /**
-   * Simplify damage roll information for use by damage tooltip.
-   * @param {DamageRoll} roll   The damage roll to simplify.
-   * @returns {object}          The object holding simplified damage roll data.
+   * Aggregate damage roll information by damage type.
+   * @param {DamageRoll} roll  The damage roll.
+   * @param {Record<string, {total: number, constant: number, dice: {result: string, classes: string}[]}>} breakdown
    * @protected
    */
-  _simplifyDamageRoll(roll) {
-    const aggregate = { type: roll.options.type, total: roll.total, constant: 0, dice: [] };
+  _aggregateDamageRoll(roll, breakdown) {
+    const aggregate = breakdown[roll.options.type] ??= { total: roll.total, constant: 0, dice: [] };
     for ( let i = roll.terms.length - 1; i >= 0; ) {
       const term = roll.terms[i--];
       if ( !(term instanceof NumericTerm) && !(term instanceof DiceTerm) ) continue;
@@ -494,8 +491,6 @@ export default class ChatMessageRotV extends ChatMessage {
       }
       if ( term instanceof NumericTerm ) aggregate.constant += value * multiplier;
     }
-
-    return aggregate;
   }
 
   /* -------------------------------------------- */

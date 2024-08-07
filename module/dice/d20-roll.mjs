@@ -147,17 +147,8 @@ export default class D20Roll extends Roll {
     //if ( this.options.reliableTalent ) d20.modifiers.push("min10");
 
     // Handle Advantage or Disadvantage
-    /*if ( this.hasAdvantage ) {
-      d20.number = this.options.elvenAccuracy ? 3 : 2;
-      d20.modifiers.push("kh");
-      d20.options.advantage = true;
-    }
-    else if ( this.hasDisadvantage ) {
-      d20.number = 2;
-      d20.modifiers.push("kl");
-      d20.options.disadvantage = true;
-    }*/
     d20.number = 1;
+
 
 
     // Assign critical and fumble thresholds
@@ -166,15 +157,14 @@ export default class D20Roll extends Roll {
     if ( this.options.targetValue ) d20.options.target = this.options.targetValue;
 
 
-    if (this.hasAdvantage) {
-        this.terms.push(new OperatorTerm({operator: "-"}));
-        this.terms.push(new NumericTerm({number: "9"}));
+
+    if ( this.hasAdvantage ) {
+      this.terms.push(new OperatorTerm({operator: "-"}));
+      this.terms.push(new NumericTerm({number: "9"}));
     }
-
-
-    if (this.hasDisadvantage) {
-        this.terms.push(new OperatorTerm({operator: "-"}));
-        this.terms.push(new NumericTerm({number: "6"}));
+    if ( this.hasDisadvantage ) {
+      this.terms.push(new OperatorTerm({operator: "-"}));
+      this.terms.push(new NumericTerm({number: "6"}));
     }
 
     // Re-compile the underlying formula

@@ -55,7 +55,7 @@ export default class ActorSheetRotVNPC extends ActorSheetRotV {
 
     // Start by classifying items into groups for rendering
     const maxLevelDelta = CONFIG.ROTV.maxLevel - (this.actor.system.details.level ?? 0);
-    const [spells, other] = context.items.reduce((arr, item) => {
+    let [spells, other] = context.items.reduce((arr, item) => {
       const {quantity, uses, target} = item.system;
       const ctx = context.itemContext[item.id] ??= {};
       ctx.isStack = Number.isNumeric(quantity) && (quantity !== 1);
@@ -78,6 +78,10 @@ export default class ActorSheetRotVNPC extends ActorSheetRotV {
       else arr[1].push(item);
       return arr;
     }, [[], []]);
+
+    // Apply item filters
+    spells = this._filterItems(spells, this._filters.spellbook.properties);
+    other = this._filterItems(other, this._filters.features.properties);
 
     // Organize Spellbook
     const spellbook = this._prepareSpellbook(context, spells);
@@ -168,7 +172,6 @@ export default class ActorSheetRotVNPC extends ActorSheetRotV {
         return this.actor.rollDeathSave({ event });
 
       case "rollInitiative":
-        event.stopPropagation();
         return this.actor.rollInitiativeDialog({ event });
     }
   }

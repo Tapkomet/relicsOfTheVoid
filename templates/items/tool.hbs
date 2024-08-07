@@ -101,6 +101,18 @@
                 {{/each}}
             </div>
 
+            <div class="form-group input-select">
+                <label>{{localize "ROTV.Attunement"}}</label>
+                <div class="form-fields">
+                    <input type="checkbox" name="system.attuned" {{ checked system.attuned }}
+                           {{ disabled (not system.attunement) }}
+                           data-tooltip="ROTV.Attuned" aria-label="{{ localize 'ROTV.Attuned' }}">
+                    <select name="system.attunement">
+                        {{selectOptions config.attunementTypes selected=system.attunement
+                                        blank=(localize "ROTV.AttunementNone")}}
+                    </select>
+                </div>
+            </div>
 
             {{!-- Tool Proficiency --}}
             <div class="form-group">

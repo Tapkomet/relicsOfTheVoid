@@ -76,7 +76,8 @@ export default class NPCData extends CreatureTemplate {
           calc: new StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
           formula: new FormulaField({deterministic: true, label: "ROTV.ArmorClassFormula"})
         }, {label: "ROTV.ArmorClass"}),
-        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        damRed: new foundry.data.fields.NumberField({
+        required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
         }),
         hd: new SchemaField({
           spent: new NumberField({integer: true, min: 0, initial: 0})

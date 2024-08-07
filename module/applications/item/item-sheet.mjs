@@ -129,7 +129,6 @@ export default class ItemSheetRotV extends ItemSheet {
       // Armor Class
       hasDexModifier: item.isArmor && (item.system.type.value !== "shield"),
 
-
       // Damage Reduction
       hasDR: item.isArmor,
 
@@ -180,7 +179,7 @@ export default class ItemSheetRotV extends ItemSheet {
 
     // Enrich HTML description
     const enrichmentOptions = {
-      secrets: item.isOwner, relativeTo: this.item, rollData: context.rollData
+      secrets: item.isOwner, async: true, relativeTo: this.item, rollData: context.rollData
     };
     context.enriched = {
       description: await TextEditor.enrichHTML(item.system.description.value, enrichmentOptions),
@@ -382,7 +381,7 @@ export default class ItemSheetRotV extends ItemSheet {
     }
     if ( ("damage" in this.item.system) && foundry.utils.getProperty(this.item.overrides, "system.damage.parts") ) {
       overrides.push("damage-control");
-      Array.fromRange(this.item.system.damage.parts.length).forEach(index => overrides.push(
+      Array.fromRange(2).forEach(index => overrides.push(
         `system.damage.parts.${index}.0`, `system.damage.parts.${index}.1`
       ));
     }

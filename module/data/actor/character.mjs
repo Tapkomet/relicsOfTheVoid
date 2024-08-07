@@ -41,6 +41,7 @@ const { SchemaField, NumberField, StringField, BooleanField, ArrayField, Integer
  * @property {number} attributes.death.success            Number of successful death saves.
  * @property {number} attributes.death.failure            Number of failed death saves.
  * @property {number} attributes.exhaustion               Number of levels of exhaustion.
+ * @property {number} attributes.inspiration              Does this character have inspiration?
  * @property {object} details
  * @property {ItemRotV|string} details.background           Character's background item or name.
  * @property {string} details.originalClass               ID of first class taken by character.
@@ -86,9 +87,11 @@ export default class CharacterData extends CreatureTemplate {
           calc: new StringField({initial: "default", label: "ROTV.ArmorClassCalculation"}),
           formula: new FormulaField({deterministic: true, label: "ROTV.ArmorClassFormula"})
         }, {label: "ROTV.ArmorClass"}),
-        damRed: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
+        damRed: new foundry.data.fields.NumberField({
+        required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DR"
         }),
-        stress: new foundry.data.fields.NumberField({required: true, nullable: false, integer: true, min: -2, initial: 0, label: "ROTV.Exhaustion"
+        stress: new foundry.data.fields.NumberField({
+        required: true, nullable: false, integer: true, min: -2, initial: 0, label: "ROTV.Exhaustion"
         }),
         hp: new SchemaField({
           value: new NumberField({
@@ -111,7 +114,8 @@ export default class CharacterData extends CreatureTemplate {
           failure: new NumberField({
             required: true, nullable: false, integer: true, min: 0, initial: 0, label: "ROTV.DeathSaveFailures"
           })
-        }, {label: "ROTV.DeathSave"})
+        }, {label: "ROTV.DeathSave"}),
+        inspiration: new BooleanField({required: true, label: "ROTV.Inspiration"})
       }, {label: "ROTV.Attributes"}),
       details: new SchemaField({
         ...DetailsFields.common,

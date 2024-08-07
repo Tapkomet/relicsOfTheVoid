@@ -1,6 +1,5 @@
 import { ItemDataModel } from "../abstract.mjs";
 import { FormulaField } from "../fields.mjs";
-import ActivitiesTemplate from "./templates/activities.mjs";
 import EquippableItemTemplate from "./templates/equippable-item.mjs";
 import IdentifiableTemplate from "./templates/identifiable.mjs";
 import ItemDescriptionTemplate from "./templates/item-description.mjs";
@@ -17,7 +16,6 @@ import ActivatedEffectTemplate from "./templates/activated-effect.mjs";
  * @mixes PhysicalItemTemplate
  * @mixes EquippableItemTemplate
  * @mixes ActivatedEffectTemplate
- * @mixes ActivitiesTemplate
  *
  * @property {string} ability     Default ability when this tool is being used.
  * @property {string} chatFlavor  Additional text added to chat when this tool is used.
@@ -26,7 +24,7 @@ import ActivatedEffectTemplate from "./templates/activated-effect.mjs";
  */
 export default class ToolData extends ItemDataModel.mixin(
   ItemDescriptionTemplate, IdentifiableTemplate, ItemTypeTemplate,
-  PhysicalItemTemplate, EquippableItemTemplate, ActivatedEffectTemplate, ActivitiesTemplate
+  PhysicalItemTemplate, EquippableItemTemplate, ActivatedEffectTemplate
 ) {
   /** @inheritdoc */
   static defineSchema() {
@@ -81,7 +79,6 @@ export default class ToolData extends ItemDataModel.mixin(
   /** @inheritdoc */
   static _migrateData(source) {
     super._migrateData(source);
-    ActivitiesTemplate.migrateActivities(source);
     ToolData.#migrateAbility(source);
   }
 
@@ -109,7 +106,6 @@ export default class ToolData extends ItemDataModel.mixin(
 
   /** @inheritDoc */
   prepareFinalData() {
-    this.prepareFinalActivityData(this.parent.getRollData({ deterministic: true }));
     this.prepareFinalEquippableData();
   }
 

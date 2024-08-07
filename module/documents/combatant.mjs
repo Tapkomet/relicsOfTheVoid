@@ -1,7 +1,7 @@
 /**
  * Custom combatant with custom initiative roll handling.
  */
-export default class CombataetRotV extends Combatant {
+export default class CombatantRotV extends Combatant {
   /** @override */
   getInitiativeRoll(formula) {
     if ( !this.actor ) return new CONFIG.Dice.D20Roll(formula ?? "1d20", {});
@@ -15,7 +15,9 @@ export default class CombataetRotV extends Combatant {
    */
   refreshDynamicRing() {
     if ( !this.token?.hasDynamicRing ) return;
-    this.token.object?.renderFlags.set({refreshRingVisuals: true});
+    if ( game.release.generation < 12 ) {
+      this.token.object?.ring.configureVisuals(foundry.utils.deepClone(this.token.getFlag("rotv", "tokenRing") ?? {}));
+    } else this.token.object?.renderFlags.set({refreshRingVisuals: true});
   }
 
   /* -------------------------------------------- */
